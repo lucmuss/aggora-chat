@@ -1,83 +1,79 @@
 {% extends "base.html" %}
-
-{% block title %}{{ APP_NAME }} Home{% endblock %}
-
+{% block title %}{{ APP_NAME }} — Home{% endblock %}
 {% block content %}
-<section class="hero">
-  <div class="hero__content">
-    <p class="eyebrow">Pseudonymous communities with audit-ready moderation</p>
-    <h1>{{ APP_NAME }} starts with communities, not profiles.</h1>
-    <p class="lede">
-      Reddit-like density, transparent moderation, and pseudonymous discussion now live in one warm, fast, server-rendered interface.
-    </p>
-    <div class="hero-inline-actions">
-      <a class="button button-primary" href="/c/create/">Create a community</a>
-      <a class="button button-secondary" href="/popular/">Browse popular threads</a>
-      {% if not user.is_authenticated %}
-        <a class="button" href="/accounts/login/">Sign in</a>
-      {% endif %}
-    </div>
-  </div>
-  <div class="hero__panel">
-    <div class="metric-grid">
-      <article class="metric-card">
-        <strong>{{ communities|length }}</strong>
-        <span>fresh communities</span>
-      </article>
-      <article class="metric-card">
-        <strong>{{ posts|length }}</strong>
-        <span>threads in this view</span>
-      </article>
-      <article class="metric-card">
-        <strong>Queue-first</strong>
-        <span>moderation workflow</span>
-      </article>
-      <article class="metric-card">
-        <strong>/ j k a z</strong>
-        <span>desktop shortcuts</span>
-      </article>
-    </div>
-  </div>
-</section>
+<div class="lg:flex lg:gap-6">
 
-<section class="grid grid-main">
-  <div class="stack">
+  <!-- Feed -->
+  <div class="flex-1 min-w-0 max-w-[640px]">
     {% include "feeds/partials/sort_tabs.html" with sort=sort %}
-    <div id="feed-container">
-      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Create the first post in one of your communities to activate the feed." %}
+    <div id="feed-container" class="space-y-2">
+      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Create the first post in one of your communities to start the feed." %}
     </div>
   </div>
 
-  <aside class="stack">
-    <section class="card card-accent">
-      <h3>Fresh communities</h3>
-      {% if communities %}
-        <ul class="list list-tight">
-          {% for community in communities|slice:":6" %}
-            <li><a href="/c/{{ community.slug }}/">c/{{ community.slug }}</a> — {{ community.subscriber_count }} member{{ community.subscriber_count|pluralize }}</li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p>No communities yet.</p>
-      {% endif %}
-    </section>
-    <section class="card">
-      <h3>How This Feed Works</h3>
-      <div class="key-points">
-        <div class="key-point">
-          <strong>Votes shape visibility</strong>
-          <p>Hot, new, top, and rising all read from the same post graph.</p>
+  <!-- Sidebar -->
+  <aside class="hidden lg:block w-80 shrink-0 space-y-3">
+
+    <!-- Create / Join card -->
+    <div class="bg-gradient-to-b from-gblue-600 to-gblue-700 rounded-g p-4 text-white">
+      <p class="font-medium text-sm mb-1">Welcome to {{ APP_NAME }}</p>
+      <p class="text-xs text-gblue-100 mb-3">{{ APP_TAGLINE|default:"communities first" }}</p>
+      <div class="space-y-2">
+        <a href="/c/create/" class="w-full h-8 flex items-center justify-center rounded-g bg-white text-gblue-600 text-sm font-medium hover:bg-gblue-50 transition-colors">
+          Create Community
+        </a>
+        {% if not user.is_authenticated %}
+          <a href="/accounts/login/" class="w-full h-8 flex items-center justify-center rounded-g border border-white/40 text-white text-sm font-medium hover:bg-white/10 transition-colors">
+            Log in
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Top Communities -->
+    {% if communities %}
+    <div class="bg-white border border-gdoc-border rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gdoc-divider">
+        <h2 class="font-medium text-sm text-gtext-primary">Top Communities</h2>
+      </div>
+      <div class="divide-y divide-gdoc-divider">
+        {% for community in communities|slice:":8" %}
+          <a href="/c/{{ community.slug }}/" class="flex items-center gap-3 px-4 py-2.5 hover:bg-gdoc-hover transition-colors">
+            <div class="w-7 h-7 rounded-full bg-gblue-50 border border-gblue-100 flex items-center justify-center text-gblue-600 text-xs font-medium shrink-0">
+              {{ community.name|first|upper }}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium text-gtext-primary truncate">c/{{ community.slug }}</p>
+              <p class="text-xs text-gtext-secondary">{{ community.subscriber_count }} member{{ community.subscriber_count|pluralize }}</p>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+      <div class="px-4 py-2.5 border-t border-gdoc-divider">
+        <a href="{% url 'community_discovery' %}" class="text-xs font-medium text-gblue-600 hover:underline">View all communities →</a>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Info card -->
+    <div class="bg-white border border-gdoc-border rounded-g p-4 space-y-3">
+      <h2 class="font-medium text-sm text-gtext-primary">How {{ APP_NAME }} Works</h2>
+      <div class="space-y-2.5">
+        <div>
+          <p class="text-xs font-medium text-gtext-primary">Votes shape visibility</p>
+          <p class="text-xs text-gtext-secondary">Hot, new, top and rising are all derived from the same vote graph.</p>
         </div>
-        <div class="key-point">
-          <strong>Communities stay local</strong>
-          <p>Each community can set post formats, moderation behavior, and its own wiki.</p>
+        <div>
+          <p class="text-xs font-medium text-gtext-primary">Communities stay local</p>
+          <p class="text-xs text-gtext-secondary">Each community controls its own post formats and moderation rules.</p>
         </div>
-        <div class="key-point">
-          <strong>Agents stay accountable</strong>
-          <p>Queue-first moderation and audit logs keep automated actions explainable.</p>
+        <div>
+          <p class="text-xs font-medium text-gtext-primary">Queue-first moderation</p>
+          <p class="text-xs text-gtext-secondary">All automated mod actions are auditable and explainable.</p>
         </div>
       </div>
-    </section>
+    </div>
+
   </aside>
-</section>
+</div>
 {% endblock %}

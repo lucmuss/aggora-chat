@@ -1,34 +1,75 @@
-<header class="topbar">
-  <div class="topbar__inner">
-    <a href="/" class="brand">
-      <span class="brand__mark">A</span>
-      <span class="brand__wordmark">
-        <strong>{{ APP_NAME }}</strong>
-        <small>{{ APP_TAGLINE }}</small>
-      </span>
+<header class="bg-white border-b border-gdoc-border sticky top-0 z-50 shadow-sm">
+  <!-- Top bar -->
+  <div class="max-w-[1200px] mx-auto flex items-center gap-3 px-4 h-12">
+
+    <!-- Logo -->
+    <a href="/" class="flex items-center gap-2 shrink-0 hover:no-underline">
+      <div class="w-7 h-7 rounded-lg bg-gblue-600 flex items-center justify-center text-white font-bold text-sm">A</div>
+      <span class="font-sans font-medium text-base text-gtext-primary">{{ APP_NAME }}</span>
     </a>
-    <form method="get" action="{% url 'search' %}" class="header-search">
-      <input type="search" name="q" placeholder="Search Agora" data-shortcut-search>
-      <span class="header-search__hint">/</span>
-    </form>
-    <nav class="topnav">
-      <a href="{% url 'home' %}" class="{% if request.path == '/' %}is-active{% endif %}">Home</a>
-      <a href="{% url 'popular' %}" class="{% if request.path == '/popular/' %}is-active{% endif %}">Popular</a>
-      <a href="{% url 'community_discovery' %}" class="{% if request.path == '/c/' %}is-active{% endif %}">Communities</a>
-      <a href="{% url 'create_community' %}" class="{% if request.path == '/c/create/' %}is-active{% endif %}">Create Community</a>
-    </nav>
-    <div class="topbar__actions">
-      <a href="{% url 'toggle_theme' %}?next={{ request.get_full_path|urlencode }}" class="pill pill-muted">
-        {% if request.COOKIES.agora_theme == 'dark' %}Light mode{% else %}Dark mode{% endif %}
-      </a>
+
+    <!-- Search -->
+    <div class="flex-1 max-w-[520px]">
+      <form method="get" action="{% url 'search' %}" class="relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gtext-disabled pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2"/>
+        </svg>
+        <input type="search" name="q" placeholder="Search {{ APP_NAME }}"
+               data-shortcut-search
+               class="w-full h-9 pl-9 pr-3 rounded-g bg-gdoc-surface border border-transparent text-sm text-gtext-primary placeholder-gtext-disabled hover:bg-gdoc-hover hover:border-gdoc-border focus:bg-white focus:border-gblue-600 focus:outline-none transition-all">
+      </form>
+    </div>
+
+    <!-- Right actions -->
+    <div class="flex items-center gap-1 ml-auto">
       {% if user.is_authenticated %}
-        <a href="{% url 'create_community' %}" class="pill">New community</a>
-        <a href="{% url 'profile' handle=user.handle|default:'me' %}?tab=saved" class="pill">Saved</a>
-        <a href="{% url 'profile' handle=user.handle|default:'me' %}" class="pill pill-muted">{{ user.handle|default:user.email }}</a>
-        <a href="/accounts/logout/" class="pill">Log out</a>
+        <a href="/c/create/"
+           class="h-8 px-3 flex items-center gap-1 rounded-g text-sm font-medium text-gblue-600 hover:bg-gblue-50 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14"/></svg>
+          Create
+        </a>
+        <a href="{% url 'profile' handle=user.handle|default:'me' %}?tab=saved"
+           class="h-8 px-3 flex items-center rounded-g text-sm font-medium text-gtext-secondary hover:bg-gdoc-hover transition-colors">
+          Saved
+        </a>
+        <a href="{% url 'profile' handle=user.handle|default:'me' %}"
+           class="h-8 w-8 flex items-center justify-center rounded-full bg-gblue-600 text-white text-xs font-medium hover:bg-gblue-700 transition-colors">
+          {{ user.handle|default:user.email|first|upper }}
+        </a>
+        <a href="/accounts/logout/"
+           class="h-8 px-3 flex items-center rounded-g text-sm text-gtext-secondary hover:bg-gdoc-hover transition-colors">
+          Log out
+        </a>
       {% else %}
-        <a href="/accounts/login/" class="pill pill-primary">Log in</a>
+        <a href="/accounts/login/"
+           class="h-8 px-5 flex items-center rounded-g bg-gblue-600 text-white text-sm font-medium hover:bg-gblue-700 hover:shadow-glow transition-all">
+          Log in
+        </a>
       {% endif %}
     </div>
+  </div>
+
+  <!-- Sub-nav tabs -->
+  <div class="max-w-[1200px] mx-auto px-4">
+    <nav class="flex items-center -mb-px">
+      {% url 'home' as url_home %}
+      {% url 'popular' as url_popular %}
+      {% url 'community_discovery' as url_discover %}
+      <a href="{{ url_home }}"
+         class="px-4 h-10 flex items-center text-sm font-medium border-b-2 transition-colors tab-indicator
+                {% if request.path == '/' %}text-gblue-600 border-gblue-600{% else %}text-gtext-secondary border-transparent hover:text-gtext-primary hover:border-gdoc-border{% endif %}">
+        Home
+      </a>
+      <a href="{{ url_popular }}"
+         class="px-4 h-10 flex items-center text-sm font-medium border-b-2 transition-colors tab-indicator
+                {% if request.path == '/popular/' %}text-gblue-600 border-gblue-600{% else %}text-gtext-secondary border-transparent hover:text-gtext-primary hover:border-gdoc-border{% endif %}">
+        Popular
+      </a>
+      <a href="{{ url_discover }}"
+         class="px-4 h-10 flex items-center text-sm font-medium border-b-2 transition-colors tab-indicator
+                {% if '/c/' in request.path and request.path != '/c/create/' %}text-gblue-600 border-gblue-600{% else %}text-gtext-secondary border-transparent hover:text-gtext-primary hover:border-gdoc-border{% endif %}">
+        Communities
+      </a>
+    </nav>
   </div>
 </header>

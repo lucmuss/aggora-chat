@@ -1,44 +1,46 @@
 {% extends "base.html" %}
-
-{% block title %}Popular{% endblock %}
-
+{% block title %}Popular — {{ APP_NAME }}{% endblock %}
 {% block content %}
-<section class="grid grid-main">
-  <div class="stack">
-    <article class="community-hero">
-      <div class="community-hero__meta">
-        <span>Global feed</span>
-        <span>{{ posts|length }} visible thread{{ posts|length|pluralize }}</span>
+<div class="lg:flex lg:gap-6">
+
+  <div class="flex-1 min-w-0 max-w-[640px]">
+    <div class="bg-white border border-gdoc-border rounded-g px-4 py-3 mb-3 flex items-center gap-3">
+      <svg class="w-8 h-8 text-gblue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-width="1.5" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/>
+      </svg>
+      <div>
+        <h1 class="font-sans font-medium text-base text-gtext-primary">Popular on {{ APP_NAME }}</h1>
+        <p class="text-xs text-gtext-secondary">Cross-community view of the most visible posts right now</p>
       </div>
-      <h1>Popular on Agora</h1>
-      <p class="lede">A cross-community view of the most visible posts right now.</p>
-    </article>
+    </div>
     {% include "feeds/partials/sort_tabs.html" with sort=sort %}
-    {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No popular posts yet" empty_copy="As communities grow, this feed will surface the strongest threads globally." %}
+    <div id="feed-container" class="space-y-2">
+      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No popular posts yet" empty_copy="As communities grow, this feed will surface the strongest threads globally." %}
+    </div>
   </div>
 
-  <aside class="stack">
-    <section class="card card-accent">
-      <h3>Leading communities</h3>
-      <ul class="list list-tight">
-        {% for community in communities %}
-          <li><a href="/c/{{ community.slug }}/">c/{{ community.slug }}</a> — {{ community.subscriber_count }} member{{ community.subscriber_count|pluralize }}</li>
-        {% endfor %}
-      </ul>
-    </section>
-    <section class="card">
-      <h3>Reading Popular</h3>
-      <div class="key-points">
-        <div class="key-point">
-          <strong>Cross-community ranking</strong>
-          <p>This view highlights the strongest threads regardless of where they started.</p>
-        </div>
-        <div class="key-point">
-          <strong>Switch sort modes</strong>
-          <p>Use the tabs to compare momentum, recency, and total score.</p>
-        </div>
+  <aside class="hidden lg:block w-80 shrink-0 space-y-3">
+    {% if communities %}
+    <div class="bg-white border border-gdoc-border rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gdoc-divider">
+        <h2 class="font-medium text-sm text-gtext-primary">Leading Communities</h2>
       </div>
-    </section>
+      <div class="divide-y divide-gdoc-divider">
+        {% for community in communities|slice:":6" %}
+          <a href="/c/{{ community.slug }}/" class="flex items-center gap-3 px-4 py-2.5 hover:bg-gdoc-hover transition-colors">
+            <div class="w-6 h-6 rounded-full bg-gblue-50 flex items-center justify-center text-gblue-600 text-xs font-medium shrink-0">
+              {{ community.name|first|upper }}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-medium text-gtext-primary truncate">c/{{ community.slug }}</p>
+              <p class="text-xs text-gtext-disabled">{{ community.subscriber_count }} members</p>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
   </aside>
-</section>
+
+</div>
 {% endblock %}

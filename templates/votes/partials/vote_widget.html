@@ -1,19 +1,21 @@
-<div class="vote-widget">
+<div class="vote-widget flex flex-col items-center py-2 gap-0.5 w-10">
   <button hx-post="/vote/"
           hx-target="closest .vote-widget"
           hx-swap="outerHTML"
           hx-vals='{"{{ target_type }}_id":"{{ target.id }}","value":"1"}'
           data-vote-up
-          class="{% if user_vote == 1 %}is-upvoted{% endif %}">
-    ▲
+          class="w-6 h-6 flex items-center justify-center rounded hover:bg-gblue-50 transition-colors {% if user_vote == 1 %}text-gblue-600{% else %}text-gtext-disabled hover:text-gblue-600{% endif %}">
+    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4 4 12h5v8h6v-8h5z"/></svg>
   </button>
-  <span class="vote-widget__score">{{ target.score }}</span>
+  <span class="text-xs font-medium leading-none {% if user_vote == 1 %}text-gblue-600{% elif user_vote == -1 %}text-gtext-disabled{% else %}text-gtext-secondary{% endif %}">
+    {{ target.score }}
+  </span>
   <button hx-post="/vote/"
           hx-target="closest .vote-widget"
           hx-swap="outerHTML"
           hx-vals='{"{{ target_type }}_id":"{{ target.id }}","value":"-1"}'
           data-vote-down
-          class="{% if user_vote == -1 %}is-downvoted{% endif %}">
-    ▼
+          class="w-6 h-6 flex items-center justify-center rounded hover:bg-gdoc-hover transition-colors {% if user_vote == -1 %}text-gtext-primary{% else %}text-gtext-disabled hover:text-gtext-secondary{% endif %}">
+    <svg class="w-4 h-4 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4 4 12h5v8h6v-8h5z"/></svg>
   </button>
 </div>

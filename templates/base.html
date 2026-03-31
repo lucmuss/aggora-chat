@@ -1,28 +1,61 @@
 {% load static common_tags %}
 <!DOCTYPE html>
-<html lang="en" class="{% if request.COOKIES.agora_theme == 'dark' %}theme-dark{% endif %}">
+<html lang="en" class="{% if request.COOKIES.agora_theme == 'dark' %}dark{% endif %}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500&family=Roboto+Mono:wght@400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            gblue:   { 50:'#E8F0FE', 100:'#D2E3FC', 200:'#AECBFA', 500:'#4285F4', 600:'#1A73E8', 700:'#1967D2', 800:'#185ABC' },
+            gdoc:    { surface:'#F8F9FA', border:'#DADCE0', divider:'#E8EAED', hover:'#F1F3F4' },
+            gtext:   { primary:'#202124', secondary:'#5F6368', disabled:'#9AA0A6' },
+            gstatus: { success:'#1E8E3E', warning:'#F9AB00', error:'#D93025' },
+          },
+          fontFamily: {
+            sans: ['"Google Sans"', 'Roboto', 'Arial', 'sans-serif'],
+            mono: ['"Roboto Mono"', 'monospace'],
+          },
+          boxShadow: {
+            glow:  '0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15)',
+            hover: '0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15)',
+            modal: '0 8px 10px 1px rgba(0,0,0,0.14), 0 3px 14px 2px rgba(0,0,0,0.12)',
+          },
+          borderRadius: { g: '8px' },
+        },
+      },
+    }
+  </script>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="{% static 'js/app.js' %}" defer></script>
 </head>
-<body>
-  <div class="backdrop-orb backdrop-orb--one" aria-hidden="true"></div>
-  <div class="backdrop-orb backdrop-orb--two" aria-hidden="true"></div>
+<body class="bg-gdoc-surface text-gtext-primary font-sans text-sm antialiased min-h-screen">
+
   {% include "partials/header.html" %}
-  <main class="shell">
-    {% if messages %}
-      <section class="stack stack-sm">
-        {% for message in messages %}
-          <div class="notice">{{ message }}</div>
-        {% endfor %}
-      </section>
-    {% endif %}
+
+  {% if messages %}
+    <div class="max-w-[1200px] mx-auto px-4 pt-3 space-y-1">
+      {% for message in messages %}
+        <div class="px-4 py-2.5 rounded-g bg-gblue-50 border border-gblue-200 text-sm text-gblue-700">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="max-w-[1200px] mx-auto px-4 py-4">
     {% block content %}{% endblock %}
-  </main>
-  <div id="shortcut-status" class="shortcut-status" aria-live="polite"></div>
+  </div>
+
+  <div id="shortcut-status"
+       class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-g shadow-glow bg-gtext-primary text-white text-xs font-medium animate-slide-up"
+       aria-live="polite"></div>
+
 </body>
 </html>

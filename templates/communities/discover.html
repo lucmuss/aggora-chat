@@ -1,69 +1,58 @@
 {% extends "base.html" %}
-
-{% block title %}Discover Communities{% endblock %}
-
+{% block title %}Discover Communities — {{ APP_NAME }}{% endblock %}
 {% block content %}
-<section class="grid grid-main">
-  <div class="stack">
-    <article class="community-hero">
-      <div class="community-hero__meta">
-        <span>Discovery</span>
-        <span>{{ communities|length }} result{{ communities|length|pluralize }}</span>
-      </div>
-      <h1>Browse communities</h1>
-      <p class="lede">Search by topic, values, or ongoing projects and jump straight into the communities shaping the feed.</p>
-      <form method="get" action="/c/" class="form stack">
-        <div class="field">
-          <label for="community_search">Search communities</label>
-          <input id="community_search" type="search" name="q" value="{{ query }}" placeholder="relationships, books, policy">
+<div class="lg:flex lg:gap-6">
+
+  <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
+
+    <div class="bg-white border border-gdoc-border rounded-g p-4">
+      <h1 class="font-sans font-medium text-lg text-gtext-primary mb-1">Browse Communities</h1>
+      <p class="text-sm text-gtext-secondary mb-3">{{ communities|length }} community{% if communities|length != 1 %}ies{% endif %} found</p>
+      <form method="get" action="/c/">
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gtext-disabled pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2"/>
+          </svg>
+          <input type="search" name="q" value="{{ query }}" placeholder="Search communities…"
+                 class="w-full h-9 pl-9 pr-3 rounded-g border border-gdoc-border text-sm text-gtext-primary placeholder-gtext-disabled focus:border-gblue-600 focus:outline-none transition-colors">
         </div>
-        <button type="submit" class="button button-primary">Search communities</button>
       </form>
-    </article>
+    </div>
 
     {% if communities %}
-      <div class="stack">
+      <div class="space-y-2">
         {% for community in communities %}
-          <article class="card card-hover">
-            <div class="card__meta card__meta-spread">
-              <span>c/{{ community.slug }}</span>
-              <span>{{ community.subscriber_count }} member{{ community.subscriber_count|pluralize }}</span>
-              <span>{{ community.rule_count }} rule{{ community.rule_count|pluralize }}</span>
+          <a href="/c/{{ community.slug }}/" class="bg-white border border-gdoc-border rounded-g p-4 flex items-start gap-3 hover:border-gtext-disabled transition-colors block group">
+            <div class="w-10 h-10 rounded-full bg-gblue-50 border border-gblue-100 flex items-center justify-center text-gblue-600 font-medium shrink-0">
+              {{ community.name|first|upper }}
             </div>
-            <h3><a href="/c/{{ community.slug }}/">{{ community.title }}</a></h3>
-            <p>{{ community.description|default:"No description yet." }}</p>
-          </article>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <p class="font-medium text-sm text-gtext-primary group-hover:text-gblue-600 transition-colors">c/{{ community.slug }}</p>
+                <span class="text-xs text-gtext-disabled">{{ community.subscriber_count }} member{{ community.subscriber_count|pluralize }}</span>
+              </div>
+              <p class="text-xs text-gtext-secondary mt-0.5 line-clamp-2">{{ community.description|default:"No description yet." }}</p>
+            </div>
+          </a>
         {% endfor %}
       </div>
     {% else %}
-      <div class="card card-empty">
-        <h3>No communities found</h3>
-        <p>Try a broader search term.</p>
+      <div class="bg-white border border-gdoc-border rounded-g p-8 text-center">
+        <p class="text-sm text-gtext-secondary">No communities found{% if query %} for "{{ query }}"{% endif %}.</p>
       </div>
     {% endif %}
+
   </div>
 
-  <aside class="stack">
-    <section class="card card-accent">
-      <h3>Discovery paths</h3>
-      <ul class="list list-tight">
-        <li><a href="/popular/">Popular feed</a></li>
-        <li><a href="/search/">Search posts</a></li>
-      </ul>
-    </section>
-    <section class="card">
-      <h3>What makes a strong community</h3>
-      <div class="key-points">
-        <div class="key-point">
-          <strong>Clear rules</strong>
-          <p>Communities with explicit moderation guidance are easier to join and scale.</p>
-        </div>
-        <div class="key-point">
-          <strong>Readable sidebars</strong>
-          <p>Good descriptions and wiki pages turn discovery into participation.</p>
-        </div>
-      </div>
-    </section>
+  <aside class="hidden lg:block w-80 shrink-0 space-y-3">
+    <div class="bg-white border border-gdoc-border rounded-g p-4">
+      <h2 class="font-medium text-sm text-gtext-primary mb-3">Create a Community</h2>
+      <p class="text-xs text-gtext-secondary mb-3">Start your own community and invite others to join the conversation.</p>
+      <a href="/c/create/" class="block w-full h-8 flex items-center justify-center rounded-g bg-gblue-600 text-white text-sm font-medium hover:bg-gblue-700 transition-colors">
+        Create Community
+      </a>
+    </div>
   </aside>
-</section>
+
+</div>
 {% endblock %}

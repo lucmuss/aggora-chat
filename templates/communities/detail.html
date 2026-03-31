@@ -1,100 +1,100 @@
 {% extends "base.html" %}
-
-{% block title %}{{ community.title }}{% endblock %}
-
+{% block title %}c/{{ community.slug }} — {{ APP_NAME }}{% endblock %}
 {% block content %}
-<section class="grid grid-main">
-  <div class="stack">
-    <article class="community-hero">
-      <div class="community-hero__meta community-hero__meta-spread">
-        <span>c/{{ community.slug }}</span>
-        <span>{{ member_count }} member{{ member_count|pluralize }}</span>
-        <span>{{ community.get_community_type_display }}</span>
-      </div>
-      <h1>{{ community.title }}</h1>
-      <p class="lede">{{ community.description|default:"No community description yet." }}</p>
-      <div class="hero-inline-actions">
-        {% include "communities/partials/join_button.html" with community=community joined=joined %}
-        {% if user.is_authenticated %}
-          <a href="/c/{{ community.slug }}/submit/" class="button button-secondary">Create post</a>
-        {% endif %}
-        <a href="/c/{{ community.slug }}/wiki/" class="button">Wiki</a>
-      </div>
-      <div class="metric-grid metric-grid--compact">
-        <article class="metric-card">
-          <strong>{{ member_count }}</strong>
-          <span>members</span>
-        </article>
-        <article class="metric-card">
-          <strong>{{ community.vote_hide_minutes }}</strong>
-          <span>vote-hide minutes</span>
-        </article>
-        <article class="metric-card">
-          <strong>{% if community.allow_polls %}polls on{% else %}polls off{% endif %}</strong>
-          <span>community format</span>
-        </article>
-      </div>
-    </article>
+<div class="lg:flex lg:gap-6">
 
-    {% include "feeds/partials/sort_tabs.html" with sort=sort %}
-    <div id="feed-container">
-      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts in this community yet" empty_copy="Write the first post to start the thread graph here." %}
+  <!-- Feed column -->
+  <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
+
+    <!-- Community header -->
+    <div class="bg-white border border-gdoc-border rounded-g overflow-hidden">
+      <div class="h-20 bg-gradient-to-r from-gblue-600 to-gblue-500"></div>
+      <div class="px-4 pb-4">
+        <div class="flex items-center gap-3 -mt-7 mb-2">
+          <div class="w-14 h-14 rounded-full border-4 border-white bg-gblue-600 flex items-center justify-center text-white text-xl font-medium shadow-sm">
+            {{ community.name|first|upper }}
+          </div>
+        </div>
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h1 class="font-sans font-medium text-lg text-gtext-primary">{{ community.title }}</h1>
+            <p class="text-xs text-gtext-secondary">c/{{ community.slug }}</p>
+            {% if community.description %}
+              <p class="text-sm text-gtext-secondary mt-1.5 leading-relaxed">{{ community.description }}</p>
+            {% endif %}
+          </div>
+          <div class="shrink-0 space-y-2">
+            {% include "communities/partials/join_button.html" with community=community joined=joined %}
+            {% if user.is_authenticated %}
+              <a href="/c/{{ community.slug }}/submit/"
+                 class="w-full h-8 flex items-center justify-center rounded-g border border-gdoc-border text-sm font-medium text-gtext-secondary hover:bg-gdoc-hover transition-colors">
+                Create post
+              </a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="flex items-center gap-6 mt-3 pt-3 border-t border-gdoc-divider">
+          <div><p class="text-sm font-medium text-gtext-primary">{{ member_count }}</p><p class="text-xs text-gtext-secondary">Members</p></div>
+          <div><p class="text-xs text-gtext-secondary">Created {{ community.created_at|date:"M d, Y" }}</p></div>
+        </div>
+      </div>
     </div>
 
-    <section class="card">
-      <h2>About this community</h2>
-      {% if community.sidebar_html %}
-        <div class="prose">{{ community.sidebar_html|safe }}</div>
-      {% else %}
-        <p>No sidebar copy yet. This space is ready for rules, FAQ, and onboarding context.</p>
-      {% endif %}
-    </section>
-
-    <section class="card">
-      <h2>Rules</h2>
-      {% if community.rules.all %}
-        <ol class="list">
-          {% for rule in community.rules.all %}
-            <li><strong>{{ rule.title }}</strong>{% if rule.description %}: {{ rule.description }}{% endif %}</li>
-          {% endfor %}
-        </ol>
-      {% else %}
-        <p>No rules have been defined yet.</p>
-      {% endif %}
-    </section>
+    {% include "feeds/partials/sort_tabs.html" with sort=sort %}
+    <div id="feed-container" class="space-y-2">
+      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Write the first post to start this community's feed." %}
+    </div>
   </div>
 
-  <aside class="stack">
-    <section class="card card-accent">
-      <h3>Community status</h3>
-      <ul class="list list-tight">
-        <li>Text posts: {{ community.allow_text_posts|yesno:"enabled,disabled" }}</li>
-        <li>Link posts: {{ community.allow_link_posts|yesno:"enabled,disabled" }}</li>
-        <li>Image posts: {{ community.allow_image_posts|yesno:"enabled,disabled" }}</li>
-        <li>Polls: {{ community.allow_polls|yesno:"enabled,disabled" }}</li>
-        <li>Vote hiding window: {{ community.vote_hide_minutes }} minutes</li>
-      </ul>
-    </section>
-    {% if user.is_authenticated %}
-    <section class="card">
-      <h3>Moderation</h3>
-      <ul class="list list-tight">
-        <li><a href="/mod/{{ community.slug }}/queue/">Mod queue</a></li>
-        <li><a href="/mod/{{ community.slug }}/log/">Mod log</a></li>
-        <li><a href="/mod/{{ community.slug }}/mail/">Mod Mail</a></li>
-        <li><a href="/c/{{ community.slug }}/settings/">Community settings</a></li>
-        <li><a href="/c/{{ community.slug }}/wiki/edit/">Edit wiki</a></li>
-      </ul>
-    </section>
+  <!-- Sidebar -->
+  <aside class="hidden lg:block w-80 shrink-0 space-y-3">
+
+    {% if community.sidebar_html %}
+    <div class="bg-white border border-gdoc-border rounded-g p-4">
+      <h2 class="font-medium text-sm text-gtext-primary mb-2">About</h2>
+      <div class="prose text-xs">{{ community.sidebar_html|safe }}</div>
+    </div>
     {% endif %}
-    <section class="card">
-      <h3>Recently created</h3>
-      <ul class="list list-tight">
-        {% for item in recent_communities %}
-          <li><a href="/c/{{ item.slug }}/">{{ item.title }}</a></li>
+
+    <!-- Community settings -->
+    <div class="bg-white border border-gdoc-border rounded-g p-4">
+      <h2 class="font-medium text-sm text-gtext-primary mb-2">Community</h2>
+      <div class="space-y-1 text-xs text-gtext-secondary">
+        <p>Text posts: <span class="text-gtext-primary">{{ community.allow_text_posts|yesno:"✓,✗" }}</span></p>
+        <p>Link posts: <span class="text-gtext-primary">{{ community.allow_link_posts|yesno:"✓,✗" }}</span></p>
+        <p>Polls: <span class="text-gtext-primary">{{ community.allow_polls|yesno:"✓,✗" }}</span></p>
+      </div>
+    </div>
+
+    <!-- Rules -->
+    {% if community.rules.all %}
+    <div class="bg-white border border-gdoc-border rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gdoc-divider">
+        <h2 class="font-medium text-sm text-gtext-primary">Rules</h2>
+      </div>
+      <div class="divide-y divide-gdoc-divider">
+        {% for rule in community.rules.all %}
+          <div class="px-4 py-2.5">
+            <p class="text-xs font-medium text-gtext-primary">{{ forloop.counter }}. {{ rule.title }}</p>
+            {% if rule.description %}<p class="text-xs text-gtext-secondary mt-0.5">{{ rule.description }}</p>{% endif %}
+          </div>
         {% endfor %}
-      </ul>
-    </section>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+    <div class="bg-white border border-gdoc-border rounded-g p-4">
+      <h2 class="font-medium text-sm text-gtext-primary mb-2">Moderation</h2>
+      <div class="space-y-1">
+        <a href="/mod/{{ community.slug }}/queue/" class="block text-xs text-gblue-600 hover:underline">Mod queue</a>
+        <a href="/mod/{{ community.slug }}/log/" class="block text-xs text-gblue-600 hover:underline">Mod log</a>
+        <a href="/mod/{{ community.slug }}/mail/" class="block text-xs text-gblue-600 hover:underline">Mod mail</a>
+        <a href="/c/{{ community.slug }}/settings/" class="block text-xs text-gblue-600 hover:underline">Settings</a>
+      </div>
+    </div>
+    {% endif %}
+
   </aside>
-</section>
+</div>
 {% endblock %}
