@@ -3,132 +3,93 @@
 {% block title %}{{ post.title }}{% endblock %}
 {% block content %}
 <div class="lg:flex lg:gap-6">
-
-  <!-- Main column -->
   <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
-
-    <!-- Post -->
-    <article class="bg-white border border-gdoc-border rounded-g flex">
-      <!-- Vote -->
-      <div class="w-10 shrink-0 flex flex-col items-center bg-gdoc-surface rounded-l-g">
+    <article class="bg-white border border-gray-200 rounded-g flex">
+      <div class="w-10 shrink-0 flex flex-col items-center bg-gray-50 rounded-l-g">
         {% include "votes/partials/vote_widget.html" with target=post target_type="post" user_vote=post_user_vote %}
       </div>
-      <!-- Body -->
       <div class="flex-1 py-3 px-4 min-w-0">
-        <div class="flex items-center gap-1 text-xs text-gtext-secondary mb-1">
-          <a href="/c/{{ post.community.slug }}/" class="font-medium text-gtext-primary hover:underline">c/{{ post.community.slug }}</a>
-          <span class="text-gtext-disabled">•</span>
-          <span>u/<a href="/u/{{ post.author.handle|default:'deleted' }}/" class="hover:underline">{{ post.author.handle|default:"[deleted]" }}</a></span>
-          <span class="text-gtext-disabled">•</span>
-          <time>{{ post.created_at|timesince_compact }} ago</time>
+        <div class="flex items-center gap-1.5 text-xs mb-1">
+          <a href="/c/{{ post.community.slug }}/" class="font-medium text-opal hover:text-opal-hover hover:underline">c/{{ post.community.slug }}</a>
+          <span class="text-gray-300">·</span>
+          <span class="text-gray-500">u/<a href="/u/{{ post.author.handle|default:'deleted' }}/" class="hover:underline">{{ post.author.handle|default:"[deleted]" }}</a></span>
+          <span class="text-gray-300">·</span>
+          <time class="text-gray-400">{{ post.created_at|timesince_compact }} ago</time>
         </div>
-        <h1 class="font-sans font-medium text-xl text-gtext-primary leading-snug mb-2">{{ post.title }}</h1>
-        {% if post.crosspost_parent %}
-          <div class="mb-2 px-3 py-2 rounded-g bg-gblue-50 border border-gblue-100 text-xs text-gblue-700">
-            Crossposted from <a href="/c/{{ post.crosspost_parent.community.slug }}/post/{{ post.crosspost_parent.id }}/{{ post.crosspost_parent.slug }}/" class="underline">c/{{ post.crosspost_parent.community.slug }}</a>
-          </div>
-        {% endif %}
+        <h1 class="font-semibold text-xl text-gray-900 leading-snug mb-2">{{ post.title }}</h1>
         {% if post.url %}
-          <a href="{{ post.url }}" target="_blank" rel="noopener" class="text-sm text-gblue-600 hover:underline block mb-2 truncate">↗ {{ post.url }}</a>
+          <a href="{{ post.url }}" target="_blank" rel="noopener" class="text-sm text-opal hover:underline block mb-2 truncate">↗ {{ post.url }}</a>
         {% endif %}
         {% if post.image %}
-          <img src="{{ post.image.url }}" alt="" class="max-w-full rounded-g border border-gdoc-border mb-2" loading="lazy">
+          <img src="{{ post.image.url }}" alt="" class="max-w-full rounded-g border border-gray-200 mb-2" loading="lazy">
         {% endif %}
         {% if post.body_html %}
           <div class="prose mb-3">{{ post.body_html|safe }}</div>
         {% endif %}
-        <div class="flex items-center gap-0.5 -ml-1.5">
+        <div class="flex items-center gap-0 -ml-1.5">
           {% include "votes/partials/save_button.html" with post=post is_saved=is_saved %}
-          {% if user.is_authenticated %}
-            <a href="/c/{{ post.community.slug }}/submit/?crosspost={{ post.id }}"
-               class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gtext-secondary hover:bg-gdoc-hover transition-colors">
-              Share
-            </a>
-          {% endif %}
-          <span class="h-7 px-2 flex items-center text-xs text-gtext-secondary">{{ post.comment_count }} comment{{ post.comment_count|pluralize }}</span>
+          <span class="h-7 px-2 flex items-center text-xs text-gray-500">{{ post.comment_count }} comment{{ post.comment_count|pluralize }}</span>
         </div>
       </div>
     </article>
 
-    <!-- Comment form -->
     {% if user.is_authenticated %}
-    <div class="bg-white border border-gdoc-border rounded-g p-4">
-      <h2 class="font-medium text-sm text-gtext-primary mb-3">Add a comment</h2>
+    <div class="bg-white border border-gray-200 rounded-g p-4">
       <form method="post" action="/posts/{{ post.id }}/comments/create/">
         {% csrf_token %}
-        <div class="border border-gdoc-border rounded-g focus-within:border-gblue-600 focus-within:ring-1 focus-within:ring-gblue-50 transition-all">
-          <textarea name="body_md" rows="4" placeholder="What are your thoughts?"
-                    class="w-full px-3 py-2 text-sm text-gtext-primary placeholder-gtext-disabled resize-y rounded-g border-0 focus:ring-0 focus:outline-none"></textarea>
-        </div>
+        <textarea name="body_md" rows="4" placeholder="What are your thoughts?"
+                  class="w-full px-3 py-2 text-sm text-gray-900 placeholder-gray-400 resize-y rounded-g border border-gray-200 focus:border-primary focus:outline-none transition-colors"></textarea>
         <div class="flex justify-end mt-2">
-          <button type="submit"
-                  class="h-8 px-5 rounded-g bg-gblue-600 text-white text-sm font-medium hover:bg-gblue-700 hover:shadow-glow transition-all">
-            Comment
-          </button>
+          <button type="submit" class="h-8 px-5 rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">Comment</button>
         </div>
       </form>
     </div>
     {% else %}
-    <div class="bg-white border border-gdoc-border rounded-g p-4 text-center">
-      <p class="text-sm text-gtext-secondary"><a href="/accounts/login/" class="text-gblue-600 hover:underline">Log in</a> to join the discussion.</p>
+    <div class="bg-white border border-gray-200 rounded-g p-4 text-center">
+      <p class="text-sm text-gray-500"><a href="/accounts/login/" class="text-primary hover:underline">Log in</a> to join the discussion.</p>
     </div>
     {% endif %}
 
-    <!-- Comments -->
-    <div class="bg-white border border-gdoc-border rounded-g">
-      <div class="flex items-center gap-2 px-4 h-10 border-b border-gdoc-divider">
-        <h2 class="font-medium text-sm text-gtext-primary">Comments</h2>
+    <div class="bg-white border border-gray-200 rounded-g">
+      <div class="flex items-center gap-2 px-4 h-10 border-b border-gray-100">
+        <h2 class="font-semibold text-sm text-gray-900">Comments</h2>
         <div class="flex items-center gap-0.5 ml-4">
-          <a href="?sort=top" class="h-7 px-2.5 flex items-center rounded text-xs font-medium transition-colors {% if sort == 'top' %}text-gblue-600 bg-gblue-50{% else %}text-gtext-secondary hover:bg-gdoc-hover{% endif %}">Top</a>
-          <a href="?sort=new" class="h-7 px-2.5 flex items-center rounded text-xs font-medium transition-colors {% if sort == 'new' %}text-gblue-600 bg-gblue-50{% else %}text-gtext-secondary hover:bg-gdoc-hover{% endif %}">New</a>
+          <a href="?sort=top" class="h-7 px-2.5 flex items-center rounded text-xs font-medium transition-colors {% if sort == 'top' %}text-primary bg-primary-light{% else %}text-gray-500 hover:bg-gray-100{% endif %}">Top</a>
+          <a href="?sort=new" class="h-7 px-2.5 flex items-center rounded text-xs font-medium transition-colors {% if sort == 'new' %}text-primary bg-primary-light{% else %}text-gray-500 hover:bg-gray-100{% endif %}">New</a>
         </div>
       </div>
       <div class="p-4 space-y-4">
         {% if comments %}
-          {% for comment in comments %}
-            {% include "posts/partials/comment.html" with comment=comment %}
-          {% endfor %}
+          {% for comment in comments %}{% include "posts/partials/comment.html" with comment=comment %}{% endfor %}
         {% else %}
-          <p class="text-sm text-gtext-secondary text-center py-4">No comments yet. Be the first!</p>
+          <p class="text-sm text-gray-400 text-center py-4">No comments yet. Be the first!</p>
         {% endif %}
       </div>
     </div>
-
   </div>
 
-  <!-- Sidebar -->
   <aside class="hidden lg:block w-80 shrink-0 space-y-3">
-    <div class="bg-white border border-gdoc-border rounded-g overflow-hidden">
-      <div class="h-16 bg-gradient-to-r from-gblue-600 to-gblue-500"></div>
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="h-12 bg-gradient-to-r from-opal to-teal-600"></div>
       <div class="px-4 pb-4">
-        <div class="flex items-center gap-3 -mt-5 mb-3">
-          <div class="w-10 h-10 rounded-full border-2 border-white bg-gblue-600 flex items-center justify-center text-white font-medium">
+        <div class="flex items-center -mt-4 mb-3">
+          <div class="w-9 h-9 rounded-full border-2 border-white bg-opal flex items-center justify-center text-white font-medium text-sm">
             {{ post.community.name|first|upper }}
           </div>
         </div>
-        <a href="/c/{{ post.community.slug }}/" class="font-medium text-sm text-gtext-primary hover:underline">c/{{ post.community.slug }}</a>
-        <p class="text-xs text-gtext-secondary mt-0.5">{{ post.community.description|truncatechars:120 }}</p>
-        <div class="mt-3">
-          {% include "communities/partials/join_button.html" with community=post.community joined=joined %}
-        </div>
+        <a href="/c/{{ post.community.slug }}/" class="font-semibold text-sm text-gray-900 hover:underline">c/{{ post.community.slug }}</a>
+        <p class="text-xs text-gray-500 mt-0.5">{{ post.community.description|truncatechars:120 }}</p>
+        <div class="mt-3">{% include "communities/partials/join_button.html" with community=post.community joined=joined %}</div>
       </div>
     </div>
-
-    <div class="bg-white border border-gdoc-border rounded-g p-4 space-y-1.5">
-      <h3 class="font-medium text-sm text-gtext-primary mb-2">Thread Info</h3>
-      <div class="text-xs text-gtext-secondary space-y-1">
-        <p>Score: <span class="text-gtext-primary font-medium">{{ post|display_score }}</span></p>
-        <p>Comments: <span class="text-gtext-primary font-medium">{{ post.comment_count }}</span></p>
-        <p>Type: <span class="text-gtext-primary font-medium">{{ post.get_post_type_display }}</span></p>
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <h3 class="font-semibold text-sm text-opal mb-2">Thread Info</h3>
+      <div class="text-xs text-gray-500 space-y-1">
+        <p>Score: <span class="text-gray-900 font-medium">{{ post|display_score }}</span></p>
+        <p>Comments: <span class="text-gray-900 font-medium">{{ post.comment_count }}</span></p>
+        <p>Type: <span class="text-gray-900 font-medium">{{ post.get_post_type_display }}</span></p>
       </div>
-      {% if user.is_authenticated %}
-        <div class="pt-2 space-y-1">
-          <a href="/mod/{{ post.community.slug }}/queue/" class="block text-xs text-gblue-600 hover:underline">Mod queue</a>
-          <a href="/mod/{{ post.community.slug }}/log/" class="block text-xs text-gblue-600 hover:underline">Mod log</a>
-        </div>
-      {% endif %}
     </div>
   </aside>
-
 </div>
 {% endblock %}

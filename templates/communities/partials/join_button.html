@@ -5,12 +5,12 @@
     {% csrf_token %}
     <button type="submit"
             class="w-full h-8 rounded-g text-sm font-medium transition-all
-                   {% if joined %}bg-white text-gblue-600 border border-gblue-600 hover:bg-gblue-50{% else %}bg-gblue-600 text-white hover:bg-gblue-700 hover:shadow-glow{% endif %}">
+                   {% if joined %}bg-white text-opal border border-opal hover:bg-opal-light{% else %}bg-primary text-white hover:bg-primary-hover{% endif %}">
       {% if joined %}Joined{% else %}Join Community{% endif %}
     </button>
   </form>
 {% else %}
-  <a href="/accounts/login/" class="block w-full h-8 flex items-center justify-center rounded-g bg-gblue-600 text-white text-sm font-medium hover:bg-gblue-700 transition-colors">
+  <a href="/accounts/login/" class="block w-full h-8 flex items-center justify-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
     Log in to join
   </a>
 {% endif %}

@@ -1,58 +1,57 @@
 {% load post_tags common_tags %}
-<article class="bg-white border border-gdoc-border rounded-g flex hover:border-gtext-disabled transition-colors group cursor-pointer"
+<article class="bg-white border border-gray-200 rounded-g flex hover:border-gray-300 transition-colors group cursor-pointer"
          data-post-card tabindex="0">
 
-  <!-- Vote column -->
-  <div class="w-10 shrink-0 flex flex-col items-center bg-gdoc-surface rounded-l-g">
+  <!-- Vote column: gray bg, gray arrows -->
+  <div class="w-10 shrink-0 flex flex-col items-center bg-gray-50 rounded-l-g">
     {% include "votes/partials/vote_widget.html" with target=post target_type="post" user_vote=user_votes|get_item:post.id %}
   </div>
 
-  <!-- Content -->
-  <div class="flex-1 py-2 px-3 min-w-0">
+  <div class="flex-1 py-2.5 px-3 min-w-0">
 
-    <!-- Meta line -->
-    <div class="flex items-center gap-1 text-xs text-gtext-secondary flex-wrap">
-      <a href="/c/{{ post.community.slug }}/" class="font-medium text-gtext-primary hover:underline">c/{{ post.community.slug }}</a>
-      <span class="text-gtext-disabled">•</span>
-      <span>u/<a href="/u/{{ post.author.handle|default:'deleted' }}/" class="hover:underline">{{ post.author.handle|default:"[deleted]" }}</a></span>
-      <span class="text-gtext-disabled">•</span>
-      <time>{{ post.created_at|timesince_compact }} ago</time>
+    <!-- Meta: community = OPAL, rest gray -->
+    <div class="flex items-center gap-1.5 text-xs flex-wrap">
+      <a href="/c/{{ post.community.slug }}/"
+         class="font-medium text-opal hover:text-opal-hover hover:underline">
+        c/{{ post.community.slug }}
+      </a>
+      <span class="text-gray-300">·</span>
+      <span class="text-gray-500">u/<a href="/u/{{ post.author.handle|default:'deleted' }}/" class="hover:underline hover:text-gray-700">{{ post.author.handle|default:"[deleted]" }}</a></span>
+      <span class="text-gray-300">·</span>
+      <time class="text-gray-400">{{ post.created_at|timesince_compact }} ago</time>
     </div>
 
     <!-- Title -->
-    <h3 class="mt-0.5 mb-0">
+    <h3 class="mt-1 mb-0">
       <a href="/c/{{ post.community.slug }}/post/{{ post.id }}/{{ post.slug }}/"
-         class="font-sans font-medium text-sm text-gtext-primary group-hover:text-gblue-600 transition-colors leading-snug">
+         class="font-medium text-sm text-gray-900 group-hover:text-primary transition-colors leading-snug">
         {{ post.title }}
       </a>
     </h3>
 
-    <!-- Link URL -->
     {% if post.url %}
       <a href="{{ post.url }}" target="_blank" rel="noopener"
-         class="text-xs text-gblue-600 hover:underline block truncate mt-0.5">
+         class="text-xs text-opal hover:underline block truncate mt-0.5">
         ↗ {{ post.url|truncatechars:60 }}
       </a>
     {% endif %}
 
-    <!-- Text preview -->
     {% if post.body_html and not post.url %}
-      <p class="text-xs text-gtext-secondary mt-1 line-clamp-2 leading-relaxed">
+      <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">
         {{ post.body_html|striptags|truncatechars:180 }}
       </p>
     {% endif %}
 
-    <!-- Thumbnail image -->
     {% if post.image %}
       <div class="mt-1.5 rounded overflow-hidden max-w-[200px]">
         <img src="{{ post.image.url }}" alt="" class="w-full object-cover max-h-[120px]" loading="lazy">
       </div>
     {% endif %}
 
-    <!-- Action bar -->
-    <div class="flex items-center gap-0.5 mt-2 -ml-1.5">
+    <!-- Actions: all gray -->
+    <div class="flex items-center gap-0 mt-2 -ml-1.5">
       <a href="/c/{{ post.community.slug }}/post/{{ post.id }}/{{ post.slug }}/"
-         class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gtext-secondary hover:bg-gdoc-hover transition-colors">
+         class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
           <path d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/>
         </svg>
@@ -61,7 +60,7 @@
       {% include "votes/partials/save_button.html" with post=post is_saved=saved_posts|contains:post.id %}
       {% if user.is_authenticated %}
         <a href="/c/{{ post.community.slug }}/submit/?crosspost={{ post.id }}"
-           class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gtext-secondary hover:bg-gdoc-hover transition-colors">
+           class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
             <path d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"/>
           </svg>
@@ -69,6 +68,5 @@
         </a>
       {% endif %}
     </div>
-
   </div>
 </article>

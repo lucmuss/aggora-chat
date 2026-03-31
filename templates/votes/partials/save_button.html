@@ -1,7 +1,7 @@
 <button hx-post="/save/{{ post.id }}/"
         hx-target="this"
         hx-swap="outerHTML"
-        class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gtext-secondary hover:bg-gdoc-hover transition-colors">
+        class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
   <svg class="w-3.5 h-3.5" fill="{% if is_saved %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
     <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"/>
   </svg>

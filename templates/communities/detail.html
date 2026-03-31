@@ -2,99 +2,85 @@
 {% block title %}c/{{ community.slug }} — {{ APP_NAME }}{% endblock %}
 {% block content %}
 <div class="lg:flex lg:gap-6">
-
-  <!-- Feed column -->
   <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
-
-    <!-- Community header -->
-    <div class="bg-white border border-gdoc-border rounded-g overflow-hidden">
-      <div class="h-20 bg-gradient-to-r from-gblue-600 to-gblue-500"></div>
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="h-20 bg-gradient-to-r from-opal to-teal-600"></div>
       <div class="px-4 pb-4">
-        <div class="flex items-center gap-3 -mt-7 mb-2">
-          <div class="w-14 h-14 rounded-full border-4 border-white bg-gblue-600 flex items-center justify-center text-white text-xl font-medium shadow-sm">
+        <div class="flex items-end justify-between -mt-7 mb-2">
+          <div class="w-14 h-14 rounded-full border-4 border-white bg-opal flex items-center justify-center text-white text-xl font-medium shadow-sm">
             {{ community.name|first|upper }}
           </div>
         </div>
         <div class="flex items-start justify-between gap-3">
           <div>
-            <h1 class="font-sans font-medium text-lg text-gtext-primary">{{ community.title }}</h1>
-            <p class="text-xs text-gtext-secondary">c/{{ community.slug }}</p>
+            <h1 class="font-semibold text-lg text-gray-900">{{ community.title }}</h1>
+            <p class="text-xs text-gray-400">c/{{ community.slug }}</p>
             {% if community.description %}
-              <p class="text-sm text-gtext-secondary mt-1.5 leading-relaxed">{{ community.description }}</p>
+              <p class="text-sm text-gray-500 mt-1.5 leading-relaxed">{{ community.description }}</p>
             {% endif %}
           </div>
-          <div class="shrink-0 space-y-2">
+          <div class="shrink-0 space-y-2 mt-1">
             {% include "communities/partials/join_button.html" with community=community joined=joined %}
             {% if user.is_authenticated %}
               <a href="/c/{{ community.slug }}/submit/"
-                 class="w-full h-8 flex items-center justify-center rounded-g border border-gdoc-border text-sm font-medium text-gtext-secondary hover:bg-gdoc-hover transition-colors">
-                Create post
+                 class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                New post
               </a>
             {% endif %}
           </div>
         </div>
-        <div class="flex items-center gap-6 mt-3 pt-3 border-t border-gdoc-divider">
-          <div><p class="text-sm font-medium text-gtext-primary">{{ member_count }}</p><p class="text-xs text-gtext-secondary">Members</p></div>
-          <div><p class="text-xs text-gtext-secondary">Created {{ community.created_at|date:"M d, Y" }}</p></div>
+        <div class="flex items-center gap-6 mt-3 pt-3 border-t border-gray-100">
+          <div><p class="text-sm font-semibold text-gray-900">{{ member_count }}</p><p class="text-xs text-gray-400">Members</p></div>
+          <div><p class="text-xs text-gray-400">Created {{ community.created_at|date:"M d, Y" }}</p></div>
         </div>
       </div>
     </div>
-
     {% include "feeds/partials/sort_tabs.html" with sort=sort %}
-    <div id="feed-container" class="space-y-2">
-      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Write the first post to start this community's feed." %}
+    <div id="feed-container" class="space-y-3">
+      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Write the first post to start this community." %}
     </div>
   </div>
 
-  <!-- Sidebar -->
   <aside class="hidden lg:block w-80 shrink-0 space-y-3">
-
     {% if community.sidebar_html %}
-    <div class="bg-white border border-gdoc-border rounded-g p-4">
-      <h2 class="font-medium text-sm text-gtext-primary mb-2">About</h2>
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <h2 class="font-semibold text-sm text-opal mb-2">About</h2>
       <div class="prose text-xs">{{ community.sidebar_html|safe }}</div>
     </div>
     {% endif %}
-
-    <!-- Community settings -->
-    <div class="bg-white border border-gdoc-border rounded-g p-4">
-      <h2 class="font-medium text-sm text-gtext-primary mb-2">Community</h2>
-      <div class="space-y-1 text-xs text-gtext-secondary">
-        <p>Text posts: <span class="text-gtext-primary">{{ community.allow_text_posts|yesno:"✓,✗" }}</span></p>
-        <p>Link posts: <span class="text-gtext-primary">{{ community.allow_link_posts|yesno:"✓,✗" }}</span></p>
-        <p>Polls: <span class="text-gtext-primary">{{ community.allow_polls|yesno:"✓,✗" }}</span></p>
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <h2 class="font-semibold text-sm text-opal mb-2">Community Settings</h2>
+      <div class="space-y-1 text-xs text-gray-500">
+        <p>Text posts: {{ community.allow_text_posts|yesno:"✓,✗" }}</p>
+        <p>Link posts: {{ community.allow_link_posts|yesno:"✓,✗" }}</p>
+        <p>Polls: {{ community.allow_polls|yesno:"✓,✗" }}</p>
       </div>
     </div>
-
-    <!-- Rules -->
     {% if community.rules.all %}
-    <div class="bg-white border border-gdoc-border rounded-g overflow-hidden">
-      <div class="px-4 py-3 border-b border-gdoc-divider">
-        <h2 class="font-medium text-sm text-gtext-primary">Rules</h2>
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100">
+        <h2 class="font-semibold text-sm text-opal">Rules</h2>
       </div>
-      <div class="divide-y divide-gdoc-divider">
+      <div class="divide-y divide-gray-100">
         {% for rule in community.rules.all %}
           <div class="px-4 py-2.5">
-            <p class="text-xs font-medium text-gtext-primary">{{ forloop.counter }}. {{ rule.title }}</p>
-            {% if rule.description %}<p class="text-xs text-gtext-secondary mt-0.5">{{ rule.description }}</p>{% endif %}
+            <p class="text-xs font-medium text-gray-900">{{ forloop.counter }}. {{ rule.title }}</p>
+            {% if rule.description %}<p class="text-xs text-gray-500 mt-0.5">{{ rule.description }}</p>{% endif %}
           </div>
         {% endfor %}
       </div>
     </div>
     {% endif %}
-
     {% if user.is_authenticated %}
-    <div class="bg-white border border-gdoc-border rounded-g p-4">
-      <h2 class="font-medium text-sm text-gtext-primary mb-2">Moderation</h2>
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <h2 class="font-semibold text-sm text-opal mb-2">Moderation</h2>
       <div class="space-y-1">
-        <a href="/mod/{{ community.slug }}/queue/" class="block text-xs text-gblue-600 hover:underline">Mod queue</a>
-        <a href="/mod/{{ community.slug }}/log/" class="block text-xs text-gblue-600 hover:underline">Mod log</a>
-        <a href="/mod/{{ community.slug }}/mail/" class="block text-xs text-gblue-600 hover:underline">Mod mail</a>
-        <a href="/c/{{ community.slug }}/settings/" class="block text-xs text-gblue-600 hover:underline">Settings</a>
+        <a href="/mod/{{ community.slug }}/queue/" class="block text-xs text-opal hover:underline">Mod queue</a>
+        <a href="/mod/{{ community.slug }}/log/" class="block text-xs text-opal hover:underline">Mod log</a>
+        <a href="/c/{{ community.slug }}/settings/" class="block text-xs text-opal hover:underline">Settings</a>
       </div>
     </div>
     {% endif %}
-
   </aside>
 </div>
 {% endblock %}

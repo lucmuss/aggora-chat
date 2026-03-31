@@ -1,62 +1,47 @@
 {% load common_tags %}
 <div class="group" id="comment-{{ comment.id }}">
   <div class="flex">
-    <!-- Thread line (for nested) -->
     {% if comment.depth > 0 %}
       <div class="w-5 shrink-0 flex justify-center">
-        <div class="w-px bg-gdoc-border group-hover:bg-gblue-200 transition-colors mt-1"></div>
+        <div class="w-px bg-gray-200 group-hover:bg-opal-accent transition-colors mt-1"></div>
       </div>
     {% endif %}
-
-    <!-- Comment body -->
     <div class="flex-1 min-w-0 py-2 {% if comment.depth > 0 %}pl-1{% endif %}">
-      <!-- Header -->
       <div class="flex items-center gap-1.5 text-xs mb-1">
-        <a href="/u/{{ comment.author.handle|default:'deleted' }}/"
-           class="font-medium text-gtext-primary hover:underline">
+        <a href="/u/{{ comment.author.handle|default:'deleted' }}/" class="font-medium text-gray-900 hover:underline">
           u/{{ comment.author.handle|default:"[deleted]" }}
         </a>
-        <span class="text-gtext-disabled">•</span>
-        <span class="text-gtext-secondary">{{ comment.score }} point{{ comment.score|pluralize }}</span>
-        <span class="text-gtext-disabled">•</span>
-        <time class="text-gtext-secondary">{{ comment.created_at|timesince_compact }} ago</time>
+        <span class="text-gray-300">·</span>
+        <span class="text-gray-500">{{ comment.score }} point{{ comment.score|pluralize }}</span>
+        <span class="text-gray-300">·</span>
+        <time class="text-gray-400">{{ comment.created_at|timesince_compact }} ago</time>
       </div>
-
-      <!-- Body -->
       <div class="prose text-sm">{{ comment.body_html|safe }}</div>
-
-      <!-- Actions -->
       <div class="flex items-center gap-0.5 mt-1.5 -ml-1.5">
         <button hx-post="/vote/"
                 hx-target="closest .vote-widget"
                 hx-swap="outerHTML"
                 hx-vals='{"comment_id":"{{ comment.id }}","value":"1"}'
                 data-vote-up
-                class="w-6 h-6 flex items-center justify-center rounded hover:bg-gblue-50 transition-colors {% if comment_votes|get_item:comment.id == 1 %}text-gblue-600{% else %}text-gtext-disabled{% endif %}">
+                class="w-6 h-6 flex items-center justify-center rounded transition-colors {% if comment_votes|get_item:comment.id == 1 %}text-primary{% else %}text-gray-400 hover:text-primary hover:bg-primary-light{% endif %}">
           <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4 4 12h5v8h6v-8h5z"/></svg>
         </button>
-        <span class="text-xs font-medium text-gtext-secondary min-w-[18px] text-center">{{ comment.score }}</span>
+        <span class="text-xs font-medium text-gray-600 min-w-[18px] text-center">{{ comment.score }}</span>
         <button hx-post="/vote/"
                 hx-target="closest .vote-widget"
                 hx-swap="outerHTML"
                 hx-vals='{"comment_id":"{{ comment.id }}","value":"-1"}'
                 data-vote-down
-                class="w-6 h-6 flex items-center justify-center rounded hover:bg-gdoc-hover transition-colors {% if comment_votes|get_item:comment.id == -1 %}text-gtext-primary{% else %}text-gtext-disabled{% endif %}">
+                class="w-6 h-6 flex items-center justify-center rounded transition-colors {% if comment_votes|get_item:comment.id == -1 %}text-gray-700{% else %}text-gray-400 hover:text-gray-600 hover:bg-gray-100{% endif %}">
           <svg class="w-3 h-3 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4 4 12h5v8h6v-8h5z"/></svg>
         </button>
         {% if user.is_authenticated %}
-          <button class="h-6 px-2 flex items-center rounded text-xs font-medium text-gtext-secondary hover:bg-gdoc-hover transition-colors ml-1">
-            Reply
-          </button>
+          <button class="h-6 px-2 flex items-center rounded text-xs font-medium text-gray-500 hover:bg-gray-100 transition-colors ml-1">Reply</button>
         {% endif %}
       </div>
-
-      <!-- Children -->
       {% if comment.children %}
-        <div class="mt-2 space-y-2 border-l-2 border-gdoc-divider pl-3">
-          {% for child in comment.children %}
-            {% include "posts/partials/comment.html" with comment=child %}
-          {% endfor %}
+        <div class="mt-2 space-y-2 border-l-2 border-gray-100 pl-3">
+          {% for child in comment.children %}{% include "posts/partials/comment.html" with comment=child %}{% endfor %}
         </div>
       {% endif %}
     </div>
