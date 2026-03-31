@@ -6,6 +6,7 @@ services:
         INSTALL_DEV: "false"
     command: gunicorn config.wsgi:application -w ${GUNICORN_WORKERS:-3} -b ${GUNICORN_BIND:-0.0.0.0:${PORT:-8000}}
     restart: unless-stopped
+    env_file: .env
     environment:
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.prod}
       DJANGO_ENV: ${DJANGO_ENV:-production}
