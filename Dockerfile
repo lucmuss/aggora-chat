@@ -12,6 +12,9 @@ RUN pip install --no-cache-dir -r requirements/prod.txt \
 
 COPY . .
 
+RUN DJANGO_ENV=production DJANGO_SECRET_KEY=build-dummy-key DATABASE_URL=sqlite:///tmp/dummy.db \
+    python manage.py collectstatic --noinput
+
 EXPOSE 8000
 
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

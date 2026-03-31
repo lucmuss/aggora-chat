@@ -16,3 +16,4 @@ python-dotenv>=1.0
 requests>=2.32
 PyJWT>=2.10
 cryptography>=45.0
+whitenoise>=6.8
