@@ -1,12 +1,15 @@
 {% load static common_tags %}
 <!DOCTYPE html>
 <html lang="en" class="{% if request.COOKIES.agora_theme == 'dark' %}dark{% endif %}">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500&family=Roboto+Mono:wght@400&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500&family=Roboto+Mono:wght@400&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -15,8 +18,8 @@
       theme: {
         extend: {
           colors: {
-            primary: { DEFAULT:'#2563EB', hover:'#1D4ED8', light:'#EFF6FF', muted:'#DBEAFE' },
-            opal:    { DEFAULT:'#0D9488', hover:'#0F766E', light:'#F0FDFA', muted:'#CCFBF1', accent:'#99F6E4' },
+            primary: { DEFAULT: '#2563EB', hover: '#1D4ED8', light: '#EFF6FF', muted: '#DBEAFE' },
+            opal: { DEFAULT: '#0D9488', hover: '#0F766E', light: '#F0FDFA', muted: '#CCFBF1', accent: '#99F6E4' },
           },
           fontFamily: {
             sans: ['"Google Sans"', 'Roboto', 'Arial', 'sans-serif'],
@@ -33,16 +36,18 @@
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="{% static 'js/app.js' %}" defer></script>
 </head>
+
 <body class="bg-gray-50 text-gray-900 font-sans text-sm antialiased min-h-screen">
 
   {% include "partials/header.html" %}
 
   {% if messages %}
-    <div class="max-w-[1200px] mx-auto px-4 pt-3 space-y-1">
-      {% for message in messages %}
-        <div class="px-4 py-2.5 rounded-g bg-primary-light border border-primary-muted text-sm text-primary">{{ message }}</div>
-      {% endfor %}
+  <div class="max-w-[1200px] mx-auto px-4 pt-3 space-y-1">
+    {% for message in messages %}
+    <div class="px-4 py-2.5 rounded-g bg-primary-light border border-primary-muted text-sm text-primary">{{ message }}
     </div>
+    {% endfor %}
+  </div>
   {% endif %}
 
   <div class="max-w-[1200px] mx-auto px-4 py-4">
@@ -50,8 +55,17 @@
   </div>
 
   <div id="shortcut-status"
-       class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-g shadow-glow bg-gray-900 text-white text-xs font-medium animate-slide-up"
-       aria-live="polite"></div>
+    class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-g shadow-glow bg-gray-900 text-white text-xs font-medium animate-slide-up"
+    aria-live="polite"></div>
 
+  <script>
+    document.body.addEventListener('htmx:configRequest', (event) => {
+      const match = document.cookie.match(new RegExp('(^| )csrftoken=([^;]+)'));
+      if (match) {
+        event.detail.headers['X-CSRFToken'] = match[2];
+      }
+    });
+  </script>
 </body>
+
 </html>

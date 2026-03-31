@@ -35,6 +35,8 @@ ROLE_PERMISSIONS = {
 
 
 def has_mod_permission(user, community, permission):
+    if user.is_staff or user.is_superuser:
+        return True
     membership = CommunityMembership.objects.filter(user=user, community=community).first()
     if not membership:
         return False
