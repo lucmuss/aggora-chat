@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Moderation Log{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="stack">
+    <article class="community-hero">
+      <div class="community-hero__meta">
+        <span>Audit log</span>
+        <span>c/{{ community.slug }}</span>
+      </div>
+      <h1>Moderation log</h1>
+    </article>
+
+    <section class="card">
+      {% if actions %}
+        <div class="stack">
+          {% for action in actions %}
+            <article class="card">
+              <div class="card__meta">
+                <span>{{ action.created_at }}</span>
+                <span>{{ action.action_type }}</span>
+                <span>by {{ action.moderator.handle|default:"system" }}</span>
+              </div>
+              <p>{{ action.reason_text|default:"No extra reason supplied." }}</p>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p>No moderation actions yet.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Queue</h3>
+      <p><a href="/mod/{{ community.slug }}/queue/">Open mod queue</a></p>
+    </section>
+  </aside>
+</section>
+{% endblock %}

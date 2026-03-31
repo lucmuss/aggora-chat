@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Search{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="stack">
+    <article class="community-hero">
+      <div class="community-hero__meta">
+        <span>Search</span>
+        {% if query %}<span>{{ query }}</span>{% endif %}
+      </div>
+      <h1>Search Agora</h1>
+      <form method="get" action="/search/" class="form stack">
+        <div class="field">
+          <label for="search_query">Query</label>
+          <input id="search_query" type="search" name="q" value="{{ query }}" placeholder="author:alice flair:news community:python safety">
+        </div>
+        <div class="field">
+          <label for="search_sort">Sort</label>
+          <select id="search_sort" name="sort">
+            <option value="relevance" {% if sort == 'relevance' %}selected{% endif %}>Relevance</option>
+            <option value="new" {% if sort == 'new' %}selected{% endif %}>New</option>
+            <option value="top" {% if sort == 'top' %}selected{% endif %}>Top</option>
+          </select>
+        </div>
+        <button type="submit" class="button button-primary">Search</button>
+      </form>
+    </article>
+
+    {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No search results" empty_copy="Try a broader term or use operators like author:, flair:, community:, or type:." %}
+  </div>
+
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Operators</h3>
+      <ul class="list">
+        <li><code>author:handle</code></li>
+        <li><code>flair:name</code></li>
+        <li><code>community:slug</code></li>
+        <li><code>subreddit:slug</code></li>
+        <li><code>type:text</code></li>
+      </ul>
+    </section>
+  </aside>
+</section>
+{% endblock %}

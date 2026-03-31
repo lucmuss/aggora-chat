@@ -1,0 +1,53 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        INSTALL_DEV: "true"
+    command: python manage.py runserver 0.0.0.0:${PORT:-8000}
+    ports:
+      - "${APP_HOST_PORT:-18080}:${PORT:-8000}"
+    depends_on:
+      - db
+      - redis
+    environment:
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.dev}
+      DJANGO_ENV: ${DJANGO_ENV:-development}
+      PORT: ${PORT:-8000}
+      POSTGRES_DB: ${POSTGRES_DB:-agora}
+      POSTGRES_USER: ${POSTGRES_USER:-agora}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agora_dev}
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      REDIS_CACHE_URL: ${REDIS_CACHE_URL:-redis://redis:6379/1}
+      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
+      SEARCH_BACKEND: ${SEARCH_BACKEND:-sql}
+      SEARCH_INDEX_ENABLED: ${SEARCH_INDEX_ENABLED:-0}
+    volumes:
+      - .:/app
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agora}
+      POSTGRES_USER: ${POSTGRES_USER:-agora}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agora_dev}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+
+  elasticsearch:
+    image: elasticsearch:8.15.0
+    profiles: ["search"]
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms512m -Xmx512m}
+    ports:
+      - "${ELASTICSEARCH_HOST_PORT:-9200}:9200"
+
+volumes:
+  pgdata:

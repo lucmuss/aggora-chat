@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Community Settings{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="card card-form">
+    <p class="eyebrow">Community settings</p>
+    <h1>Configure c/{{ community.slug }}</h1>
+    <form method="post" enctype="multipart/form-data" class="form stack">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<div class="field__errors">{{ field.errors }}</div>{% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="button button-primary">Save settings</button>
+    </form>
+  </div>
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Moderation tools</h3>
+      <ul class="list">
+        <li><a href="/mod/{{ community.slug }}/removal-reasons/">Removal reasons</a></li>
+        <li><a href="/mod/{{ community.slug }}/mail/">Mod Mail</a></li>
+      </ul>
+    </section>
+  </aside>
+</section>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load post_tags common_tags %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="stack">
+    <article class="post-shell">
+      <div class="post-shell__votes">
+        {% include "votes/partials/vote_widget.html" with target=post target_type="post" user_vote=post_user_vote %}
+      </div>
+      <div class="post-shell__body">
+        <div class="card__meta">
+          <a href="/c/{{ post.community.slug }}/">c/{{ post.community.slug }}</a>
+          <span>posted by u/{{ post.author.handle|default:"deleted" }}</span>
+          <span>{{ post.created_at|timesince_compact }} ago</span>
+        </div>
+        <h1 class="post-title">{{ post.title }}</h1>
+        {% if post.crosspost_parent %}
+          <div class="notice">
+            Crossposted from
+            <a href="/c/{{ post.crosspost_parent.community.slug }}/post/{{ post.crosspost_parent.id }}/{{ post.crosspost_parent.slug }}/">
+              c/{{ post.crosspost_parent.community.slug }} by u/{{ post.crosspost_parent.author.handle|default:"deleted" }}
+            </a>.
+          </div>
+        {% endif %}
+        {% if post.url %}
+          <p><a href="{{ post.url }}" target="_blank" rel="noopener">{{ post.url }}</a></p>
+        {% endif %}
+        {% if post.image %}
+          <p><img src="{{ post.image.url }}" alt="" class="post-image"></p>
+        {% endif %}
+        {% if post.post_type == "poll" and post.poll %}
+          <section class="card card-accent poll-card">
+            <h3>Poll</h3>
+            <div class="stack stack-sm">
+              {% for option in post.poll.options.all %}
+                <form method="post" action="/posts/{{ post.id }}/poll-vote/" class="poll-option">
+                  {% csrf_token %}
+                  <input type="hidden" name="option_id" value="{{ option.id }}">
+                  <button type="submit" class="button {% if poll_vote and poll_vote.option_id == option.id %}button-primary{% else %}button-secondary{% endif %}">
+                    {{ option.label }}
+                  </button>
+                  <span>{{ option.votes.count }} vote{{ option.votes.count|pluralize }}</span>
+                </form>
+              {% endfor %}
+            </div>
+          </section>
+        {% endif %}
+        {% if post.body_html %}
+          <div class="prose">{{ post.body_html|safe }}</div>
+        {% endif %}
+        <div class="post-actions">
+          {% include "votes/partials/save_button.html" with post=post is_saved=is_saved %}
+          <span>{{ post.comment_count }} comment{{ post.comment_count|pluralize }}</span>
+          {% if user.is_authenticated %}
+            <a href="/c/{{ post.community.slug }}/submit/?crosspost={{ post.id }}">Crosspost</a>
+          {% endif %}
+        </div>
+        {% if user.is_authenticated %}
+        <form method="post" action="/report/" class="form stack">
+          {% csrf_token %}
+          <input type="hidden" name="post_id" value="{{ post.id }}">
+          <div class="field">
+            <label for="report_reason_post">Report post</label>
+            <input id="report_reason_post" type="text" name="reason" placeholder="Reason">
+          </div>
+          <div class="field">
+            <label for="report_details_post">Details</label>
+            <textarea id="report_details_post" name="details" rows="2"></textarea>
+          </div>
+          <button type="submit" class="button button-secondary button-small">Submit report</button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+
+    <section class="card card-form">
+      <h2>Add a comment</h2>
+      {% if user.is_authenticated %}
+        <form method="post" action="/posts/{{ post.id }}/comments/create/" class="form stack">
+          {% csrf_token %}
+          <div class="field">
+            <label for="id_body_md">Comment</label>
+            <textarea id="id_body_md" name="body_md" rows="5"></textarea>
+          </div>
+          <button type="submit" class="button button-primary">Post comment</button>
+        </form>
+      {% else %}
+        <p><a href="/accounts/login/">Log in</a> to join the discussion.</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <div class="section-heading">
+        <h2>Comments</h2>
+        <p>Sorted by {{ sort|title }}</p>
+      </div>
+      <div class="comment-sort-tabs">
+        <a href="?sort=top" class="{% if sort == 'top' %}active{% endif %}">Top</a>
+        <a href="?sort=new" class="{% if sort == 'new' %}active{% endif %}">New</a>
+      </div>
+      {% if comments %}
+        <div class="stack">
+          {% for comment in comments %}
+            {% include "posts/partials/comment.html" with comment=comment %}
+          {% endfor %}
+        </div>
+      {% else %}
+        <p>No comments yet.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Thread status</h3>
+      <ul class="list">
+        <li>Score: {{ post|display_score }}</li>
+        <li>Comments: {{ post.comment_count }}</li>
+        <li>Locked: {{ post.is_locked|yesno:"yes,no" }}</li>
+        <li>Type: {{ post.get_post_type_display }}</li>
+      </ul>
+    </section>
+    {% if user.is_authenticated %}
+    <section class="card">
+      <h3>Moderation</h3>
+      <ul class="list">
+        <li><a href="/mod/{{ post.community.slug }}/queue/">Open mod queue</a></li>
+        <li><a href="/mod/{{ post.community.slug }}/log/">Open mod log</a></li>
+      </ul>
+    </section>
+    {% endif %}
+  </aside>
+</section>
+{% endblock %}

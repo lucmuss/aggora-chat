@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Popular{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="stack">
+    <article class="community-hero">
+      <div class="community-hero__meta">
+        <span>Global feed</span>
+        <span>{{ posts|length }} visible thread{{ posts|length|pluralize }}</span>
+      </div>
+      <h1>Popular on Agora</h1>
+      <p class="lede">A cross-community view of the most visible posts right now.</p>
+    </article>
+    {% include "feeds/partials/sort_tabs.html" with sort=sort %}
+    {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No popular posts yet" empty_copy="As communities grow, this feed will surface the strongest threads globally." %}
+  </div>
+
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Leading communities</h3>
+      <ul class="list list-tight">
+        {% for community in communities %}
+          <li><a href="/c/{{ community.slug }}/">c/{{ community.slug }}</a> — {{ community.subscriber_count }} member{{ community.subscriber_count|pluralize }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+    <section class="card">
+      <h3>Reading Popular</h3>
+      <div class="key-points">
+        <div class="key-point">
+          <strong>Cross-community ranking</strong>
+          <p>This view highlights the strongest threads regardless of where they started.</p>
+        </div>
+        <div class="key-point">
+          <strong>Switch sort modes</strong>
+          <p>Use the tabs to compare momentum, recency, and total score.</p>
+        </div>
+      </div>
+    </section>
+  </aside>
+</section>
+{% endblock %}

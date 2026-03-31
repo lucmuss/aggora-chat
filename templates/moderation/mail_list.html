@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Mod Mail{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="stack">
+    <article class="community-hero">
+      <div class="community-hero__meta">
+        <span>Mod Mail</span>
+        <span>c/{{ community.slug }}</span>
+      </div>
+      <h1>Shared moderator inbox</h1>
+      <div class="post-actions">
+        <a href="/mod/{{ community.slug }}/mail/new/" class="button button-primary">New thread</a>
+      </div>
+    </article>
+    {% if threads %}
+      <div class="stack">
+        {% for thread in threads %}
+          <article class="card">
+            <div class="card__meta">
+              <span>{{ thread.created_at }}</span>
+              <span>by {{ thread.created_by.handle|default:"unknown" }}</span>
+              <span>{{ thread.messages.count }} message{{ thread.messages.count|pluralize }}</span>
+            </div>
+            <h3><a href="/mod/{{ community.slug }}/mail/{{ thread.id }}/">{{ thread.subject }}</a></h3>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card card-empty">
+        <h3>No mod mail threads</h3>
+        <p>No one has opened a thread yet.</p>
+      </div>
+    {% endif %}
+  </div>
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Related tools</h3>
+      <ul class="list">
+        <li><a href="/mod/{{ community.slug }}/queue/">Mod queue</a></li>
+        <li><a href="/mod/{{ community.slug }}/log/">Mod log</a></li>
+      </ul>
+    </section>
+  </aside>
+</section>
+{% endblock %}

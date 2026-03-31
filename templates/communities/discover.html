@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Discover Communities{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="stack">
+    <article class="community-hero">
+      <div class="community-hero__meta">
+        <span>Discovery</span>
+        <span>{{ communities|length }} result{{ communities|length|pluralize }}</span>
+      </div>
+      <h1>Browse communities</h1>
+      <p class="lede">Search by topic, values, or ongoing projects and jump straight into the communities shaping the feed.</p>
+      <form method="get" action="/c/" class="form stack">
+        <div class="field">
+          <label for="community_search">Search communities</label>
+          <input id="community_search" type="search" name="q" value="{{ query }}" placeholder="relationships, books, policy">
+        </div>
+        <button type="submit" class="button button-primary">Search communities</button>
+      </form>
+    </article>
+
+    {% if communities %}
+      <div class="stack">
+        {% for community in communities %}
+          <article class="card card-hover">
+            <div class="card__meta card__meta-spread">
+              <span>c/{{ community.slug }}</span>
+              <span>{{ community.subscriber_count }} member{{ community.subscriber_count|pluralize }}</span>
+              <span>{{ community.rule_count }} rule{{ community.rule_count|pluralize }}</span>
+            </div>
+            <h3><a href="/c/{{ community.slug }}/">{{ community.title }}</a></h3>
+            <p>{{ community.description|default:"No description yet." }}</p>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card card-empty">
+        <h3>No communities found</h3>
+        <p>Try a broader search term.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Discovery paths</h3>
+      <ul class="list list-tight">
+        <li><a href="/popular/">Popular feed</a></li>
+        <li><a href="/search/">Search posts</a></li>
+      </ul>
+    </section>
+    <section class="card">
+      <h3>What makes a strong community</h3>
+      <div class="key-points">
+        <div class="key-point">
+          <strong>Clear rules</strong>
+          <p>Communities with explicit moderation guidance are easier to join and scale.</p>
+        </div>
+        <div class="key-point">
+          <strong>Readable sidebars</strong>
+          <p>Good descriptions and wiki pages turn discovery into participation.</p>
+        </div>
+      </div>
+    </section>
+  </aside>
+</section>
+{% endblock %}

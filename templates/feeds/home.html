@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}{{ APP_NAME }} Home{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero__content">
+    <p class="eyebrow">Pseudonymous communities with audit-ready moderation</p>
+    <h1>{{ APP_NAME }} starts with communities, not profiles.</h1>
+    <p class="lede">
+      Reddit-like density, transparent moderation, and pseudonymous discussion now live in one warm, fast, server-rendered interface.
+    </p>
+    <div class="hero-inline-actions">
+      <a class="button button-primary" href="/c/create/">Create a community</a>
+      <a class="button button-secondary" href="/popular/">Browse popular threads</a>
+      {% if not user.is_authenticated %}
+        <a class="button" href="/accounts/login/">Sign in</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="hero__panel">
+    <div class="metric-grid">
+      <article class="metric-card">
+        <strong>{{ communities|length }}</strong>
+        <span>fresh communities</span>
+      </article>
+      <article class="metric-card">
+        <strong>{{ posts|length }}</strong>
+        <span>threads in this view</span>
+      </article>
+      <article class="metric-card">
+        <strong>Queue-first</strong>
+        <span>moderation workflow</span>
+      </article>
+      <article class="metric-card">
+        <strong>/ j k a z</strong>
+        <span>desktop shortcuts</span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="grid grid-main">
+  <div class="stack">
+    {% include "feeds/partials/sort_tabs.html" with sort=sort %}
+    <div id="feed-container">
+      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Create the first post in one of your communities to activate the feed." %}
+    </div>
+  </div>
+
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Fresh communities</h3>
+      {% if communities %}
+        <ul class="list list-tight">
+          {% for community in communities|slice:":6" %}
+            <li><a href="/c/{{ community.slug }}/">c/{{ community.slug }}</a> — {{ community.subscriber_count }} member{{ community.subscriber_count|pluralize }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No communities yet.</p>
+      {% endif %}
+    </section>
+    <section class="card">
+      <h3>How This Feed Works</h3>
+      <div class="key-points">
+        <div class="key-point">
+          <strong>Votes shape visibility</strong>
+          <p>Hot, new, top, and rising all read from the same post graph.</p>
+        </div>
+        <div class="key-point">
+          <strong>Communities stay local</strong>
+          <p>Each community can set post formats, moderation behavior, and its own wiki.</p>
+        </div>
+        <div class="key-point">
+          <strong>Agents stay accountable</strong>
+          <p>Queue-first moderation and audit logs keep automated actions explainable.</p>
+        </div>
+      </div>
+    </section>
+  </aside>
+</section>
+{% endblock %}

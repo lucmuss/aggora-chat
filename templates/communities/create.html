@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Create Community{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="card card-form">
+    <p class="eyebrow">Community setup</p>
+    <h1>Create a new community</h1>
+    <p class="lede">Give your topic a stable home with a slug, description, and moderation-ready defaults.</p>
+    <form method="post" enctype="multipart/form-data" class="form stack">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      {% for field in form %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<p class="field__help">{{ field.help_text }}</p>{% endif %}
+          {% if field.errors %}<div class="field__errors">{{ field.errors }}</div>{% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="button button-primary">Create community</button>
+    </form>
+  </div>
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Phase 1 defaults</h3>
+      <ul class="list">
+        <li>Public communities by default</li>
+        <li>Markdown sidebar support</li>
+        <li>Creator becomes owner automatically</li>
+      </ul>
+    </section>
+  </aside>
+</section>
+{% endblock %}

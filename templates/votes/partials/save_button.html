@@ -1,0 +1,6 @@
+<button hx-post="/save/{{ post.id }}/"
+        hx-target="this"
+        hx-swap="outerHTML"
+        class="button button-secondary button-small">
+  {% if is_saved %}Saved{% else %}Save{% endif %}
+</button>

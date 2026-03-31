@@ -1,0 +1,28 @@
+{% load static common_tags %}
+<!DOCTYPE html>
+<html lang="en" class="{% if request.COOKIES.agora_theme == 'dark' %}theme-dark{% endif %}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
+</head>
+<body>
+  <div class="backdrop-orb backdrop-orb--one" aria-hidden="true"></div>
+  <div class="backdrop-orb backdrop-orb--two" aria-hidden="true"></div>
+  {% include "partials/header.html" %}
+  <main class="shell">
+    {% if messages %}
+      <section class="stack stack-sm">
+        {% for message in messages %}
+          <div class="notice">{{ message }}</div>
+        {% endfor %}
+      </section>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <div id="shortcut-status" class="shortcut-status" aria-live="polite"></div>
+</body>
+</html>

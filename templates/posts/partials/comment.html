@@ -1,0 +1,29 @@
+{% load common_tags %}
+<article class="comment depth-{{ comment.depth }}">
+  <div class="comment__header">
+    <span class="comment__author">u/{{ comment.author.handle|default:"deleted" }}</span>
+    <span>{{ comment.score }} points</span>
+  </div>
+  <div class="comment__body prose">{{ comment.body_html|safe }}</div>
+  <div class="comment__actions">
+    {% include "votes/partials/vote_widget.html" with target=comment target_type="comment" user_vote=comment_votes|get_item:comment.id %}
+  </div>
+  {% if user.is_authenticated %}
+  <form method="post" action="/report/" class="form stack">
+    {% csrf_token %}
+    <input type="hidden" name="comment_id" value="{{ comment.id }}">
+    <div class="field">
+      <label for="comment_report_{{ comment.id }}">Report comment</label>
+      <input id="comment_report_{{ comment.id }}" type="text" name="reason" placeholder="Reason">
+    </div>
+    <button type="submit" class="button button-secondary button-small">Report</button>
+  </form>
+  {% endif %}
+  {% if comment.children %}
+    <div class="comment__children">
+      {% for child in comment.children %}
+        {% include "posts/partials/comment.html" with comment=child %}
+      {% endfor %}
+    </div>
+  {% endif %}
+</article>

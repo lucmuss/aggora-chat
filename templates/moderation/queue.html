@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load common_tags %}
+
+{% block title %}Moderation Queue{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="stack">
+    <article class="community-hero">
+      <div class="community-hero__meta">
+        <span>Moderation</span>
+        <span>c/{{ community.slug }}</span>
+      </div>
+      <h1>Mod queue</h1>
+      <div class="sort-tabs">
+        {% for option in "needs_review,reported,removed,approved"|split:"," %}
+          <a href="?status={{ option }}" class="{% if status_filter == option %}active{% endif %}">{{ option|title }}</a>
+        {% endfor %}
+      </div>
+    </article>
+
+    {% if items %}
+      <div class="stack">
+        {% for item in items %}
+          {% include "moderation/partials/queue_item.html" with item=item removal_reasons=removal_reasons %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card card-empty">
+        <h3>No queue items</h3>
+        <p>This status bucket is empty right now.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Shortcuts</h3>
+      <ul class="list">
+        <li><a href="/mod/{{ community.slug }}/log/">View mod log</a></li>
+        <li><a href="/c/{{ community.slug }}/">Back to community</a></li>
+      </ul>
+    </section>
+  </aside>
+</section>
+{% endblock %}

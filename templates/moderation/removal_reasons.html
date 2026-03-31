@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Removal Reasons{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="stack">
+    <section class="card card-form">
+      <p class="eyebrow">Removal reasons</p>
+      <h1>Manage removal reasons for c/{{ community.slug }}</h1>
+      <form method="post" class="form stack">
+        {% csrf_token %}
+        {% for field in form %}
+          <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="field__errors">{{ field.errors }}</div>{% endif %}
+          </div>
+        {% endfor %}
+        <button type="submit" class="button button-primary">Add reason</button>
+      </form>
+    </section>
+    <section class="card">
+      <h2>Existing reasons</h2>
+      {% if reasons %}
+        <div class="stack">
+          {% for reason in reasons %}
+            <article class="card">
+              <div class="card__meta">
+                <span>{{ reason.code }}</span>
+                <span>{{ reason.order }}</span>
+              </div>
+              <h3>{{ reason.title }}</h3>
+              <div class="prose">{{ reason.message_md }}</div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p>No removal reasons yet.</p>
+      {% endif %}
+    </section>
+  </div>
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Community tools</h3>
+      <ul class="list">
+        <li><a href="/c/{{ community.slug }}/settings/">Community settings</a></li>
+        <li><a href="/mod/{{ community.slug }}/queue/">Mod queue</a></li>
+      </ul>
+    </section>
+  </aside>
+</section>
+{% endblock %}

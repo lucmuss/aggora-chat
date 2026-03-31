@@ -1,0 +1,41 @@
+{% load post_tags common_tags %}
+<article class="post-card" data-post-card tabindex="0">
+  <div class="post-card__votes">
+    {% include "votes/partials/vote_widget.html" with target=post target_type="post" user_vote=user_votes|get_item:post.id %}
+  </div>
+  <div class="post-card__body">
+    <div class="card__meta">
+      <a href="/c/{{ post.community.slug }}/">c/{{ post.community.slug }}</a>
+      <span>u/{{ post.author.handle|default:"deleted" }}</span>
+      <span>{{ post.created_at|timesince_compact }} ago</span>
+      <span>{{ post|display_score }} score</span>
+      <span>{{ post.get_post_type_display }}</span>
+    </div>
+    <h3><a href="/c/{{ post.community.slug }}/post/{{ post.id }}/{{ post.slug }}/">{{ post.title }}</a></h3>
+    {% if post.crosspost_parent %}
+      <p class="card__meta">Crosspost from <a href="/c/{{ post.crosspost_parent.community.slug }}/post/{{ post.crosspost_parent.id }}/{{ post.crosspost_parent.slug }}/">c/{{ post.crosspost_parent.community.slug }}</a></p>
+    {% endif %}
+    {% if post.url %}
+      <p><a href="{{ post.url }}" target="_blank" rel="noopener">{{ post.url|truncatechars:60 }}</a></p>
+    {% endif %}
+    {% if post.image %}
+      <p><img src="{{ post.image.url }}" alt="" class="post-image"></p>
+    {% endif %}
+    {% if post.post_type == "poll" and post.poll %}
+      <div class="post-actions">
+        <span>{{ post.poll.options.count }} option{{ post.poll.options.count|pluralize }}</span>
+        <span>{{ post.poll.votes.count }} total vote{{ post.poll.votes.count|pluralize }}</span>
+      </div>
+    {% endif %}
+    {% if post.body_html %}
+      <div class="prose post-card__excerpt">{{ post.body_html|safe|truncatechars_html:280 }}</div>
+    {% endif %}
+    <div class="post-actions">
+      <a href="/c/{{ post.community.slug }}/post/{{ post.id }}/{{ post.slug }}/">{{ post.comment_count }} comments</a>
+      {% include "votes/partials/save_button.html" with post=post is_saved=saved_posts|contains:post.id %}
+      {% if user.is_authenticated %}
+        <a href="/c/{{ post.community.slug }}/submit/?crosspost={{ post.id }}">Crosspost</a>
+      {% endif %}
+    </div>
+  </div>
+</article>

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Mod Mail Thread{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="stack">
+    <article class="community-hero">
+      <div class="community-hero__meta">
+        <span>Mod Mail</span>
+        <span>c/{{ community.slug }}</span>
+      </div>
+      <h1>{{ thread.subject }}</h1>
+    </article>
+    <div class="stack">
+      {% for message in thread.messages.all %}
+        <article class="card">
+          <div class="card__meta">
+            <span>{{ message.created_at }}</span>
+            <span>{{ message.author.handle|default:"unknown" }}</span>
+            <span>{% if message.is_mod_reply %}Moderator{% else %}User{% endif %}</span>
+          </div>
+          <div class="prose">{{ message.body_html|safe }}</div>
+        </article>
+      {% endfor %}
+    </div>
+    <section class="card card-form">
+      <h2>Reply</h2>
+      <form method="post" class="form stack">
+        {% csrf_token %}
+        {% for field in form %}
+          <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="field__errors">{{ field.errors }}</div>{% endif %}
+          </div>
+        {% endfor %}
+        <button type="submit" class="button button-primary">Send reply</button>
+      </form>
+    </section>
+  </div>
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Inbox</h3>
+      <p><a href="/mod/{{ community.slug }}/mail/">Back to mod mail list</a></p>
+    </section>
+  </aside>
+</section>
+{% endblock %}

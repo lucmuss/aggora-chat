@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}New Mod Mail Thread{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="card card-form">
+    <p class="eyebrow">Mod Mail</p>
+    <h1>Start a new thread with the moderators of c/{{ community.slug }}</h1>
+    <form method="post" class="form stack">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<div class="field__errors">{{ field.errors }}</div>{% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="button button-primary">Open thread</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

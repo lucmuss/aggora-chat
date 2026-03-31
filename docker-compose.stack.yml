@@ -1,0 +1,60 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        INSTALL_DEV: "false"
+    command: gunicorn config.wsgi:application -w ${GUNICORN_WORKERS:-3} -b ${GUNICORN_BIND:-0.0.0.0:${PORT:-8000}}
+    restart: unless-stopped
+    environment:
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.prod}
+      DJANGO_ENV: ${DJANGO_ENV:-production}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      PORT: ${PORT:-8000}
+      DATABASE_URL: ${DATABASE_URL}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      REDIS_CACHE_URL: ${REDIS_CACHE_URL:-redis://redis:6379/1}
+      SEARCH_BACKEND: ${SEARCH_BACKEND:-sql}
+      SEARCH_INDEX_ENABLED: ${SEARCH_INDEX_ENABLED:-0}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL}
+      APP_NAME: ${APP_NAME:-Agora}
+      APP_TAGLINE: ${APP_TAGLINE:-communities first}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,192.168.178.46,aggora.kolibri-kollektiv.eu,hp-home-server.tail74f4f2.ts.net}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://127.0.0.1:18080,http://192.168.178.46:18080,https://aggora.kolibri-kollektiv.eu}
+      EMAIL_DELIVERY_MODE: ${EMAIL_DELIVERY_MODE:-console}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-info@kolibri-kollektiv.eu}
+      TEST_USER_EMAIL: ${TEST_USER_EMAIL}
+      TEST_USER_PASSWORD: ${TEST_USER_PASSWORD}
+      TEST_USER_PHONE: ${TEST_USER_PHONE:-+491500000002}
+      OPS_ADMIN_EMAIL: ${OPS_ADMIN_EMAIL:-ops-admin@example.com}
+      OPS_ADMIN_PASSWORD: ${OPS_ADMIN_PASSWORD:-StrongPass123!}
+      OPS_MODERATOR_EMAIL: ${OPS_MODERATOR_EMAIL:-ops-mod@example.com}
+      OPS_MODERATOR_PASSWORD: ${OPS_MODERATOR_PASSWORD:-StrongPass123!}
+      SEED_USERS_FILE: ${SEED_USERS_FILE:-data/seed/users.json}
+    ports:
+      - "${APP_HOST_PORT:-18080}:${PORT:-8000}"
+    volumes:
+      - media:/app/media
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:${PORT:-8000}/healthz/', timeout=5).read()\""]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - default
+      - apps-shared
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+volumes:
+  media:
+
+networks:
+  apps-shared:
+    external: true
+    name: apps-shared

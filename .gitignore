@@ -1,0 +1,21 @@
+# Local environment files
+.env
+.env.local
+.venv/
+db.sqlite3
+media/
+staticfiles/
+__pycache__/
+*.pyc
+output/ui-review/
+
+# Dependency directories
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+
+# Logs
+*.log

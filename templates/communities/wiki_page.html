@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Wiki · c/{{ community.slug }}{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="stack">
+    <article class="community-hero">
+      <div class="community-hero__meta">
+        <span>Wiki</span>
+        <span>c/{{ community.slug }}</span>
+      </div>
+      <h1>{% if page %}{{ page.title }}{% else %}No wiki page yet{% endif %}</h1>
+      <p class="lede">Community documentation, onboarding notes, and longer-form guidance live here.</p>
+    </article>
+
+    <section class="card">
+      {% if page %}
+        <div class="prose">{{ page.body_html|safe }}</div>
+      {% else %}
+        <p>No wiki content exists for <code>{{ page_slug }}</code> yet.</p>
+        {% if can_edit %}
+          <p><a href="/c/{{ community.slug }}/wiki/{{ page_slug }}/edit/">Create this page</a></p>
+        {% endif %}
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Wiki pages</h3>
+      {% if pages %}
+        <ul class="list">
+          {% for item in pages %}
+            <li><a href="/c/{{ community.slug }}/wiki/{{ item.slug }}/">{{ item.title }}</a></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No wiki pages yet.</p>
+      {% endif %}
+    </section>
+    {% if can_edit %}
+      <section class="card">
+        <h3>Editing</h3>
+        <ul class="list">
+          <li><a href="/c/{{ community.slug }}/wiki/edit/">Edit home page</a></li>
+          {% if page %}
+            <li><a href="/c/{{ community.slug }}/wiki/{{ page.slug }}/edit/">Edit this page</a></li>
+          {% endif %}
+        </ul>
+      </section>
+    {% endif %}
+  </aside>
+</section>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Choose Your Handle{% endblock %}
+
+{% block content %}
+<section class="auth-shell">
+  <div class="card card-form">
+    <p class="eyebrow">Identity setup</p>
+    <h1>Choose the handle people will know you by.</h1>
+    <p class="lede">Agora keeps authentication separate from your public identity. Your handle is your pseudonymous home.</p>
+    <form method="post" class="form stack">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="field">
+        <label for="{{ form.handle.id_for_label }}">Handle</label>
+        {{ form.handle }}
+        {% if form.handle.errors %}<div class="field__errors">{{ form.handle.errors }}</div>{% endif %}
+      </div>
+      <div class="field">
+        <label for="{{ form.display_name.id_for_label }}">Display name</label>
+        {{ form.display_name }}
+        {% if form.display_name.errors %}<div class="field__errors">{{ form.display_name.errors }}</div>{% endif %}
+      </div>
+      <button type="submit" class="button button-primary">Save handle</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Create Post{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="card card-form">
+    <p class="eyebrow">Create post</p>
+    <h1>Start a thread in c/{{ community.slug }}</h1>
+    <p class="lede">Text, links, images, polls, and crossposts all start from the same community publishing flow.</p>
+    {% if crosspost_source %}
+      <div class="notice">
+        Crossposting from <a href="/c/{{ crosspost_source.community.slug }}/post/{{ crosspost_source.id }}/{{ crosspost_source.slug }}/">c/{{ crosspost_source.community.slug }}/{{ crosspost_source.title }}</a>.
+      </div>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" class="form stack">
+      {% csrf_token %}
+      {% if crosspost_source %}
+        <input type="hidden" name="crosspost_parent_id" value="{{ crosspost_source.id }}">
+      {% endif %}
+      {{ form.non_field_errors }}
+      {% for field in form %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="field__help">{{ field.help_text }}</div>{% endif %}
+          {% if field.errors %}<div class="field__errors">{{ field.errors }}</div>{% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="button button-primary">Publish post</button>
+    </form>
+  </div>
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Current post types</h3>
+      <ul class="list">
+        <li>Text posts</li>
+        <li>Link posts</li>
+        <li>Image posts</li>
+        <li>Polls{% if not community.allow_polls %} are currently disabled here{% endif %}</li>
+        <li>Crossposts with source attribution</li>
+      </ul>
+    </section>
+  </aside>
+</section>
+{% endblock %}

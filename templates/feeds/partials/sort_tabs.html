@@ -1,0 +1,6 @@
+{% load common_tags %}
+<nav class="sort-tabs">
+  {% for option in "hot,new,top,rising"|split:"," %}
+    <a href="?sort={{ option }}" class="{% if sort == option %}active{% endif %}">{{ option|title }}</a>
+  {% endfor %}
+</nav>

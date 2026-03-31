@@ -1,0 +1,14 @@
+{% if user.is_authenticated %}
+  <form method="post"
+        action="/c/{{ community.slug }}/toggle-join/"
+        hx-post="/c/{{ community.slug }}/toggle-join/"
+        hx-target="this"
+        hx-swap="outerHTML">
+    {% csrf_token %}
+    <button type="submit" class="button {% if joined %}button-secondary{% else %}button-primary{% endif %}">
+      {% if joined %}Joined{% else %}Join{% endif %}
+    </button>
+  </form>
+{% else %}
+  <a href="/accounts/login/" class="button button-primary">Log in to join</a>
+{% endif %}

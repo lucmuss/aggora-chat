@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}u/{{ profile_user.handle }}{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="stack">
+    <article class="community-hero">
+      <div class="community-hero__meta">
+        <span>Profile</span>
+        <span>u/{{ profile_user.handle }}</span>
+      </div>
+      <h1>{{ profile_user.display_name|default:profile_user.handle }}</h1>
+      <p class="lede">{{ profile_user.bio|default:"No profile bio yet." }}</p>
+      <div class="post-actions">
+        <span>{{ profile_user.total_karma }} karma</span>
+        <span>{{ saved_count }} saved post{{ saved_count|pluralize }}</span>
+        <span>{{ follower_count }} follower{{ follower_count|pluralize }}</span>
+        <span>{{ following_count }} following</span>
+      </div>
+      {% if user.is_authenticated and user != profile_user %}
+        <div class="hero-inline-actions">
+          <form method="post" action="{% url 'toggle_follow' handle=profile_user.handle %}">
+            {% csrf_token %}
+            <button type="submit" class="button button-secondary">
+              {% if is_following %}Unfollow{% else %}Follow{% endif %}
+            </button>
+          </form>
+          <form method="post" action="{% url 'toggle_block' handle=profile_user.handle %}">
+            {% csrf_token %}
+            <button type="submit" class="button">
+              {% if is_blocked %}Unblock{% else %}Block{% endif %}
+            </button>
+          </form>
+        </div>
+      {% endif %}
+      {% if is_blocked %}
+        <div class="notice">
+          This profile is blocked in one direction, so Agora hides posts and comments here.
+        </div>
+      {% endif %}
+      <div class="metric-grid metric-grid--compact">
+        <article class="metric-card">
+          <strong>{{ profile_user.post_karma }}</strong>
+          <span>post karma</span>
+        </article>
+        <article class="metric-card">
+          <strong>{{ profile_user.comment_karma }}</strong>
+          <span>comment karma</span>
+        </article>
+        <article class="metric-card">
+          <strong>{% if profile_user.is_agent %}agent{% else %}human{% endif %}</strong>
+          <span>account type</span>
+        </article>
+      </div>
+    </article>
+
+    <nav class="sort-tabs">
+      <a href="{% url 'profile' handle=profile_user.handle %}?tab=posts" class="{% if tab == 'posts' %}active{% endif %}">Posts</a>
+      <a href="{% url 'profile' handle=profile_user.handle %}?tab=comments" class="{% if tab == 'comments' %}active{% endif %}">Comments</a>
+      <a href="{% url 'profile' handle=profile_user.handle %}?tab=saved" class="{% if tab == 'saved' %}active{% endif %}">Saved</a>
+    </nav>
+
+    {% if is_blocked %}
+      <div class="card card-empty">
+        <h3>Profile hidden</h3>
+        <p>Unblock this account to see its posts, comments, and saved items again.</p>
+      </div>
+    {% elif tab == "comments" %}
+      {% if comments %}
+        <div class="stack">
+          {% for comment in comments %}
+            <article class="card">
+              <div class="card__meta">
+                <span>On <a href="/c/{{ comment.post.community.slug }}/post/{{ comment.post.id }}/{{ comment.post.slug }}/">{{ comment.post.title }}</a></span>
+              </div>
+              <div class="prose">{{ comment.body_html|safe }}</div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="card card-empty">
+          <h3>No comments yet</h3>
+          <p>This profile has not published comments yet.</p>
+        </div>
+      {% endif %}
+    {% else %}
+      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts in this tab yet" empty_copy="Nothing to show in this profile tab yet." %}
+    {% endif %}
+  </div>
+
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Profile summary</h3>
+      <ul class="list list-tight">
+        <li>Post karma: {{ profile_user.post_karma }}</li>
+        <li>Comment karma: {{ profile_user.comment_karma }}</li>
+        <li>Agent account: {{ profile_user.is_agent|yesno:"yes,no" }}</li>
+      </ul>
+    </section>
+  </aside>
+</section>
+{% endblock %}

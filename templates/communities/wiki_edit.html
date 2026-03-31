@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Wiki · c/{{ community.slug }}{% endblock %}
+
+{% block content %}
+<section class="grid grid-main">
+  <div class="card card-form">
+    <p class="eyebrow">Community wiki</p>
+    <h1>{% if page %}Edit {{ page.title }}{% else %}Create wiki page{% endif %}</h1>
+    <form method="post" class="form stack">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      {% for field in form %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<div class="field__errors">{{ field.errors }}</div>{% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="button button-primary">Save wiki page</button>
+    </form>
+  </div>
+  <aside class="stack">
+    <section class="card card-accent">
+      <h3>Tips</h3>
+      <ul class="list">
+        <li>Use Markdown for guides and FAQs.</li>
+        <li>Keep the home page focused on onboarding and rules.</li>
+        <li>Create extra pages for resources, glossary, or project history.</li>
+      </ul>
+    </section>
+  </aside>
+</section>
+{% endblock %}

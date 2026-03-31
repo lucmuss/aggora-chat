@@ -1,0 +1,45 @@
+{% load common_tags %}
+<article class="card" id="qi-{{ item.id }}">
+  <div class="card__meta">
+    <span>{{ item.get_status_display }}</span>
+    <span>{{ item.content_type|title }}</span>
+    <span>{{ item.created_at }}</span>
+  </div>
+  {% if item.post %}
+    <h3>{{ item.post.title }}</h3>
+    <p>by u/{{ item.post.author.handle|default:"deleted" }}</p>
+  {% else %}
+    <p>{{ item.comment.body_md|truncatechars:220 }}</p>
+    <p>by u/{{ item.comment.author.handle|default:"deleted" }}</p>
+  {% endif %}
+  {% if item.report_set.all %}
+    <p>{{ item.report_set.count }} report{{ item.report_set.count|pluralize }}. Latest: {{ item.report_set.first.reason }}</p>
+  {% endif %}
+  <div class="stack">
+    <form method="post" hx-post="/mod/{{ item.community.slug }}/action/" hx-target="#qi-{{ item.id }}" hx-swap="outerHTML" class="form stack">
+      {% csrf_token %}
+      {% if item.post %}<input type="hidden" name="post_id" value="{{ item.post_id }}">{% endif %}
+      {% if item.comment %}<input type="hidden" name="comment_id" value="{{ item.comment_id }}">{% endif %}
+      <div class="field">
+        <label for="reason_code_{{ item.id }}">Removal reason</label>
+        <select id="reason_code_{{ item.id }}" name="reason_code">
+          <option value="">Custom reason</option>
+          {% for removal_reason in removal_reasons %}
+            <option value="{{ removal_reason.code }}">{{ removal_reason.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="reason_text_{{ item.id }}">Moderator note</label>
+        <textarea id="reason_text_{{ item.id }}" name="reason_text" rows="3"></textarea>
+      </div>
+      <div class="post-actions">
+        <button type="submit" name="action_type" value="approve_{{ item.content_type }}" class="button button-secondary">Approve</button>
+        <button type="submit" name="action_type" value="remove_{{ item.content_type }}" class="button button-primary">Remove</button>
+        {% if item.post %}
+          <button type="submit" name="action_type" value="lock_post" class="button button-secondary">Lock</button>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</article>

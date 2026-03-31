@@ -1,0 +1,19 @@
+<div class="vote-widget">
+  <button hx-post="/vote/"
+          hx-target="closest .vote-widget"
+          hx-swap="outerHTML"
+          hx-vals='{"{{ target_type }}_id":"{{ target.id }}","value":"1"}'
+          data-vote-up
+          class="{% if user_vote == 1 %}is-upvoted{% endif %}">
+    ▲
+  </button>
+  <span class="vote-widget__score">{{ target.score }}</span>
+  <button hx-post="/vote/"
+          hx-target="closest .vote-widget"
+          hx-swap="outerHTML"
+          hx-vals='{"{{ target_type }}_id":"{{ target.id }}","value":"-1"}'
+          data-vote-down
+          class="{% if user_vote == -1 %}is-downvoted{% endif %}">
+    ▼
+  </button>
+</div>

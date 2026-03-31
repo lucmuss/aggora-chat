@@ -1,0 +1,12 @@
+{% if posts %}
+  <div class="stack">
+    {% for post in posts %}
+      {% include "feeds/partials/post_card.html" with post=post %}
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card card-empty">
+    <h3>{{ empty_title }}</h3>
+    <p>{{ empty_copy }}</p>
+  </div>
+{% endif %}
