@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load account socialaccount %}
+
+{% block title %}{% trans "Sign Up" %} — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-center items-center py-10">
+    <div class="w-full max-w-md bg-white border border-gray-200 rounded-g overflow-hidden shadow-sm">
+        <div class="bg-gradient-to-r from-opal to-teal-600 h-2"></div>
+        <div class="p-8">
+            <div class="mb-8 text-center">
+                <div
+                    class="w-12 h-12 rounded-lg bg-opal flex items-center justify-center text-white font-bold text-xl mx-auto mb-4">
+                    A</div>
+                <h1 class="text-2xl font-bold text-gray-900">{% trans "Create Account" %}</h1>
+                <p class="text-sm text-gray-500 mt-1">{% blocktrans %}Join {{ APP_NAME }} and start exploring
+                    communities{% endblocktrans %}</p>
+            </div>
+
+            {% if socialaccount_providers %}
+            <p>{% blocktrans with site.name as site_name %}Please sign up with one
+                of your existing third party accounts. Or, <a href="{{ login_url }}">sign in</a>
+                instead:{% endblocktrans %}</p>
+
+            <div class="socialaccount_ballot">
+                <ul class="socialaccount_providers">
+                    {% include "socialaccount/snippets/provider_list.html" with process="signup" %}
+                </ul>
+                <div class="login-or">{% trans 'or' %}</div>
+            </div>
+            {% include "socialaccount/snippets/login_extra.html" %}
+            {% endif %}
+
+            <form class="signup space-y-4" id="signup_form" method="post" action="{% url 'account_signup' %}">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ field.label }}
+                    </label>
+                    <input type="{{ field.field.widget.input_type|default:'text' }}" name="{{ field.name }}"
+                        placeholder="{{ field.label }}" required id="{{ field.id_for_label }}"
+                        class="w-full h-10 px-3 rounded-g border border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-gray-400">
+                    {% if field.help_text %}<p class="text-[10px] text-gray-400 mt-1 leading-tight">{{
+                        field.help_text|safe }}</p>{% endif %}
+                    {% if field.errors %}<p class="text-xs text-red-500 mt-1">{{ field.errors.as_text }}</p>{% endif %}
+                </div>
+                {% endfor %}
+
+                {% if redirect_field_value %}
+                <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+                {% endif %}
+
+                <button
+                    class="w-full h-10 bg-primary text-white rounded-g font-medium hover:bg-primary-hover transition-colors shadow-sm mt-4"
+                    type="submit">
+                    {% trans "Create Account" %}
+                </button>
+            </form>
+
+            <div class="mt-8 pt-6 border-t border-gray-100 text-center">
+                <p class="text-sm text-gray-500">
+                    {% trans "Already have an account?" %}
+                    <a href="{{ login_url }}" class="text-opal font-semibold hover:underline">{% trans "Sign In" %}</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load account socialaccount %}
+
+{% block title %}{% trans "Sign In" %} — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-center items-center py-10">
+  <div class="w-full max-w-md bg-white border border-gray-200 rounded-g overflow-hidden shadow-sm">
+    <div class="bg-gradient-to-r from-opal to-teal-600 h-2"></div>
+    <div class="p-8">
+      <div class="mb-8 text-center">
+        <div class="w-12 h-12 rounded-lg bg-opal flex items-center justify-center text-white font-bold text-xl mx-auto mb-4">A</div>
+        <h1 class="text-2xl font-bold text-gray-900">{% trans "Welcome back" %}</h1>
+        <p class="text-sm text-gray-500 mt-1">{% blocktrans %}Log in to your {{ APP_NAME }} account{% endblocktrans %}</p>
+      </div>
+
+      {% if socialaccount_providers %}
+        <p>{% blocktrans with site.name as site_name %}Please sign in with one
+        of your existing third party accounts. Or, <a href="{{ signup_url }}">sign up</a>
+        for a {{ site_name }} account and sign in below:{% endblocktrans %}</p>
+
+        <div class="socialaccount_ballot">
+          <ul class="socialaccount_providers">
+            {% include "socialaccount/snippets/provider_list.html" with process="login" %}
+          </ul>
+          <div class="login-or">{% trans 'or' %}</div>
+        </div>
+        {% include "socialaccount/snippets/login_extra.html" %}
+      {% endif %}
+
+      <form class="login space-y-4" method="POST" action="{% url 'account_login' %}">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        
+        <div>
+          <label for="{{ form.login.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+            {% trans "Email" %}
+          </label>
+          <input type="text" name="login" placeholder="{% trans 'Email address' %}" autocomplete="email" required id="id_login"
+                 class="w-full h-10 px-3 rounded-g border border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-gray-400">
+          {% if form.login.errors %}<p class="text-xs text-red-500 mt-1">{{ form.login.errors.as_text }}</p>{% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+            {% trans "Password" %}
+          </label>
+          <input type="password" name="password" placeholder="{% trans 'Password' %}" autocomplete="current-password" required id="id_password"
+                 class="w-full h-10 px-3 rounded-g border border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-gray-400">
+          {% if form.password.errors %}<p class="text-xs text-red-500 mt-1">{{ form.password.errors.as_text }}</p>{% endif %}
+        </div>
+
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="remember" id="id_remember" class="w-4 h-4 rounded text-opal border-gray-300 focus:ring-opal">
+            <span class="text-xs text-gray-600">{% trans "Remember me" %}</span>
+          </label>
+          <a class="text-xs text-opal hover:underline" href="{% url 'account_reset_password' %}">{% trans "Forgot Password?" %}</a>
+        </div>
+
+        {% if redirect_field_value %}
+          <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+        {% endif %}
+
+        <button class="w-full h-10 bg-primary text-white rounded-g font-medium hover:bg-primary-hover transition-colors shadow-sm mt-2" type="submit">
+          {% trans "Sign In" %}
+        </button>
+      </form>
+      
+      <div class="mt-8 pt-6 border-t border-gray-100 text-center">
+        <p class="text-sm text-gray-500">
+          {% trans "Don't have an account?" %} 
+          <a href="{{ signup_url }}" class="text-opal font-semibold hover:underline">{% trans "Sign Up" %}</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -10,12 +10,13 @@
     <!-- Search -->
     <div class="flex-1 max-w-[520px]">
       <form method="get" action="{% url 'search' %}" class="relative">
-        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="11" cy="11" r="8" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2"/>
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none"
+          stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8" stroke-width="2" />
+          <path d="m21 21-4.35-4.35" stroke-width="2" />
         </svg>
-        <input type="search" name="q" placeholder="Search {{ APP_NAME }}"
-               data-shortcut-search
-               class="w-full h-9 pl-9 pr-3 rounded-g bg-gray-50 border border-transparent text-sm text-gray-900 placeholder-gray-400 hover:bg-gray-100 hover:border-gray-200 focus:bg-white focus:border-primary focus:outline-none transition-all">
+        <input type="search" name="q" placeholder="Search {{ APP_NAME }}" data-shortcut-search
+          class="w-full h-9 pl-9 pr-3 rounded-g bg-gray-50 border border-transparent text-sm text-gray-900 placeholder-gray-400 hover:bg-gray-100 hover:border-gray-200 focus:bg-white focus:border-primary focus:outline-none transition-all">
       </form>
     </div>
 
@@ -23,36 +24,39 @@
     <div class="flex items-center gap-1 ml-auto">
       <!-- Dark mode toggle -->
       <button onclick="document.documentElement.classList.toggle('dark')"
-              class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-              title="Toggle dark mode">
+        class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+        title="Toggle dark mode">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-width="1.5" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
+          <path stroke-width="1.5"
+            d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
         </svg>
       </button>
 
       {% if user.is_authenticated %}
-        <a href="/c/create/"
-           class="h-8 px-3 flex items-center gap-1 rounded-g text-sm font-medium text-primary hover:bg-primary-light transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14"/></svg>
-          Create
-        </a>
-        <a href="{% url 'profile' handle=user.handle|default:'me' %}?tab=saved"
-           class="h-8 px-3 flex items-center rounded-g text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
-          Saved
-        </a>
-        <a href="{% url 'profile' handle=user.handle|default:'me' %}"
-           class="h-8 w-8 flex items-center justify-center rounded-full bg-opal text-white text-xs font-medium hover:bg-opal-hover transition-colors">
-          {{ user.handle|default:user.email|first|upper }}
-        </a>
-        <a href="/accounts/logout/"
-           class="h-8 px-3 flex items-center rounded-g text-sm text-gray-500 hover:bg-gray-100 transition-colors">
-          Log out
-        </a>
+      <a href="/c/create/"
+        class="h-8 px-3 flex items-center gap-1 rounded-g text-sm font-medium text-primary hover:bg-primary-light transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 5v14m-7-7h14" />
+        </svg>
+        Create
+      </a>
+      <a href="{% url 'profile' handle=user.handle|default:'me' %}?tab=saved"
+        class="h-8 px-3 flex items-center rounded-g text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+        Saved
+      </a>
+      <a href="{% url 'profile' handle=user.handle|default:'me' %}"
+        class="h-8 w-8 flex items-center justify-center rounded-full bg-opal text-white text-xs font-medium hover:bg-opal-hover transition-colors">
+        {{ user.handle|default:user.email|first|upper }}
+      </a>
+      <a href="/accounts/logout/"
+        class="h-8 px-3 flex items-center rounded-g text-sm text-gray-500 hover:bg-gray-100 transition-colors">
+        Log out
+      </a>
       {% else %}
-        <a href="/accounts/login/"
-           class="h-8 px-5 flex items-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
-          Log in
-        </a>
+      <a href="/accounts/login/"
+        class="h-8 px-5 flex items-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
+        Log in
+      </a>
       {% endif %}
     </div>
   </div>
@@ -64,18 +68,18 @@
       {% url 'popular' as url_popular %}
       {% url 'community_discovery' as url_discover %}
       <a href="{{ url_home }}"
-         class="px-4 h-10 flex items-center text-sm font-medium border-b-2 transition-colors
-                {% if request.path == '/' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-300{% endif %}">
+        class="px-4 h-10 flex items-center text-sm border-b-2 transition-colors
+                {% if request.path == '/' %}text-primary border-primary font-bold{% else %}text-gray-500 border-transparent font-medium hover:text-gray-900 hover:border-gray-300{% endif %}">
         Home
       </a>
       <a href="{{ url_popular }}"
-         class="px-4 h-10 flex items-center text-sm font-medium border-b-2 transition-colors
-                {% if request.path == '/popular/' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-300{% endif %}">
+        class="px-4 h-10 flex items-center text-sm border-b-2 transition-colors
+                {% if request.path == '/popular/' %}text-primary border-primary font-bold{% else %}text-gray-500 border-transparent font-medium hover:text-gray-900 hover:border-gray-300{% endif %}">
         Popular
       </a>
       <a href="{{ url_discover }}"
-         class="px-4 h-10 flex items-center text-sm font-medium border-b-2 transition-colors
-                {% if '/c/' in request.path %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-300{% endif %}">
+        class="px-4 h-10 flex items-center text-sm border-b-2 transition-colors
+                {% if '/c/' in request.path %}text-primary border-primary font-bold{% else %}text-gray-500 border-transparent font-medium hover:text-gray-900 hover:border-gray-300{% endif %}">
         Communities
       </a>
     </nav>

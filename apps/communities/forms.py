@@ -16,9 +16,24 @@ class CommunityCreateForm(forms.ModelForm):
             "banner",
             "community_type",
         ]
+        labels = {
+            "name": "Community name",
+            "slug": "Slug",
+            "title": "Display title",
+            "description": "Short description",
+            "sidebar_md": "Sidebar content (Markdown)",
+            "community_type": "Privacy type",
+        }
+        help_texts = {
+            "name": "The full display name for your community.",
+            "slug": "The unique URL identifier for your community (e.g. 'coding' for c/coding).",
+            "title": "A catchy title that appears at the top of the community page.",
+            "sidebar_md": "Information about the community that appears in the right sidebar. Supports Markdown.",
+            "community_type": "Control who can view and join this community.",
+        }
         widgets = {
-            "description": forms.Textarea(attrs={"rows": 4}),
-            "sidebar_md": forms.Textarea(attrs={"rows": 6}),
+            "description": forms.Textarea(attrs={"rows": 4, "placeholder": "What is this community about?"}),
+            "sidebar_md": forms.Textarea(attrs={"rows": 6, "placeholder": "# Welcome to our community\n\nRules and guidelines go here..."}),
         }
 
     def clean_name(self):

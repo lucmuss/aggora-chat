@@ -7,7 +7,8 @@
   <div class="flex-1 min-w-0 max-w-[640px]">
     {% include "feeds/partials/sort_tabs.html" with sort=sort %}
     <div id="feed-container" class="space-y-3">
-      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Create the first post in one of your communities to start the feed." %}
+      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts
+      empty_title="No posts yet" empty_copy="Create the first post in one of your communities to start the feed." %}
     </div>
   </div>
 
@@ -21,14 +22,14 @@
         <p class="text-white/75 text-xs mt-0.5">{{ APP_TAGLINE|default:"communities first" }}</p>
         <div class="mt-4 space-y-2">
           <a href="/c/create/"
-             class="block w-full py-2 text-center rounded-g bg-white text-opal text-sm font-medium hover:bg-opal-light transition-colors">
+            class="block w-full py-2 text-center rounded-g bg-white text-opal text-sm font-medium hover:bg-opal-light transition-colors">
             Create Community
           </a>
           {% if not user.is_authenticated %}
-            <a href="/accounts/login/"
-               class="block w-full py-2 text-center rounded-g bg-white/15 text-white text-sm font-medium border border-white/30 hover:bg-white/25 transition-colors">
-              Log in
-            </a>
+          <a href="/accounts/login/"
+            class="block w-full py-2 text-center rounded-g bg-white/15 text-white text-sm font-medium border border-white/30 hover:bg-white/25 transition-colors">
+            Log in
+          </a>
           {% endif %}
         </div>
       </div>
@@ -42,21 +43,25 @@
       </div>
       <div class="divide-y divide-gray-100">
         {% for community in communities|slice:":8" %}
-          <a href="/c/{{ community.slug }}/" class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
-            <!-- Community avatar = OPAL -->
-            <div class="w-8 h-8 rounded-full bg-opal-muted text-opal flex items-center justify-center text-xs font-medium shrink-0">
-              {{ community.name|first|upper }}
-            </div>
-            <div class="min-w-0 flex-1">
-              <p class="text-sm font-medium text-gray-900 truncate">c/{{ community.slug }}</p>
-              <p class="text-xs text-gray-400">{{ community.subscriber_count }} member{{ community.subscriber_count|pluralize }}</p>
-            </div>
-          </a>
+        <a href="/c/{{ community.slug }}/"
+          class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+          <!-- Community avatar = OPAL -->
+          <div
+            class="w-8 h-8 rounded-full bg-opal-muted text-opal flex items-center justify-center text-xs font-medium shrink-0">
+            {{ community.name|first|upper }}
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-gray-900 truncate">c/{{ community.slug }}</p>
+            <p class="text-xs text-gray-400">{{ community.subscriber_count }} member{{
+              community.subscriber_count|pluralize }}</p>
+          </div>
+        </a>
         {% endfor %}
       </div>
       <div class="px-4 py-2.5 border-t border-gray-100">
         <!-- "View all" link = OPAL -->
-        <a href="{% url 'community_discovery' %}" class="text-xs font-medium text-opal hover:text-opal-hover hover:underline">View all communities →</a>
+        <a href="{% url 'community_discovery' %}"
+          class="text-xs font-medium text-opal hover:text-opal-hover hover:underline">View all communities →</a>
       </div>
     </div>
     {% endif %}

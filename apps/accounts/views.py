@@ -26,6 +26,13 @@ def handle_setup(request):
 
 
 def profile_view(request, handle):
+    if handle == "me":
+        if not request.user.is_authenticated:
+            return redirect("account_login")
+        if not request.user.handle:
+            return redirect("handle_setup")
+        return redirect("profile", handle=request.user.handle)
+
     profile_user = get_object_or_404(User, handle=handle)
     is_blocked = False
     is_following = False
