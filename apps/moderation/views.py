@@ -1,20 +1,22 @@
-from datetime import timedelta
-
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import User
-from apps.common.markdown import render_markdown
 from apps.communities.models import Community
 from apps.posts.models import Comment, Post
-from apps.search.tasks import index_post_task
 
 from .forms import ModMailCreateForm, ModMailReplyForm, RemovalReasonForm
-from .models import Ban, ModAction, ModMail, ModMailMessage, ModQueueItem, Report, RemovalReason
+from .models import ModAction, ModMail, ModQueueItem
 from .permissions import ModPermission, has_mod_permission
+from .services import (
+    create_mod_mail,
+    create_mod_mail_reply,
+    execute_ban,
+    execute_mod_action,
+    submit_report,
+)
 
 
 @login_required
@@ -64,65 +66,19 @@ def mod_action(request, community_slug):
         raise PermissionDenied
 
     action_type = request.POST.get("action_type")
-    post_id = request.POST.get("post_id")
-    comment_id = request.POST.get("comment_id")
-    reason_code = request.POST.get("reason_code", "")
-    reason_text = request.POST.get("reason_text", "")
-
-    target_post = None
-    target_comment = None
-
-    if post_id:
-        target_post = get_object_or_404(Post, pk=post_id, community=community)
-    if comment_id:
-        target_comment = get_object_or_404(Comment, pk=comment_id, post__community=community)
-
-    if action_type == "remove_post" and target_post:
-        target_post.is_removed = True
-        target_post.removed_reason = reason_text
-        target_post.save(update_fields=["is_removed", "removed_reason", "body_html"])
-        index_post_task(target_post.pk)
-    elif action_type == "approve_post" and target_post:
-        target_post.is_removed = False
-        target_post.removed_reason = ""
-        target_post.save(update_fields=["is_removed", "removed_reason", "body_html"])
-        index_post_task(target_post.pk)
-    elif action_type == "lock_post" and target_post:
-        target_post.is_locked = True
-        target_post.save(update_fields=["is_locked", "body_html"])
-    elif action_type == "sticky_post" and target_post:
-        target_post.is_stickied = True
-        target_post.save(update_fields=["is_stickied", "body_html"])
-    elif action_type == "remove_comment" and target_comment:
-        target_comment.is_removed = True
-        target_comment.save(update_fields=["is_removed", "body_html"])
-    elif action_type == "approve_comment" and target_comment:
-        target_comment.is_removed = False
-        target_comment.save(update_fields=["is_removed", "body_html"])
-
-    ModAction.objects.create(
-        community=community,
-        moderator=request.user,
-        is_agent_action=request.user.is_agent,
-        action_type=action_type,
-        target_post=target_post,
-        target_comment=target_comment,
-        reason_code=reason_code,
-        reason_text=reason_text,
-    )
-
-    queue_item = ModQueueItem.objects.filter(
-        community=community,
-        post_id=post_id or None,
-        comment_id=comment_id or None,
-    ).order_by("-created_at").first()
-    if queue_item:
-        queue_item.status = (
-            ModQueueItem.Status.REMOVED if "remove" in action_type else ModQueueItem.Status.APPROVED
+    
+    try:
+        execute_mod_action(
+            moderator=request.user,
+            community=community,
+            action_type=action_type,
+            post_id=request.POST.get("post_id"),
+            comment_id=request.POST.get("comment_id"),
+            reason_code=request.POST.get("reason_code", ""),
+            reason_text=request.POST.get("reason_text", ""),
         )
-        queue_item.resolved_by = request.user
-        queue_item.resolved_at = timezone.now()
-        queue_item.save(update_fields=["status", "resolved_by", "resolved_at"])
+    except ObjectDoesNotExist:
+        return redirect("mod_queue", community_slug=community_slug)
 
     if request.htmx:
         return render(request, "moderation/partials/queue_item_resolved.html", {"action_type": action_type})
@@ -132,46 +88,25 @@ def mod_action(request, community_slug):
 @require_POST
 @login_required
 def report_content(request):
-    post_id = request.POST.get("post_id")
-    comment_id = request.POST.get("comment_id")
-    reason = request.POST.get("reason", "other")
-    details = request.POST.get("details", "")
-
-    community = None
-    if post_id:
-        post = get_object_or_404(Post, pk=post_id)
-        community = post.community
-    else:
-        comment = get_object_or_404(Comment, pk=comment_id)
-        community = comment.post.community
-
-    queue_item, _ = ModQueueItem.objects.get_or_create(
-        community=community,
-        post_id=post_id or None,
-        comment_id=comment_id or None,
-        defaults={
-            "status": ModQueueItem.Status.REPORTED,
-            "content_type": ModQueueItem.ContentType.POST if post_id else ModQueueItem.ContentType.COMMENT,
-        },
-    )
-
-    Report.objects.create(
-        reporter=request.user,
-        post_id=post_id or None,
-        comment_id=comment_id or None,
-        reason=reason,
-        details=details,
-        queue_item=queue_item,
-    )
+    try:
+        report, community, post, comment = submit_report(
+            reporter=request.user,
+            post_id=request.POST.get("post_id"),
+            comment_id=request.POST.get("comment_id"),
+            reason=request.POST.get("reason", "other"),
+            details=request.POST.get("details", "")
+        )
+    except ObjectDoesNotExist:
+        raise PermissionDenied
 
     if request.htmx:
         return render(request, "moderation/partials/report_success.html")
-    if post_id:
+    if post:
         return redirect(
             "post_detail",
             community_slug=community.slug,
-            post_id=post_id,
-            slug=get_object_or_404(Post, pk=post_id).slug,
+            post_id=post.id,
+            slug=post.slug,
         )
     return redirect(
         "post_detail",
@@ -189,26 +124,13 @@ def ban_user(request, community_slug):
         raise PermissionDenied
 
     target_user = get_object_or_404(User, handle=request.POST.get("handle"))
-    duration_days = int(request.POST.get("duration", 0) or 0)
-    reason = request.POST.get("reason", "")
-
-    ban, _ = Ban.objects.update_or_create(
-        community=community,
-        user=target_user,
-        defaults={
-            "banned_by": request.user,
-            "reason": reason,
-            "is_permanent": duration_days == 0,
-            "expires_at": timezone.now() + timedelta(days=duration_days) if duration_days else None,
-        },
-    )
-    ModAction.objects.create(
-        community=community,
+    
+    ban = execute_ban(
         moderator=request.user,
-        action_type=ModAction.ActionType.BAN_USER,
+        community=community,
         target_user=target_user,
-        reason_text=reason,
-        details_json={"duration_days": duration_days, "permanent": duration_days == 0},
+        duration_days=int(request.POST.get("duration", 0) or 0),
+        reason=request.POST.get("reason", ""),
     )
 
     if request.htmx:
@@ -230,20 +152,20 @@ def mod_mail_list(request, community_slug):
 def mod_mail_thread(request, community_slug, thread_id):
     community = get_object_or_404(Community, slug=community_slug)
     thread = get_object_or_404(ModMail.objects.filter(community=community), pk=thread_id)
-    if not (
-        has_mod_permission(request.user, community, ModPermission.MOD_MAIL)
-        or request.user == thread.created_by
-    ):
+    is_mod = has_mod_permission(request.user, community, ModPermission.MOD_MAIL)
+    
+    if not (is_mod or request.user == thread.created_by):
         raise PermissionDenied
 
     if request.method == "POST":
         form = ModMailReplyForm(request.POST)
         if form.is_valid():
-            reply = form.save(commit=False)
-            reply.thread = thread
-            reply.author = request.user
-            reply.is_mod_reply = has_mod_permission(request.user, community, ModPermission.MOD_MAIL)
-            reply.save()
+            create_mod_mail_reply(
+                author=request.user,
+                thread=thread,
+                body_md=form.cleaned_data["body_md"],
+                is_mod_reply=is_mod,
+            )
             return redirect("mod_mail_thread", community_slug=community.slug, thread_id=thread.id)
     else:
         form = ModMailReplyForm()
@@ -261,16 +183,11 @@ def mod_mail_create(request, community_slug):
     if request.method == "POST":
         form = ModMailCreateForm(request.POST)
         if form.is_valid():
-            thread = form.save(commit=False)
-            thread.community = community
-            thread.created_by = request.user
-            thread.save()
-            ModMailMessage.objects.create(
-                thread=thread,
-                author=request.user,
+            thread = create_mod_mail(
+                creator=request.user,
+                community=community,
                 body_md=form.cleaned_data["body_md"],
-                body_html=render_markdown(form.cleaned_data["body_md"]),
-                is_mod_reply=False,
+                title=form.cleaned_data["title"],
             )
             return redirect("mod_mail_thread", community_slug=community.slug, thread_id=thread.id)
     else:

@@ -4,11 +4,16 @@ import math
 from collections import defaultdict
 from datetime import datetime, timezone
 
+from django.db import models
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 
+from apps.common.celery import dispatch_task
+from apps.search.tasks import index_post_task
 from apps.votes.models import SavedPost, Vote
+from apps.votes.tasks import recalculate_post_vote_totals
 
-from .models import Comment, Post
+from .models import Comment, Poll, PollOption, PollVote, Post
 
 
 EPOCH = datetime(2005, 12, 8, 7, 46, 43, tzinfo=timezone.utc)
@@ -26,6 +31,71 @@ def hot_score(ups: int, downs: int, created_at) -> float:
     sign = 1 if score > 0 else -1 if score < 0 else 0
     seconds = (created_at - EPOCH).total_seconds()
     return round(sign * order + seconds / 45000, 7)
+
+
+def submit_post(user, community, post_data: dict, poll_lines: list[str] = None, crosspost_source_id: str = None) -> Post:
+    """Service to create a post and handle related side effects like upvoting and indexing."""
+    post = Post(
+        author=user,
+        community=community,
+        title=post_data["title"],
+        body_md=post_data.get("body_md", ""),
+        post_type=post_data["post_type"],
+        is_locked=post_data.get("is_locked", False),
+        is_stickied=post_data.get("is_stickied", False),
+    )
+    if post.post_type == Post.PostType.CROSSPOST and crosspost_source_id:
+        post.crosspost_parent = get_object_or_404(Post.objects.visible(), pk=crosspost_source_id)
+    
+    post.save()
+
+    if post.post_type == Post.PostType.POLL and poll_lines:
+        poll = Poll.objects.create(post=post)
+        for index, label in enumerate(poll_lines, start=1):
+            PollOption.objects.create(poll=poll, label=label, position=index)
+
+    # Initial self-upvote
+    Vote.objects.create(user=user, post=post, value=Vote.VoteType.UPVOTE)
+    post.upvote_count = 1
+    post.score = 1
+    post.hot_score = hot_score(1, 0, post.created_at)
+    post.save(update_fields=["upvote_count", "score", "hot_score", "body_html"])
+    
+    dispatch_task(index_post_task, post.pk)
+    return post
+
+
+def submit_comment(user, post: Post, body_md: str, parent_id: str | None = None) -> Comment:
+    """Service to create a comment and handle vote/counter side effects."""
+    parent = None
+    depth = 0
+    if parent_id:
+        parent = get_object_or_404(Comment, pk=parent_id, post=post)
+        depth = parent.depth + 1
+        if depth > 10:
+            raise ValueError("Maximum nesting depth reached.")
+
+    comment = Comment.objects.create(post=post, parent=parent, author=user, body_md=body_md, depth=depth)
+    Vote.objects.create(user=user, comment=comment, value=Vote.VoteType.UPVOTE)
+    comment.upvote_count = 1
+    comment.score = 1
+    comment.save(update_fields=["upvote_count", "score", "body_html"])
+    
+    Post.objects.filter(pk=post.pk).update(comment_count=models.F("comment_count") + 1)
+    dispatch_task(recalculate_post_vote_totals, post.id)
+    return comment
+
+
+def submit_poll_vote(user, poll: Poll, option_id: str):
+    """Service to record a user's vote on a poll."""
+    if not poll.is_open():
+        raise ValueError("This poll is closed.")
+    option = get_object_or_404(PollOption, poll=poll, pk=option_id)
+    PollVote.objects.update_or_create(
+        poll=poll,
+        user=user,
+        defaults={"option": option},
+    )
 
 
 def build_comment_tree(post: Post, sort: str = "top", max_depth: int = 10, user=None):

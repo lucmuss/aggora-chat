@@ -6,7 +6,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from apps.moderation.permissions import ModPermission, has_mod_permission
 
 from .forms import CommunityCreateForm, CommunitySettingsForm, CommunityWikiPageForm
-from .models import Community, CommunityMembership, CommunityWikiPage
+from .models import Community, CommunityWikiPage
+from .services import save_wiki_page, submit_community, toggle_user_membership
 
 
 @login_required
@@ -14,16 +15,7 @@ def create_community(request):
     if request.method == "POST":
         form = CommunityCreateForm(request.POST, request.FILES)
         if form.is_valid():
-            community = form.save(commit=False)
-            community.creator = request.user
-            community.save()
-            CommunityMembership.objects.create(
-                user=request.user,
-                community=community,
-                role=CommunityMembership.Role.OWNER,
-            )
-            community.subscriber_count = community.memberships.count()
-            community.save(update_fields=["subscriber_count"])
+            community = submit_community(request.user, form)
             return redirect("community_detail", slug=community.slug)
     else:
         form = CommunityCreateForm()
@@ -36,21 +28,10 @@ def toggle_membership(request, slug):
         return HttpResponseForbidden("POST required")
 
     community = get_object_or_404(Community, slug=slug)
-    membership, created = CommunityMembership.objects.get_or_create(
-        user=request.user,
-        community=community,
-        defaults={"role": CommunityMembership.Role.MEMBER},
-    )
-    if not created:
-        if membership.role == CommunityMembership.Role.OWNER:
-            return HttpResponseForbidden("Owners cannot leave their own community.")
-        membership.delete()
-        joined = False
-    else:
-        joined = True
-
-    community.subscriber_count = community.memberships.count()
-    community.save(update_fields=["subscriber_count"])
+    try:
+        joined = toggle_user_membership(request.user, community)
+    except ValueError as e:
+        return HttpResponseForbidden(str(e))
 
     return render(
         request,
@@ -125,10 +106,7 @@ def wiki_edit(request, slug, page_slug="home"):
     if request.method == "POST":
         form = CommunityWikiPageForm(request.POST, instance=page)
         if form.is_valid():
-            page = form.save(commit=False)
-            page.community = community
-            page.updated_by = request.user
-            page.save()
+            page = save_wiki_page(request.user, community, form)
             return redirect("community_wiki_page", slug=community.slug, page_slug=page.slug)
     else:
         initial = {"slug": page_slug, "title": page_slug.replace("-", " ").title()}
