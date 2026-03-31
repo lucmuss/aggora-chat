@@ -5,5 +5,5 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 SECURE_SSL_REDIRECT = False
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "0.0.0.0"]
+# ALLOWED_HOSTS is handled in base.py (env-driven)
 CELERY_TASK_ALWAYS_EAGER = True
