@@ -305,3 +305,23 @@ REST_FRAMEWORK = {
         "anon": "20/minute",
     },
 }
+
+SENTRY_DSN = env_str("SENTRY_DSN", "")
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
+        ],
+        environment=env_str("SENTRY_ENVIRONMENT", DJANGO_ENV),
+        release=env_str("SENTRY_RELEASE", ""),
+        send_default_pii=env_bool("SENTRY_SEND_PII", False),
+        debug=env_bool("SENTRY_DEBUG", False),
+        traces_sample_rate=env_float("SENTRY_TRACES_SAMPLE_RATE", 0.0),
+        profiles_sample_rate=env_float("SENTRY_PROFILES_SAMPLE_RATE", 0.0),
+    )
