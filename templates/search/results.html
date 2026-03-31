@@ -1,47 +1,46 @@
 {% extends "base.html" %}
 
-{% block title %}Search{% endblock %}
+{% block title %}Search — {{ APP_NAME }}{% endblock %}
 
 {% block content %}
-<section class="grid grid-main">
-  <div class="stack">
-    <article class="community-hero">
-      <div class="community-hero__meta">
-        <span>Search</span>
-        {% if query %}<span>{{ query }}</span>{% endif %}
-      </div>
-      <h1>Search Agora</h1>
-      <form method="get" action="/search/" class="form stack">
-        <div class="field">
-          <label for="search_query">Query</label>
-          <input id="search_query" type="search" name="q" value="{{ query }}" placeholder="author:alice flair:news community:python safety">
-        </div>
-        <div class="field">
-          <label for="search_sort">Sort</label>
-          <select id="search_sort" name="sort">
-            <option value="relevance" {% if sort == 'relevance' %}selected{% endif %}>Relevance</option>
-            <option value="new" {% if sort == 'new' %}selected{% endif %}>New</option>
-            <option value="top" {% if sort == 'top' %}selected{% endif %}>Top</option>
+<div class="lg:flex lg:gap-6">
+  <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <h1 class="text-xl font-semibold text-gray-900 mb-3">Search {{ APP_NAME }}</h1>
+      <form method="get" action="/search/" class="styled-form space-y-3">
+        <div class="flex gap-2">
+          <input id="search_query" type="search" name="q" value="{{ query }}"
+            placeholder="Search posts, communities, users…"
+            class="flex-1 h-9 pl-3 pr-3 rounded-g border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none transition-colors">
+          <select id="search_sort" name="sort"
+            class="h-9 px-3 rounded-g border border-gray-200 text-sm text-gray-600 focus:border-primary focus:outline-none">
+            <option value="relevance" {% if sort=='relevance' %}selected{% endif %}>Relevance</option>
+            <option value="new" {% if sort=='new' %}selected{% endif %}>New</option>
+            <option value="top" {% if sort=='top' %}selected{% endif %}>Top</option>
           </select>
+          <button type="submit"
+            class="h-9 px-4 bg-primary text-white rounded-g text-sm font-medium hover:bg-primary-hover transition-colors border-0 cursor-pointer">Search</button>
         </div>
-        <button type="submit" class="button button-primary">Search</button>
       </form>
-    </article>
-
-    {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No search results" empty_copy="Try a broader term or use operators like author:, flair:, community:, or type:." %}
+    </div>
+    {% if query %}
+    <div id="feed-container" class="space-y-3">
+      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts
+      empty_title="No search results" empty_copy="Try a broader term or use operators like author:, flair:, community:,
+      or type:." %}
+    </div>
+    {% endif %}
   </div>
-
-  <aside class="stack">
-    <section class="card card-accent">
-      <h3>Operators</h3>
-      <ul class="list">
-        <li><code>author:handle</code></li>
-        <li><code>flair:name</code></li>
-        <li><code>community:slug</code></li>
-        <li><code>subreddit:slug</code></li>
-        <li><code>type:text</code></li>
+  <aside class="hidden lg:block w-80 shrink-0">
+    <div class="bg-white border border-gray-200 rounded-g p-4 sticky top-[72px]">
+      <h3 class="font-semibold text-sm text-opal mb-3">Search operators</h3>
+      <ul class="text-xs text-gray-500 space-y-1.5 font-mono">
+        <li><code class="text-gray-700">author:handle</code></li>
+        <li><code class="text-gray-700">flair:name</code></li>
+        <li><code class="text-gray-700">community:slug</code></li>
+        <li><code class="text-gray-700">type:text</code></li>
       </ul>
-    </section>
+    </div>
   </aside>
-</section>
+</div>
 {% endblock %}

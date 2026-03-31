@@ -1,49 +1,58 @@
 {% extends "base.html" %}
 
-{% block title %}Mod Mail Thread{% endblock %}
+{% block title %}{{ thread.subject }} — Mod Mail{% endblock %}
 
 {% block content %}
-<section class="grid grid-main">
-  <div class="stack">
-    <article class="community-hero">
-      <div class="community-hero__meta">
-        <span>Mod Mail</span>
+<div class="max-w-[1000px] mx-auto lg:flex lg:gap-6">
+  <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <div class="flex items-center gap-2 text-xs text-gray-400 mb-1">
+        <span class="font-medium text-opal">Mod Mail</span>
+        <span>·</span>
         <span>c/{{ community.slug }}</span>
       </div>
-      <h1>{{ thread.subject }}</h1>
-    </article>
-    <div class="stack">
+      <h1 class="text-xl font-semibold text-gray-900">{{ thread.subject }}</h1>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden divide-y divide-gray-100">
       {% for message in thread.messages.all %}
-        <article class="card">
-          <div class="card__meta">
-            <span>{{ message.created_at }}</span>
-            <span>{{ message.author.handle|default:"unknown" }}</span>
-            <span>{% if message.is_mod_reply %}Moderator{% else %}User{% endif %}</span>
-          </div>
-          <div class="prose">{{ message.body_html|safe }}</div>
-        </article>
+      <div class="px-4 py-3">
+        <div class="flex items-center gap-2 text-xs text-gray-400 mb-2">
+          <span class="font-medium {% if message.is_mod_reply %}text-opal{% else %}text-gray-600{% endif %}">{{
+            message.author.handle|default:"unknown" }}</span>
+          <span>·</span>
+          <span>{% if message.is_mod_reply %}Moderator{% else %}User{% endif %}</span>
+          <span>·</span>
+          <time>{{ message.created_at|timesince }} ago</time>
+        </div>
+        <div class="prose text-sm">{{ message.body_html|safe }}</div>
+      </div>
       {% endfor %}
     </div>
-    <section class="card card-form">
-      <h2>Reply</h2>
-      <form method="post" class="form stack">
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100">
+        <h2 class="font-semibold text-sm text-gray-900">Reply</h2>
+      </div>
+      <form method="post" class="styled-form p-4 space-y-3">
         {% csrf_token %}
         {% for field in form %}
-          <div class="field">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<div class="field__errors">{{ field.errors }}</div>{% endif %}
-          </div>
+        <div>
+          <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label
+            }}</label>
+          {{ field }}
+          {% if field.errors %}<p class="text-xs text-red-500 mt-1">{{ field.errors.as_text }}</p>{% endif %}
+        </div>
         {% endfor %}
-        <button type="submit" class="button button-primary">Send reply</button>
+        <button type="submit"
+          class="h-9 px-4 bg-primary text-white rounded-g text-sm font-medium hover:bg-primary-hover transition-colors border-0 cursor-pointer">Send
+          reply</button>
       </form>
-    </section>
+    </div>
   </div>
-  <aside class="stack">
-    <section class="card card-accent">
-      <h3>Inbox</h3>
-      <p><a href="/mod/{{ community.slug }}/mail/">Back to mod mail list</a></p>
-    </section>
+  <aside class="hidden lg:block w-80 shrink-0">
+    <div class="bg-white border border-gray-200 rounded-g p-4 sticky top-[72px]">
+      <h3 class="font-semibold text-sm text-opal mb-3">Inbox</h3>
+      <a href="/mod/{{ community.slug }}/mail/" class="text-sm text-opal hover:underline">Back to mod mail list</a>
+    </div>
   </aside>
-</section>
+</div>
 {% endblock %}

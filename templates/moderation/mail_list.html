@@ -1,48 +1,57 @@
 {% extends "base.html" %}
 
-{% block title %}Mod Mail{% endblock %}
+{% block title %}Mod Mail — {{ APP_NAME }}{% endblock %}
 
 {% block content %}
-<section class="grid grid-main">
-  <div class="stack">
-    <article class="community-hero">
-      <div class="community-hero__meta">
-        <span>Mod Mail</span>
-        <span>c/{{ community.slug }}</span>
+<div class="max-w-[1000px] mx-auto lg:flex lg:gap-6">
+  <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
+    <div class="bg-white border border-gray-200 rounded-g p-4 flex items-center justify-between">
+      <div>
+        <div class="flex items-center gap-2 text-xs text-gray-400 mb-1">
+          <span class="font-medium text-opal">Mod Mail</span>
+          <span>·</span>
+          <span>c/{{ community.slug }}</span>
+        </div>
+        <h1 class="text-xl font-semibold text-gray-900">Shared moderator inbox</h1>
       </div>
-      <h1>Shared moderator inbox</h1>
-      <div class="post-actions">
-        <a href="/mod/{{ community.slug }}/mail/new/" class="button button-primary">New thread</a>
-      </div>
-    </article>
+      <a href="/mod/{{ community.slug }}/mail/new/"
+        class="h-9 px-4 bg-primary text-white rounded-g text-sm font-medium hover:bg-primary-hover transition-colors flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 5v14m-7-7h14" />
+        </svg>
+        New thread
+      </a>
+    </div>
     {% if threads %}
-      <div class="stack">
-        {% for thread in threads %}
-          <article class="card">
-            <div class="card__meta">
-              <span>{{ thread.created_at }}</span>
-              <span>by {{ thread.created_by.handle|default:"unknown" }}</span>
-              <span>{{ thread.messages.count }} message{{ thread.messages.count|pluralize }}</span>
-            </div>
-            <h3><a href="/mod/{{ community.slug }}/mail/{{ thread.id }}/">{{ thread.subject }}</a></h3>
-          </article>
-        {% endfor %}
-      </div>
+    <div class="space-y-2">
+      {% for thread in threads %}
+      <a href="/mod/{{ community.slug }}/mail/{{ thread.id }}/"
+        class="block bg-white border border-gray-200 rounded-g p-4 hover:border-gray-300 transition-colors">
+        <div class="flex items-center gap-2 text-xs text-gray-400 mb-1">
+          <time>{{ thread.created_at|timesince }} ago</time>
+          <span>·</span>
+          <span>by {{ thread.created_by.handle|default:"unknown" }}</span>
+          <span>·</span>
+          <span>{{ thread.messages.count }} message{{ thread.messages.count|pluralize }}</span>
+        </div>
+        <h3 class="text-sm font-medium text-gray-900">{{ thread.subject }}</h3>
+      </a>
+      {% endfor %}
+    </div>
     {% else %}
-      <div class="card card-empty">
-        <h3>No mod mail threads</h3>
-        <p>No one has opened a thread yet.</p>
-      </div>
+    <div class="bg-white border border-gray-200 rounded-g p-8 text-center">
+      <p class="text-sm text-gray-400">No mod mail threads yet.</p>
+    </div>
     {% endif %}
   </div>
-  <aside class="stack">
-    <section class="card card-accent">
-      <h3>Related tools</h3>
-      <ul class="list">
-        <li><a href="/mod/{{ community.slug }}/queue/">Mod queue</a></li>
-        <li><a href="/mod/{{ community.slug }}/log/">Mod log</a></li>
+  <aside class="hidden lg:block w-80 shrink-0">
+    <div class="bg-white border border-gray-200 rounded-g p-4 sticky top-[72px]">
+      <h3 class="font-semibold text-sm text-opal mb-3">Related tools</h3>
+      <ul class="text-sm text-gray-600 space-y-2">
+        <li><a href="/mod/{{ community.slug }}/queue/" class="text-opal hover:underline">Mod queue</a></li>
+        <li><a href="/mod/{{ community.slug }}/log/" class="text-opal hover:underline">Mod log</a></li>
       </ul>
-    </section>
+    </div>
   </aside>
-</section>
+</div>
 {% endblock %}

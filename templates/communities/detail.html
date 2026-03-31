@@ -7,7 +7,8 @@
       <div class="h-20 bg-gradient-to-r from-opal to-teal-600"></div>
       <div class="px-4 pb-4">
         <div class="flex items-end justify-between -mt-7 mb-2">
-          <div class="w-14 h-14 rounded-full border-4 border-white bg-opal flex items-center justify-center text-white text-xl font-medium shadow-sm">
+          <div
+            class="w-14 h-14 rounded-full border-4 border-white bg-opal flex items-center justify-center text-white text-xl font-medium shadow-sm">
             {{ community.name|first|upper }}
           </div>
         </div>
@@ -16,28 +17,36 @@
             <h1 class="font-semibold text-lg text-gray-900">{{ community.title }}</h1>
             <p class="text-xs text-gray-400">c/{{ community.slug }}</p>
             {% if community.description %}
-              <p class="text-sm text-gray-500 mt-1.5 leading-relaxed">{{ community.description }}</p>
+            <p class="text-sm text-gray-500 mt-1.5 leading-relaxed">{{ community.description }}</p>
             {% endif %}
           </div>
           <div class="shrink-0 space-y-2 mt-1">
             {% include "communities/partials/join_button.html" with community=community joined=joined %}
             {% if user.is_authenticated %}
-              <a href="/c/{{ community.slug }}/submit/"
-                 class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                New post
-              </a>
+            <a href="/c/{{ community.slug }}/submit/"
+              class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+              New post
+            </a>
             {% endif %}
           </div>
         </div>
         <div class="flex items-center gap-6 mt-3 pt-3 border-t border-gray-100">
-          <div><p class="text-sm font-semibold text-gray-900">{{ member_count }}</p><p class="text-xs text-gray-400">Members</p></div>
-          <div><p class="text-xs text-gray-400">Created {{ community.created_at|date:"M d, Y" }}</p></div>
+          <div>
+            <p class="text-sm font-semibold text-gray-900">{{ member_count }}</p>
+            <p class="text-xs text-gray-400">Members</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400">Created {{ community.created_at|date:"M d, Y" }}</p>
+          </div>
         </div>
       </div>
     </div>
     {% include "feeds/partials/sort_tabs.html" with sort=sort %}
     <div id="feed-container" class="space-y-3">
-      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Write the first post to start this community." %}
+      <div id="feed-container-inner">
+        {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts
+        empty_title="No posts yet" empty_copy="Write the first post to start this community." %}
+      </div>
     </div>
   </div>
 
@@ -63,10 +72,10 @@
       </div>
       <div class="divide-y divide-gray-100">
         {% for rule in community.rules.all %}
-          <div class="px-4 py-2.5">
-            <p class="text-xs font-medium text-gray-900">{{ forloop.counter }}. {{ rule.title }}</p>
-            {% if rule.description %}<p class="text-xs text-gray-500 mt-0.5">{{ rule.description }}</p>{% endif %}
-          </div>
+        <div class="px-4 py-2.5">
+          <p class="text-xs font-medium text-gray-900">{{ forloop.counter }}. {{ rule.title }}</p>
+          {% if rule.description %}<p class="text-xs text-gray-500 mt-0.5">{{ rule.description }}</p>{% endif %}
+        </div>
         {% endfor %}
       </div>
     </div>

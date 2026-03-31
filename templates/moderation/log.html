@@ -1,43 +1,46 @@
 {% extends "base.html" %}
 
-{% block title %}Moderation Log{% endblock %}
+{% block title %}Mod Log — {{ APP_NAME }}{% endblock %}
 
 {% block content %}
-<section class="grid grid-main">
-  <div class="stack">
-    <article class="community-hero">
-      <div class="community-hero__meta">
-        <span>Audit log</span>
+<div class="max-w-[1000px] mx-auto lg:flex lg:gap-6">
+  <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <div class="flex items-center gap-2 text-xs text-gray-400 mb-1">
+        <span class="font-medium text-opal">Audit log</span>
+        <span>·</span>
         <span>c/{{ community.slug }}</span>
       </div>
-      <h1>Moderation log</h1>
-    </article>
-
-    <section class="card">
+      <h1 class="text-xl font-semibold text-gray-900">Moderation log</h1>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
       {% if actions %}
-        <div class="stack">
-          {% for action in actions %}
-            <article class="card">
-              <div class="card__meta">
-                <span>{{ action.created_at }}</span>
-                <span>{{ action.action_type }}</span>
-                <span>by {{ action.moderator.handle|default:"system" }}</span>
-              </div>
-              <p>{{ action.reason_text|default:"No extra reason supplied." }}</p>
-            </article>
-          {% endfor %}
+      <div class="divide-y divide-gray-100">
+        {% for action in actions %}
+        <div class="px-4 py-3">
+          <div class="flex items-center gap-2 text-xs text-gray-400 mb-1">
+            <time>{{ action.created_at|timesince }} ago</time>
+            <span>·</span>
+            <span class="font-medium text-gray-600">{{ action.action_type }}</span>
+            <span>·</span>
+            <span>by {{ action.moderator.handle|default:"system" }}</span>
+          </div>
+          <p class="text-sm text-gray-700">{{ action.reason_text|default:"No extra reason supplied." }}</p>
         </div>
+        {% endfor %}
+      </div>
       {% else %}
-        <p>No moderation actions yet.</p>
+      <div class="p-8 text-center">
+        <p class="text-sm text-gray-400">No moderation actions yet.</p>
+      </div>
       {% endif %}
-    </section>
+    </div>
   </div>
-
-  <aside class="stack">
-    <section class="card card-accent">
-      <h3>Queue</h3>
-      <p><a href="/mod/{{ community.slug }}/queue/">Open mod queue</a></p>
-    </section>
+  <aside class="hidden lg:block w-80 shrink-0">
+    <div class="bg-white border border-gray-200 rounded-g p-4 sticky top-[72px]">
+      <h3 class="font-semibold text-sm text-opal mb-3">Queue</h3>
+      <a href="/mod/{{ community.slug }}/queue/" class="text-sm text-opal hover:underline">Open mod queue</a>
+    </div>
   </aside>
-</section>
+</div>
 {% endblock %}

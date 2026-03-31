@@ -1,55 +1,61 @@
 {% extends "base.html" %}
 
-{% block title %}Wiki · c/{{ community.slug }}{% endblock %}
+{% block title %}Wiki · c/{{ community.slug }} — {{ APP_NAME }}{% endblock %}
 
 {% block content %}
-<section class="grid grid-main">
-  <div class="stack">
-    <article class="community-hero">
-      <div class="community-hero__meta">
-        <span>Wiki</span>
+<div class="max-w-[1000px] mx-auto lg:flex lg:gap-6">
+  <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <div class="flex items-center gap-2 text-xs text-gray-400 mb-1">
+        <span class="font-medium text-opal">Wiki</span>
+        <span>·</span>
         <span>c/{{ community.slug }}</span>
       </div>
-      <h1>{% if page %}{{ page.title }}{% else %}No wiki page yet{% endif %}</h1>
-      <p class="lede">Community documentation, onboarding notes, and longer-form guidance live here.</p>
-    </article>
-
-    <section class="card">
+      <h1 class="text-xl font-semibold text-gray-900">{% if page %}{{ page.title }}{% else %}No wiki page yet{% endif %}
+      </h1>
+      <p class="text-xs text-gray-500 mt-1">Community documentation, onboarding notes, and longer-form guidance live
+        here.</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-g p-5">
       {% if page %}
-        <div class="prose">{{ page.body_html|safe }}</div>
+      <div class="prose">{{ page.body_html|safe }}</div>
       {% else %}
-        <p>No wiki content exists for <code>{{ page_slug }}</code> yet.</p>
-        {% if can_edit %}
-          <p><a href="/c/{{ community.slug }}/wiki/{{ page_slug }}/edit/">Create this page</a></p>
-        {% endif %}
+      <p class="text-sm text-gray-500">No wiki content exists for <code
+          class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{{ page_slug }}</code> yet.</p>
+      {% if can_edit %}
+      <a href="/c/{{ community.slug }}/wiki/{{ page_slug }}/edit/"
+        class="inline-block mt-3 h-9 px-4 bg-primary text-white rounded-g text-sm font-medium hover:bg-primary-hover transition-colors">Create
+        this page</a>
       {% endif %}
-    </section>
+      {% endif %}
+    </div>
   </div>
-
-  <aside class="stack">
-    <section class="card card-accent">
-      <h3>Wiki pages</h3>
+  <aside class="hidden lg:block w-80 shrink-0 space-y-3">
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <h3 class="font-semibold text-sm text-opal mb-3">Wiki pages</h3>
       {% if pages %}
-        <ul class="list">
-          {% for item in pages %}
-            <li><a href="/c/{{ community.slug }}/wiki/{{ item.slug }}/">{{ item.title }}</a></li>
-          {% endfor %}
-        </ul>
+      <ul class="text-sm text-gray-600 space-y-1.5">
+        {% for item in pages %}
+        <li><a href="/c/{{ community.slug }}/wiki/{{ item.slug }}/" class="text-opal hover:underline">{{ item.title
+            }}</a></li>
+        {% endfor %}
+      </ul>
       {% else %}
-        <p>No wiki pages yet.</p>
+      <p class="text-xs text-gray-400">No wiki pages yet.</p>
       {% endif %}
-    </section>
+    </div>
     {% if can_edit %}
-      <section class="card">
-        <h3>Editing</h3>
-        <ul class="list">
-          <li><a href="/c/{{ community.slug }}/wiki/edit/">Edit home page</a></li>
-          {% if page %}
-            <li><a href="/c/{{ community.slug }}/wiki/{{ page.slug }}/edit/">Edit this page</a></li>
-          {% endif %}
-        </ul>
-      </section>
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <h3 class="font-semibold text-sm text-opal mb-3">Editing</h3>
+      <ul class="text-sm text-gray-600 space-y-1.5">
+        <li><a href="/c/{{ community.slug }}/wiki/edit/" class="text-opal hover:underline">Edit home page</a></li>
+        {% if page %}
+        <li><a href="/c/{{ community.slug }}/wiki/{{ page.slug }}/edit/" class="text-opal hover:underline">Edit this
+            page</a></li>
+        {% endif %}
+      </ul>
+    </div>
     {% endif %}
   </aside>
-</section>
+</div>
 {% endblock %}
