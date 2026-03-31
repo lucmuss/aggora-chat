@@ -32,21 +32,32 @@
             {% include "socialaccount/snippets/login_extra.html" %}
             {% endif %}
 
-            <form class="signup space-y-4" id="signup_form" method="post" action="{% url 'account_signup' %}">
+            <form class="signup styled-form space-y-4" id="signup_form" method="post"
+                action="{% url 'account_signup' %}">
                 {% csrf_token %}
-                {{ form.non_field_errors }}
+                {% if form.non_field_errors %}<div class="bg-red-50 text-red-600 text-sm p-3 rounded-g">{{
+                    form.non_field_errors }}</div>{% endif %}
 
                 {% for field in form %}
                 <div>
                     <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
-                        {{ field.label }}
+                        {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
                     </label>
-                    <input type="{{ field.field.widget.input_type|default:'text' }}" name="{{ field.name }}"
-                        placeholder="{{ field.label }}" required id="{{ field.id_for_label }}"
-                        class="w-full h-10 px-3 rounded-g border border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-gray-400">
+                    {{ field }}
                     {% if field.help_text %}<p class="text-[10px] text-gray-400 mt-1 leading-tight">{{
                         field.help_text|safe }}</p>{% endif %}
                     {% if field.errors %}<p class="text-xs text-red-500 mt-1">{{ field.errors.as_text }}</p>{% endif %}
+                    {% if field.name == "password1" %}
+                    <div class="mt-2">
+                        <div class="flex gap-1 h-1">
+                            <div id="pw-bar-1" class="flex-1 rounded-full bg-gray-200 transition-colors"></div>
+                            <div id="pw-bar-2" class="flex-1 rounded-full bg-gray-200 transition-colors"></div>
+                            <div id="pw-bar-3" class="flex-1 rounded-full bg-gray-200 transition-colors"></div>
+                            <div id="pw-bar-4" class="flex-1 rounded-full bg-gray-200 transition-colors"></div>
+                        </div>
+                        <p id="pw-label" class="text-[10px] text-gray-400 mt-1"></p>
+                    </div>
+                    {% endif %}
                 </div>
                 {% endfor %}
 
@@ -70,4 +81,25 @@
         </div>
     </div>
 </div>
+<script>
+    const pwInput = document.getElementById('id_password1');
+    if (pwInput) {
+        const bars = [1, 2, 3, 4].map(i => document.getElementById('pw-bar-' + i));
+        const label = document.getElementById('pw-label');
+        const colors = ['bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-500'];
+        const labels = ['Weak', 'Fair', 'Good', 'Strong'];
+        pwInput.addEventListener('input', () => {
+            const v = pwInput.value;
+            let score = 0;
+            if (v.length >= 8) score++;
+            if (/[A-Z]/.test(v)) score++;
+            if (/[0-9]/.test(v)) score++;
+            if (/[^A-Za-z0-9]/.test(v)) score++;
+            bars.forEach((b, i) => {
+                b.className = 'flex-1 rounded-full transition-colors ' + (i < score ? colors[score - 1] : 'bg-gray-200');
+            });
+            if (label) label.textContent = v.length ? labels[score > 0 ? score - 1 : 0] : '';
+        });
+    }
+</script>
 {% endblock %}

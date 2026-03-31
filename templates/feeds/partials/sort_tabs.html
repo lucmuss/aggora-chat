@@ -2,17 +2,32 @@
 <div class="bg-white border border-gray-200 rounded-g mb-3">
   <div class="flex items-center h-11 px-3 gap-1">
     {% for option in "hot,new,top,rising"|split:"," %}
-      <button hx-get="?sort={{ option }}"
-              hx-target="#feed-container"
-              hx-push-url="true"
-              class="h-9 px-3 flex items-center gap-1.5 text-sm font-medium border-b-2 transition-colors rounded-sm
+    <button hx-get="?sort={{ option }}" hx-target="#feed-container" hx-swap="innerHTML" hx-push-url="true"
+      hx-select="#feed-container-inner"
+      class="h-9 px-3 flex items-center gap-1.5 text-sm font-medium border-b-2 transition-colors rounded-sm
                      {% if sort == option %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:bg-gray-50{% endif %}">
-        {% if option == "hot" %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.657 18.657A8 8 0 0 1 6.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0 1 20 13a7.975 7.975 0 0 1-2.343 5.657z"/></svg>
-        {% elif option == "new" %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        {% elif option == "top" %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-        {% elif option == "rising" %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>{% endif %}
-        {{ option|title }}
-      </button>
+      {% if option == "hot" %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24">
+        <path
+          d="M17.657 18.657A8 8 0 0 1 6.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0 1 20 13a7.975 7.975 0 0 1-2.343 5.657z" />
+      </svg>
+      {% elif option == "new" %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+      {% elif option == "top" %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24">
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+        <polyline points="16 7 22 7 22 13" />
+      </svg>
+      {% elif option == "rising" %}<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24">
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+        <polyline points="17 6 23 6 23 12" />
+      </svg>{% endif %}
+      {{ option|title }}
+    </button>
     {% endfor %}
   </div>
 </div>
