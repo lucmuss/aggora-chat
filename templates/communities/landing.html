@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load post_tags %}
+
+{% block meta_description %}{{ community.seo_description|default:community.description|default:APP_TAGLINE }}{% endblock %}
+{% block title %}c/{{ community.slug }} — Explore {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-[1160px] mx-auto space-y-4">
+  <section class="bg-white border border-gray-200 rounded-g overflow-hidden">
+    <div class="h-28 bg-gradient-to-r from-opal to-teal-700"></div>
+    <div class="px-5 pb-5">
+      <div class="flex items-center justify-between gap-4 -mt-7">
+        <div class="w-16 h-16 rounded-full border-4 border-white bg-opal text-white flex items-center justify-center text-xl font-semibold">
+          {{ community.name|first|upper }}
+        </div>
+        <div class="flex flex-wrap gap-2 pt-6">
+          <a href="{% url 'community_detail' slug=community.slug %}" class="h-9 px-4 rounded-g bg-primary text-white text-sm font-medium flex items-center hover:bg-primary-hover transition-colors">Open community</a>
+          <a href="{{ share_links.whatsapp }}" target="_blank" rel="noopener" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center hover:bg-gray-50 transition-colors">Share invite</a>
+          <a href="{% url 'community_share_card' slug=community.slug %}" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center hover:bg-gray-50 transition-colors">Share card</a>
+        </div>
+      </div>
+      <h1 class="text-2xl font-semibold text-gray-900 mt-3">{{ community.title }}</h1>
+      <p class="text-sm text-gray-500 mt-2">{{ community.seo_description|default:community.description }}</p>
+      {% if community.landing_intro_html %}
+      <div class="prose mt-4">{{ community.landing_intro_html|safe }}</div>
+      {% endif %}
+    </div>
+  </section>
+
+  <div class="grid gap-4 lg:grid-cols-[2fr_1fr]">
+    <div class="space-y-4">
+      {% if challenge %}
+      <section class="bg-gradient-to-r from-opal-light to-white border border-opal-muted rounded-g p-4">
+        <p class="text-[11px] uppercase tracking-wide text-opal font-semibold">Featured challenge</p>
+        <h2 class="text-lg font-semibold text-gray-900 mt-1">{{ challenge.title }}</h2>
+        <div class="prose mt-2">{{ challenge.prompt_html|safe }}</div>
+      </section>
+      {% endif %}
+
+      <section class="bg-white border border-gray-200 rounded-g overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-100">
+          <h2 class="font-semibold text-sm text-gray-900">Best of c/{{ community.slug }}</h2>
+        </div>
+        {% if best_posts %}
+        <div class="divide-y divide-gray-100">
+          {% for post in best_posts %}
+          <a href="{% url 'post_detail' community_slug=community.slug post_id=post.id slug=post.slug %}" class="block px-4 py-3 hover:bg-gray-50">
+            <p class="text-sm font-medium text-gray-900">{{ post.title }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ post|display_score }} score · {{ post.comment_count }} comments</p>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="px-4 py-6 text-sm text-gray-500">No featured posts yet.</div>
+        {% endif %}
+      </section>
+
+      {% if community.best_of_html %}
+      <section class="bg-white border border-gray-200 rounded-g p-4">
+        <h2 class="font-semibold text-sm text-gray-900">Resources and highlights</h2>
+        <div class="prose mt-3">{{ community.best_of_html|safe }}</div>
+      </section>
+      {% endif %}
+
+      {% if community.faq_html %}
+      <section class="bg-white border border-gray-200 rounded-g p-4">
+        <h2 class="font-semibold text-sm text-gray-900">FAQ</h2>
+        <div class="prose mt-3">{{ community.faq_html|safe }}</div>
+      </section>
+      {% endif %}
+    </div>
+
+    <aside class="space-y-4">
+      <section class="bg-white border border-gray-200 rounded-g p-4">
+        <h2 class="font-semibold text-sm text-opal mb-2">One-click invite</h2>
+        <input type="text" readonly value="{{ share_links.copy_url }}" class="w-full h-9 px-3 rounded-g border border-gray-200 text-sm text-gray-700 bg-gray-50">
+        <div class="grid grid-cols-3 gap-2 mt-3">
+          <a href="{{ share_links.whatsapp }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-green-50 text-green-700 text-xs font-medium flex items-center justify-center">WhatsApp</a>
+          <a href="{{ share_links.telegram }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-sky-50 text-sky-700 text-xs font-medium flex items-center justify-center">Telegram</a>
+          <a href="{{ share_links.x }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-gray-100 text-gray-700 text-xs font-medium flex items-center justify-center">X</a>
+        </div>
+      </section>
+
+      {% if leaderboard %}
+      <section class="bg-white border border-gray-200 rounded-g overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-100">
+          <h2 class="font-semibold text-sm text-opal">Leaderboard</h2>
+        </div>
+        <div class="divide-y divide-gray-100">
+          {% for row in leaderboard %}
+          <a href="{% url 'profile' handle=row.user.handle %}" class="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50">
+            <div>
+              <p class="text-sm font-medium text-gray-900">{{ row.user.display_name|default:row.user.handle }}</p>
+              <p class="text-xs text-gray-500">{{ row.posts }} posts · {{ row.comments }} comments</p>
+            </div>
+            <span class="text-sm font-semibold text-opal">{{ row.total_points }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    </aside>
+  </div>
+</div>
+{% endblock %}

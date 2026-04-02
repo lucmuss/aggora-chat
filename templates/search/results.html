@@ -10,7 +10,7 @@
       <form method="get" action="/search/" class="styled-form space-y-3">
         <div class="flex gap-2">
           <input id="search_query" type="search" name="q" value="{{ query }}"
-            placeholder="Search posts, communities, users…"
+            placeholder="Search posts…"
             class="flex-1 h-9 pl-3 pr-3 rounded-g border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none transition-colors">
           <select id="search_sort" name="sort"
             class="h-9 px-3 rounded-g border border-gray-200 text-sm text-gray-600 focus:border-primary focus:outline-none">
@@ -34,6 +34,7 @@
   <aside class="hidden lg:block w-80 shrink-0">
     <div class="bg-white border border-gray-200 rounded-g p-4 sticky top-[72px]">
       <h3 class="font-semibold text-sm text-opal mb-3">Search operators</h3>
+      <p class="text-xs text-gray-500 mb-3">Search currently indexes posts. Community and profile discovery happens in their own sections.</p>
       <ul class="text-xs text-gray-500 space-y-1.5 font-mono">
         <li><code class="text-gray-700">author:handle</code></li>
         <li><code class="text-gray-700">flair:name</code></li>

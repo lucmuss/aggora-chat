@@ -5,9 +5,10 @@ from django.urls import reverse
 
 from apps.communities.models import Community
 from apps.posts.models import Comment, Post
+from apps.posts.services import submit_comment
 from apps.votes.models import SavedPost
 
-
+from .models import Notification
 User = get_user_model()
 
 
@@ -16,7 +17,7 @@ class HandleSetupTests(TestCase):
         response = self.client.get(reverse("home"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Agora starts with communities")
+        self.assertContains(response, "Welcome to Agora")
 
     def test_authenticated_user_without_handle_is_redirected(self):
         user = User.objects.create_user(
@@ -44,7 +45,7 @@ class HandleSetupTests(TestCase):
         )
 
         user.refresh_from_db()
-        self.assertRedirects(response, reverse("home"))
+        self.assertRedirects(response, reverse("start_with_friends"))
         self.assertEqual(user.handle, "agora_user")
 
     def test_profile_saved_tab_renders(self):
@@ -107,6 +108,70 @@ class HandleSetupTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
+
+    def test_start_with_friends_completes_onboarding_and_redirects_to_post_create(self):
+        user = User.objects.create_user(
+            username="newbie",
+            email="newbie@example.com",
+            password="password123",
+            handle="newbie",
+        )
+        community = Community.objects.create(
+            name="Agora Onboarding",
+            slug="agora-onboarding",
+            title="Agora Onboarding",
+            description="Start here.",
+            creator=user,
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("start_with_friends"),
+            {
+                "communities": [community.pk],
+                "first_post_community": community.pk,
+            },
+        )
+
+        user.refresh_from_db()
+        self.assertTrue(user.onboarding_completed)
+        self.assertRedirects(response, reverse("create_post", kwargs={"community_slug": community.slug}))
+
+    def test_notifications_page_marks_reply_notifications_as_read(self):
+        author = User.objects.create_user(
+            username="author",
+            email="author@example.com",
+            password="password123",
+            handle="author",
+        )
+        replier = User.objects.create_user(
+            username="replier",
+            email="replier@example.com",
+            password="password123",
+            handle="replier",
+        )
+        community = Community.objects.create(
+            name="Agora Notifications",
+            slug="agora-notifications",
+            title="Agora Notifications",
+            description="Notification tests.",
+            creator=author,
+        )
+        post = Post.objects.create(
+            community=community,
+            author=author,
+            post_type="text",
+            title="Notify me",
+            body_md="Body",
+        )
+        submit_comment(replier, post, "Reply body")
+        self.client.force_login(author)
+
+        response = self.client.get(reverse("notifications"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "replied to your post")
+        self.assertFalse(Notification.objects.filter(user=author, is_read=False).exists())
 
 
 class AccountBootstrapCommandTests(TestCase):

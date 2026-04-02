@@ -41,6 +41,11 @@ def submit_post(user, community, post_data: dict, poll_lines: list[str] = None, 
         title=post_data["title"],
         body_md=post_data.get("body_md", ""),
         post_type=post_data["post_type"],
+        url=post_data.get("url", ""),
+        image=post_data.get("image"),
+        flair=post_data.get("flair"),
+        is_spoiler=post_data.get("is_spoiler", False),
+        is_nsfw=post_data.get("is_nsfw", False),
         is_locked=post_data.get("is_locked", False),
         is_stickied=post_data.get("is_stickied", False),
     )
@@ -83,6 +88,7 @@ def submit_comment(user, post: Post, body_md: str, parent_id: str | None = None)
     
     Post.objects.filter(pk=post.pk).update(comment_count=models.F("comment_count") + 1)
     dispatch_task(recalculate_post_vote_totals, post.id)
+    create_reengagement_notifications(comment)
     return comment
 
 
@@ -157,3 +163,41 @@ def pg_feed_queryset(user, community=None, sort="hot"):
         if filters:
             queryset = queryset.filter(filters)
     return apply_post_sort(queryset, sort=sort)
+
+
+def create_reengagement_notifications(comment: Comment):
+    from apps.accounts.models import Notification
+
+    recipients = []
+    if comment.post.author_id and comment.post.author_id != comment.author_id:
+        recipients.append(
+            (
+                comment.post.author,
+                Notification.NotificationType.POST_REPLY,
+                f"{comment.author.handle or 'Someone'} replied to your post '{comment.post.title}'.",
+            )
+        )
+    if comment.parent_id and comment.parent and comment.parent.author_id and comment.parent.author_id not in {
+        comment.author_id,
+        comment.post.author_id,
+    }:
+        recipients.append(
+            (
+                comment.parent.author,
+                Notification.NotificationType.COMMENT_REPLY,
+                f"{comment.author.handle or 'Someone'} replied to your comment in '{comment.post.title}'.",
+            )
+        )
+
+    url = f"/c/{comment.post.community.slug}/post/{comment.post.id}/{comment.post.slug}/"
+    for user, notification_type, message in recipients:
+        Notification.objects.create(
+            user=user,
+            actor=comment.author,
+            community=comment.post.community,
+            post=comment.post,
+            comment=comment,
+            notification_type=notification_type,
+            message=message,
+            url=url,
+        )

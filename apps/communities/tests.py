@@ -2,7 +2,11 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Community, CommunityMembership, CommunityWikiPage
+from django.utils import timezone
+
+from apps.posts.models import Comment, Post
+
+from .models import Community, CommunityChallenge, CommunityInvite, CommunityMembership, CommunityWikiPage
 
 
 User = get_user_model()
@@ -51,7 +55,7 @@ class CommunityFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Agora Builders")
-        self.assertContains(response, "About this community")
+        self.assertContains(response, "Community Settings")
 
     def test_owner_can_update_community_settings(self):
         CommunityMembership.objects.create(
@@ -103,3 +107,100 @@ class CommunityFlowTests(TestCase):
             reverse("community_wiki_page", kwargs={"slug": self.community.slug, "page_slug": wiki_page.slug}),
         )
         self.assertIn("Start here", wiki_page.body_html)
+
+    def test_public_landing_page_renders_invite_and_best_of_sections(self):
+        Post.objects.create(
+            community=self.community,
+            author=self.user,
+            post_type="text",
+            title="Best thread",
+            body_md="Highlight",
+            score=9,
+            hot_score=9,
+        )
+        self.community.landing_intro_md = "Welcome builders."
+        self.community.faq_md = "## FAQ\n\nHow do I join?"
+        self.community.save()
+
+        response = self.client.get(reverse("community_landing", kwargs={"slug": self.community.slug}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "One-click invite")
+        self.assertContains(response, "Best thread")
+
+    def test_invite_link_joins_user_and_redirects_to_post_create(self):
+        joining_user = User.objects.create_user(
+            username="joiner",
+            email="joiner@example.com",
+            password="password123",
+            handle="joiner",
+        )
+        invite = CommunityInvite.objects.create(community=self.community, created_by=self.user, token="invite-token-1")
+        self.client.force_login(joining_user)
+
+        response = self.client.post(reverse("community_invite", kwargs={"slug": self.community.slug, "token": invite.token}))
+
+        self.assertRedirects(response, reverse("create_post", kwargs={"community_slug": self.community.slug}))
+        self.assertTrue(CommunityMembership.objects.filter(user=joining_user, community=self.community).exists())
+
+    def test_community_detail_renders_active_challenge_and_leaderboard(self):
+        CommunityMembership.objects.create(
+            user=self.user,
+            community=self.community,
+            role=CommunityMembership.Role.OWNER,
+        )
+        Post.objects.create(
+            community=self.community,
+            author=self.user,
+            post_type="text",
+            title="Leaderboard thread",
+            body_md="Body",
+            score=12,
+            hot_score=12,
+        )
+        CommunityChallenge.objects.create(
+            community=self.community,
+            created_by=self.user,
+            title="Weekly prompt",
+            prompt_md="Share what you're building.",
+            starts_at=timezone.now() - timezone.timedelta(days=1),
+            ends_at=timezone.now() + timezone.timedelta(days=6),
+        )
+
+        response = self.client.get(reverse("community_detail", kwargs={"slug": self.community.slug}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Weekly prompt")
+        self.assertContains(response, "Top Contributors This Week")
+
+    def test_private_community_is_hidden_from_anonymous_discovery_and_detail(self):
+        self.community.community_type = Community.CommunityType.PRIVATE
+        self.community.save(update_fields=["community_type"])
+
+        discovery_response = self.client.get(reverse("community_discovery"))
+        detail_response = self.client.get(reverse("community_detail", kwargs={"slug": self.community.slug}))
+
+        self.assertEqual(discovery_response.status_code, 200)
+        self.assertNotContains(discovery_response, "Agora Builders")
+        self.assertEqual(detail_response.status_code, 403)
+
+    def test_restricted_community_requires_invite_to_join(self):
+        joining_user = User.objects.create_user(
+            username="restricted_joiner",
+            email="restricted_joiner@example.com",
+            password="password123",
+            handle="restricted_joiner",
+        )
+        self.community.community_type = Community.CommunityType.RESTRICTED
+        self.community.save(update_fields=["community_type"])
+        self.client.force_login(joining_user)
+
+        response = self.client.post(reverse("toggle_membership", kwargs={"slug": self.community.slug}))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_share_card_page_renders(self):
+        response = self.client.get(reverse("community_share_card", kwargs={"slug": self.community.slug}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "One click to join, one more to post.")

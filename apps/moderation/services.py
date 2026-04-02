@@ -45,8 +45,14 @@ def execute_mod_action(
     elif action_type == "lock_post" and target_post:
         target_post.is_locked = True
         target_post.save(update_fields=["is_locked", "body_html"])
+    elif action_type == "unlock_post" and target_post:
+        target_post.is_locked = False
+        target_post.save(update_fields=["is_locked", "body_html"])
     elif action_type == "sticky_post" and target_post:
         target_post.is_stickied = True
+        target_post.save(update_fields=["is_stickied", "body_html"])
+    elif action_type == "unsticky_post" and target_post:
+        target_post.is_stickied = False
         target_post.save(update_fields=["is_stickied", "body_html"])
     elif action_type == "remove_comment" and target_comment:
         target_comment.is_removed = True
@@ -158,7 +164,7 @@ def create_mod_mail(creator: User, community: Community, body_md: str, title: st
     thread = ModMail.objects.create(
         community=community,
         created_by=creator,
-        title=title,
+        subject=title,
     )
     ModMailMessage.objects.create(
         thread=thread,

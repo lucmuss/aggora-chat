@@ -101,6 +101,60 @@ class ModerationFlowTests(TestCase):
         self.assertEqual(queue_item.status, ModQueueItem.Status.REMOVED)
         self.assertEqual(ModAction.objects.filter(action_type="remove_post").count(), 1)
 
+    def test_owner_can_lock_and_unlock_post(self):
+        self.client.force_login(self.owner)
+
+        lock_response = self.client.post(
+            reverse("mod_action", kwargs={"community_slug": self.community.slug}),
+            {
+                "post_id": self.post.id,
+                "action_type": "lock_post",
+                "reason_text": "Pause thread",
+            },
+        )
+        self.post.refresh_from_db()
+        self.assertEqual(lock_response.status_code, 302)
+        self.assertTrue(self.post.is_locked)
+
+        unlock_response = self.client.post(
+            reverse("mod_action", kwargs={"community_slug": self.community.slug}),
+            {
+                "post_id": self.post.id,
+                "action_type": "unlock_post",
+                "reason_text": "Reopen thread",
+            },
+        )
+        self.post.refresh_from_db()
+        self.assertEqual(unlock_response.status_code, 302)
+        self.assertFalse(self.post.is_locked)
+
+    def test_owner_can_sticky_and_unsticky_post(self):
+        self.client.force_login(self.owner)
+
+        sticky_response = self.client.post(
+            reverse("mod_action", kwargs={"community_slug": self.community.slug}),
+            {
+                "post_id": self.post.id,
+                "action_type": "sticky_post",
+                "reason_text": "Highlight thread",
+            },
+        )
+        self.post.refresh_from_db()
+        self.assertEqual(sticky_response.status_code, 302)
+        self.assertTrue(self.post.is_stickied)
+
+        unsticky_response = self.client.post(
+            reverse("mod_action", kwargs={"community_slug": self.community.slug}),
+            {
+                "post_id": self.post.id,
+                "action_type": "unsticky_post",
+                "reason_text": "Normal ranking again",
+            },
+        )
+        self.post.refresh_from_db()
+        self.assertEqual(unsticky_response.status_code, 302)
+        self.assertFalse(self.post.is_stickied)
+
     def test_banned_user_cannot_create_post(self):
         Ban.objects.create(
             community=self.community,

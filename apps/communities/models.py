@@ -16,6 +16,13 @@ class Community(models.Model):
     description = models.TextField(max_length=5000, blank=True)
     sidebar_md = models.TextField(blank=True)
     sidebar_html = models.TextField(blank=True)
+    landing_intro_md = models.TextField(blank=True)
+    landing_intro_html = models.TextField(blank=True)
+    faq_md = models.TextField(blank=True)
+    faq_html = models.TextField(blank=True)
+    best_of_md = models.TextField(blank=True)
+    best_of_html = models.TextField(blank=True)
+    seo_description = models.CharField(max_length=160, blank=True)
     icon = models.ImageField(upload_to="community_icons/", blank=True)
     banner = models.ImageField(upload_to="community_banners/", blank=True)
     community_type = models.CharField(
@@ -46,6 +53,9 @@ class Community(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)
         self.sidebar_html = render_markdown(self.sidebar_md)
+        self.landing_intro_html = render_markdown(self.landing_intro_md)
+        self.faq_html = render_markdown(self.faq_md)
+        self.best_of_html = render_markdown(self.best_of_md)
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -141,3 +151,56 @@ class CommunityWikiPage(models.Model):
 
     def __str__(self) -> str:
         return f"{self.community.slug}:{self.slug}"
+
+
+class CommunityInvite(models.Model):
+    community = models.ForeignKey(Community, on_delete=models.CASCADE, related_name="invites")
+    created_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="community_invites",
+    )
+    token = models.CharField(max_length=32, unique=True, db_index=True)
+    usage_count = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"Invite {self.token} for c/{self.community.slug}"
+
+
+class CommunityChallenge(models.Model):
+    community = models.ForeignKey(Community, on_delete=models.CASCADE, related_name="challenges")
+    created_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_challenges",
+    )
+    title = models.CharField(max_length=120)
+    prompt_md = models.TextField()
+    prompt_html = models.TextField(blank=True)
+    share_text = models.CharField(max_length=200, blank=True)
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    is_featured = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-starts_at", "-created_at"]
+
+    def save(self, *args, **kwargs):
+        self.prompt_html = render_markdown(self.prompt_md)
+        super().save(*args, **kwargs)
+
+    def is_active(self):
+        from django.utils import timezone
+
+        now = timezone.now()
+        return self.starts_at <= now <= self.ends_at

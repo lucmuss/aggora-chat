@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-[900px] mx-auto">
+  <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+    <div class="px-4 py-3 border-b border-gray-100">
+      <h1 class="text-lg font-semibold text-gray-900">Notifications</h1>
+    </div>
+    {% if notifications %}
+    <div class="divide-y divide-gray-100">
+      {% for notification in notifications %}
+      <a href="{{ notification.url|default:'/' }}" class="block px-4 py-3 hover:bg-gray-50">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-sm font-medium text-gray-900">{{ notification.message }}</p>
+            <p class="text-xs text-gray-500 mt-1">
+              {% if notification.community %}c/{{ notification.community.slug }} · {% endif %}
+              {{ notification.created_at|timesince }} ago
+            </p>
+          </div>
+          {% if not notification.is_read %}
+          <span class="w-2.5 h-2.5 rounded-full bg-primary shrink-0"></span>
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-4 py-10 text-center">
+      <p class="text-sm text-gray-500">No notifications yet. Replies, new joins from people you follow, and challenge nudges will show up here.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

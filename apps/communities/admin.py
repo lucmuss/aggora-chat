@@ -1,6 +1,15 @@
 from django.contrib import admin
 
-from .models import Community, CommunityMembership, CommunityRule, CommunityWikiPage, PostFlair, UserFlair
+from .models import (
+    Community,
+    CommunityChallenge,
+    CommunityInvite,
+    CommunityMembership,
+    CommunityRule,
+    CommunityWikiPage,
+    PostFlair,
+    UserFlair,
+)
 
 
 class CommunityRuleInline(admin.TabularInline):
@@ -26,3 +35,5 @@ class CommunityMembershipAdmin(admin.ModelAdmin):
 admin.site.register(PostFlair)
 admin.site.register(UserFlair)
 admin.site.register(CommunityWikiPage)
+admin.site.register(CommunityInvite)
+admin.site.register(CommunityChallenge)

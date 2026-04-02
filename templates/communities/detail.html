@@ -22,6 +22,10 @@
           </div>
           <div class="shrink-0 space-y-2 mt-1">
             {% include "communities/partials/join_button.html" with community=community joined=joined %}
+            <a href="{% url 'community_landing' slug=community.slug %}"
+              class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+              Share page
+            </a>
             {% if user.is_authenticated %}
             <a href="/c/{{ community.slug }}/submit/"
               class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
@@ -35,12 +39,33 @@
             <p class="text-sm font-semibold text-gray-900">{{ member_count }}</p>
             <p class="text-xs text-gray-400">Members</p>
           </div>
+          {% if followed_member_count %}
+          <div>
+            <p class="text-sm font-semibold text-gray-900">{{ followed_member_count }}</p>
+            <p class="text-xs text-gray-400">People you follow here</p>
+          </div>
+          {% endif %}
           <div>
             <p class="text-xs text-gray-400">Created {{ community.created_at|date:"M d, Y" }}</p>
           </div>
         </div>
       </div>
     </div>
+    {% if active_challenge %}
+    <div class="bg-gradient-to-r from-opal-light to-white border border-opal-muted rounded-g p-4">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-[11px] uppercase tracking-wide text-opal font-semibold">Challenge of the week</p>
+          <h2 class="text-base font-semibold text-gray-900 mt-1">{{ active_challenge.title }}</h2>
+          <div class="prose prose-sm mt-2 text-sm">{{ active_challenge.prompt_html|safe }}</div>
+        </div>
+        {% if user.is_authenticated %}
+        <a href="{% url 'create_post' community_slug=community.slug %}"
+          class="shrink-0 h-8 px-3 rounded-g bg-primary text-white text-sm font-medium flex items-center hover:bg-primary-hover">Join in</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
     {% include "feeds/partials/sort_tabs.html" with sort=sort %}
     <div id="feed-container" class="space-y-3">
       <div id="feed-container-inner">
@@ -65,6 +90,39 @@
         <p>Polls: {{ community.allow_polls|yesno:"✓,✗" }}</p>
       </div>
     </div>
+    {% if leaderboard %}
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100">
+        <h2 class="font-semibold text-sm text-opal">Top Contributors This Week</h2>
+      </div>
+      <div class="divide-y divide-gray-100">
+        {% for row in leaderboard %}
+        <a href="{% url 'profile' handle=row.user.handle %}" class="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50">
+          <div>
+            <p class="text-sm font-medium text-gray-900">{{ row.user.display_name|default:row.user.handle }}</p>
+            <p class="text-xs text-gray-500">{{ row.posts }} posts · {{ row.comments }} comments</p>
+          </div>
+          <span class="text-sm font-semibold text-opal">{{ row.total_points }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if suggested_communities %}
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100">
+        <h2 class="font-semibold text-sm text-opal">You May Also Like</h2>
+      </div>
+      <div class="divide-y divide-gray-100">
+        {% for suggestion in suggested_communities %}
+        <a href="{% url 'community_detail' slug=suggestion.slug %}" class="block px-4 py-2.5 hover:bg-gray-50">
+          <p class="text-sm font-medium text-gray-900">c/{{ suggestion.slug }}</p>
+          <p class="text-xs text-gray-500 line-clamp-1">{{ suggestion.description|default:"Join the next conversation." }}</p>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
     {% if community.rules.all %}
     <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
       <div class="px-4 py-3 border-b border-gray-100">

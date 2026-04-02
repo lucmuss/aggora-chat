@@ -26,6 +26,14 @@ sync:
     uv pip install -r requirements/base.txt
     uv pip install -r requirements/dev.txt
 
+# Run Django tests
+test:
+    uv run python manage.py test
+
+# Run pytest-based test collection
+pytest:
+    uv run pytest
+
 # Create pre-commit hooks
 setup:
     uv pip install pre-commit ruff mypy

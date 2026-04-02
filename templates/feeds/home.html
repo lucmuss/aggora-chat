@@ -5,6 +5,18 @@
 
   <!-- Feed -->
   <div class="flex-1 min-w-0 max-w-[640px]">
+    {% if featured_challenges %}
+    <div class="space-y-2 mb-3">
+      {% for challenge in featured_challenges %}
+      <a href="{% url 'community_landing' slug=challenge.community.slug %}"
+        class="block bg-gradient-to-r from-opal to-teal-700 rounded-g p-4 text-white">
+        <p class="text-[11px] uppercase tracking-wide text-white/70">Community Challenge</p>
+        <h2 class="font-semibold text-base mt-1">{{ challenge.title }}</h2>
+        <p class="text-sm text-white/85 mt-1">{{ challenge.share_text|default:challenge.prompt_md|truncatechars:120 }}</p>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
     {% include "feeds/partials/sort_tabs.html" with sort=sort %}
     <div id="feed-container" class="space-y-3">
       <div id="feed-container-inner">
@@ -64,6 +76,30 @@
         <!-- "View all" link = OPAL -->
         <a href="{% url 'community_discovery' %}"
           class="text-xs font-medium text-opal hover:text-opal-hover hover:underline">View all communities →</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if user.is_authenticated and suggested_communities %}
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-semibold text-sm text-gray-900">Suggested For You</h2>
+        {% if not user.onboarding_completed %}
+        <a href="{% url 'start_with_friends' %}" class="text-xs font-medium text-opal hover:underline">Finish onboarding</a>
+        {% endif %}
+      </div>
+      <div class="divide-y divide-gray-100">
+        {% for community in suggested_communities %}
+        <a href="{% url 'community_detail' slug=community.slug %}" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
+          <div class="w-8 h-8 rounded-full bg-opal-muted text-opal flex items-center justify-center text-xs font-medium">
+            {{ community.name|first|upper }}
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-gray-900 truncate">c/{{ community.slug }}</p>
+            <p class="text-xs text-gray-500 line-clamp-1">{{ community.description|default:"Join the conversation." }}</p>
+          </div>
+        </a>
+        {% endfor %}
       </div>
     </div>
     {% endif %}

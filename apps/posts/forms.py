@@ -43,10 +43,16 @@ class PostCreateForm(forms.ModelForm):
         option_lines = [line.strip() for line in poll_options.splitlines() if line.strip()]
         if post_type == Post.PostType.TEXT and not body_md:
             self.add_error("body_md", "Text posts need a body.")
+        if post_type == Post.PostType.TEXT and not self.community.allow_text_posts:
+            self.add_error("post_type", "Text posts are disabled in this community.")
         if post_type == Post.PostType.LINK and not url:
             self.add_error("url", "Link posts need a URL.")
+        if post_type == Post.PostType.LINK and not self.community.allow_link_posts:
+            self.add_error("post_type", "Link posts are disabled in this community.")
         if post_type == Post.PostType.IMAGE and not image:
             self.add_error("image", "Image posts need an image.")
+        if post_type == Post.PostType.IMAGE and not self.community.allow_image_posts:
+            self.add_error("post_type", "Image posts are disabled in this community.")
         if post_type == Post.PostType.POLL:
             if not self.community.allow_polls:
                 self.add_error("post_type", "Polls are disabled in this community.")

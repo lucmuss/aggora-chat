@@ -6,6 +6,9 @@ from . import views
 urlpatterns = [
     path("create/", views.create_community, name="create_community"),
     path("", views.community_discovery, name="community_discovery"),
+    path("<slug:slug>/landing/", views.community_landing, name="community_landing"),
+    path("<slug:slug>/share-card/", views.community_share_card, name="community_share_card"),
+    path("<slug:slug>/invite/<str:token>/", views.community_invite, name="community_invite"),
     path("<slug:slug>/wiki/edit/", views.wiki_edit, name="community_wiki_edit_home"),
     path("<slug:slug>/wiki/<slug:page_slug>/edit/", views.wiki_edit, name="community_wiki_edit"),
     path("<slug:slug>/wiki/", views.wiki_page, name="community_wiki_home"),

@@ -1,7 +1,15 @@
 from django.db.models import Count
+from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render
 
 from apps.communities.models import Community
+from apps.communities.services import (
+    active_challenge_for_community,
+    can_view_community,
+    community_leaderboard,
+    featured_challenges_for_user,
+    suggested_communities_for_user,
+)
 from apps.feeds.caching import (
     community_feed_cache_key,
     get_cached_feed,
@@ -22,6 +30,7 @@ def home(request):
         .select_related("creator")
         .order_by("-created_at")[:12]
     )
+    suggested = suggested_communities_for_user(request.user)
     return render(
         request,
         "feeds/home.html",
@@ -32,12 +41,16 @@ def home(request):
             "user_votes": user_votes,
             "saved_posts": saved_posts,
             "communities": communities,
+            "suggested_communities": suggested,
+            "featured_challenges": featured_challenges_for_user(request.user),
         },
     )
 
 
 def community_feed(request, slug):
     community = get_object_or_404(Community.objects.prefetch_related("rules"), slug=slug)
+    if not can_view_community(request.user, community):
+        return HttpResponseForbidden("This private community is only visible to members.")
     sort = request.GET.get("sort", "hot")
     after = request.GET.get("after")
     cache_key = community_feed_cache_key(community.slug, sort)
@@ -50,8 +63,10 @@ def community_feed(request, slug):
             set_cached_feed(cache_key, posts)
     user_votes, saved_posts = annotate_posts_with_user_state(posts, request.user)
     joined = False
+    followed_member_count = 0
     if request.user.is_authenticated:
         joined = community.memberships.filter(user=request.user).exists()
+        followed_member_count = community.memberships.filter(user__in=request.user.followed_users.all()).count()
     return render(
         request,
         "communities/detail.html",
@@ -65,6 +80,10 @@ def community_feed(request, slug):
             "next_cursor": next_cursor,
             "user_votes": user_votes,
             "saved_posts": saved_posts,
+            "active_challenge": active_challenge_for_community(community),
+            "leaderboard": community_leaderboard(community),
+            "suggested_communities": suggested_communities_for_user(request.user),
+            "followed_member_count": followed_member_count,
         },
     )
 

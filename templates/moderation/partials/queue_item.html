@@ -49,8 +49,10 @@
         <button type="submit" name="action_type" value="remove_{{ item.content_type }}"
           class="h-8 px-3 rounded-g bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors border-0">Remove</button>
         {% if item.post %}
-        <button type="submit" name="action_type" value="lock_post"
-          class="h-8 px-3 rounded-g border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">Lock</button>
+        <button type="submit" name="action_type" value="{% if item.post.is_locked %}unlock_post{% else %}lock_post{% endif %}"
+          class="h-8 px-3 rounded-g border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">{% if item.post.is_locked %}Unlock{% else %}Lock{% endif %}</button>
+        <button type="submit" name="action_type" value="{% if item.post.is_stickied %}unsticky_post{% else %}sticky_post{% endif %}"
+          class="h-8 px-3 rounded-g border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">{% if item.post.is_stickied %}Unsticky{% else %}Sticky{% endif %}</button>
         {% endif %}
       </div>
     </form>

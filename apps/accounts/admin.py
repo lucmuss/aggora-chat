@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from .models import AgentIdentityProvider, User
+from .models import AgentIdentityProvider, Notification, User
 
 
 @admin.register(User)
@@ -20,6 +20,8 @@ class UserAdmin(DjangoUserAdmin):
                     "is_agent",
                     "agent_verified",
                     "agent_provider_issuer",
+                    "onboarding_completed",
+                    "onboarding_completed_at",
                 )
             },
         ),
@@ -43,3 +45,10 @@ class AgentIdentityProviderAdmin(admin.ModelAdmin):
     list_display = ("name", "issuer_url", "status", "owner_organization", "updated_at")
     list_filter = ("status",)
     search_fields = ("name", "issuer_url", "owner_organization")
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ("user", "notification_type", "community", "is_read", "created_at")
+    list_filter = ("notification_type", "is_read")
+    search_fields = ("user__email", "user__handle", "message")

@@ -16,6 +16,13 @@
       </div>
 
       {% if socialaccount_providers %}
+        {% if GOOGLE_AUTH_ENABLED %}
+        <a href="{% provider_login_url 'google' process='login' %}"
+          class="w-full h-10 mb-4 rounded-g border border-gray-300 bg-white flex items-center justify-center gap-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+          <span class="w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[11px] font-bold">G</span>
+          Continue with Google
+        </a>
+        {% endif %}
         <p>{% blocktrans with site.name as site_name %}Please sign in with one
         of your existing third party accounts. Or, <a href="{{ signup_url }}">sign up</a>
         for a {{ site_name }} account and sign in below:{% endblocktrans %}</p>

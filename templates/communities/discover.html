@@ -47,6 +47,19 @@
         Create Community
       </a>
     </div>
+    {% if suggested_communities %}
+    <div class="bg-white border border-gray-200 rounded-g p-4 mt-3">
+      <h2 class="font-semibold text-sm text-opal mb-2">Suggested Communities</h2>
+      <div class="space-y-2">
+        {% for community in suggested_communities %}
+        <a href="{% url 'community_detail' slug=community.slug %}" class="block">
+          <p class="text-sm font-medium text-gray-900">c/{{ community.slug }}</p>
+          <p class="text-xs text-gray-500">{{ community.description|default:"New conversations waiting."|truncatechars:70 }}</p>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
   </aside>
 </div>
 {% endblock %}

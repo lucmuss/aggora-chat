@@ -19,6 +19,14 @@
             </div>
 
             {% if socialaccount_providers %}
+            {% if GOOGLE_AUTH_ENABLED %}
+            <a href="{% provider_login_url 'google' process='signup' %}"
+                class="w-full h-10 mb-4 rounded-g border border-gray-300 bg-white flex items-center justify-center gap-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                <span class="w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[11px] font-bold">G</span>
+                Continue with Google
+            </a>
+            <p class="text-xs text-gray-500 mb-4 text-center">Fastest path: Google sign-in, choose your handle, then join communities and invite friends.</p>
+            {% endif %}
             <p>{% blocktrans with site.name as site_name %}Please sign up with one
                 of your existing third party accounts. Or, <a href="{{ login_url }}">sign in</a>
                 instead:{% endblocktrans %}</p>

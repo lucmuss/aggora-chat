@@ -50,6 +50,10 @@ class CommunitySettingsForm(forms.ModelForm):
             "title",
             "description",
             "sidebar_md",
+            "landing_intro_md",
+            "faq_md",
+            "best_of_md",
+            "seo_description",
             "community_type",
             "allow_text_posts",
             "allow_link_posts",
@@ -61,6 +65,9 @@ class CommunitySettingsForm(forms.ModelForm):
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
             "sidebar_md": forms.Textarea(attrs={"rows": 6}),
+            "landing_intro_md": forms.Textarea(attrs={"rows": 5, "placeholder": "Why this community matters"}),
+            "faq_md": forms.Textarea(attrs={"rows": 6, "placeholder": "## FAQ\n\n### What is this place?"}),
+            "best_of_md": forms.Textarea(attrs={"rows": 6, "placeholder": "- Best discussion\n- Community resources"}),
         }
 
 
