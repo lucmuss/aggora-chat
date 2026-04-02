@@ -2,6 +2,35 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.0] - 2026-04-02
+
+Production-readiness pass focused on security hardening, account settings, API/web parity, richer demo seeding, and operational stability.
+
+### Added
+- Account settings for profile visibility and notification preferences.
+- Staff MFA setup flow with TOTP verification for sensitive moderation and admin routes.
+- Rate limiting middleware for login, posting, voting, and social actions.
+- PWA offline fallback page and install prompt handling.
+- Extended JSON seed data for multiple communities, challenges, wiki pages, curated posts, votes, and saved items.
+- CI workflow with lint/test, Bandit security scan, and optional Playwright smoke screenshots.
+
+### Changed
+- API search now returns posts, communities, and users to match the web experience more closely.
+- Community and wiki editors now support live Markdown preview.
+- Container startup now supports automatic migrate and richer seeding in development and stack/prod-style Compose flows.
+- Demo environment and live container were refreshed to serve the current `0.3.0` release.
+
+### Fixed
+- Eliminated the remaining `makemigrations --check` drift by committing the pending accounts index rename migration.
+- Reduced Django 6 deprecation noise by updating the vote check constraint and opting forms into HTTPS URL assumptions.
+- Removed local test warnings about a missing `staticfiles` directory by ensuring the path exists during repo runs.
+
+### Verified
+- `python3 -m compileall apps config templates static scripts`
+- `uv run pytest -q`
+- `uv run python manage.py test --noinput`
+- `uv run python manage.py makemigrations --check --dry-run`
+
 ## [0.2.0] - 2026-04-02
 
 Expanded the initial release with web search improvements, PWA groundwork, richer social login support, and editor usability upgrades.

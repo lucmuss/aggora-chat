@@ -25,7 +25,7 @@ class Vote(models.Model):
                 name="unique_comment_vote",
             ),
             models.CheckConstraint(
-                check=(
+                condition=(
                     (models.Q(post__isnull=False) & models.Q(comment__isnull=True))
                     | (models.Q(post__isnull=True) & models.Q(comment__isnull=False))
                 ),

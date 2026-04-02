@@ -26,7 +26,7 @@ PROJECT_SLUG = env_str("PROJECT_SLUG", "aggora_chat")
 APP_NAME = env_str("APP_NAME", "Agora")
 APP_TAGLINE = env_str("APP_TAGLINE", "communities first")
 APP_PUBLIC_URL = env_str("APP_PUBLIC_URL", "").rstrip("/")
-APP_VERSION = env_str("APP_VERSION", "0.2.0")
+APP_VERSION = env_str("APP_VERSION", "0.3.0")
 SEED_USERS_FILE = env_str("SEED_USERS_FILE", "data/seed/users.json")
 SEED_ADMINS_FILE = env_str("SEED_ADMINS_FILE", "data/seed/admins.json")
 SEED_COMMUNITIES_FILE = env_str("SEED_COMMUNITIES_FILE", "data/seed/communities.json")
@@ -176,6 +176,7 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = env_str("ACCOUNT_EMAIL_VERIFICATION", "optional")
 ACCOUNT_PRESERVE_USERNAME_CASING = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+FORMS_URLFIELD_ASSUME_HTTPS = True
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = env_str(
     "ACCOUNT_DEFAULT_HTTP_PROTOCOL",
     "https" if IS_PRODUCTION else "http",
