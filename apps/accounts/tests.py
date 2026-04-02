@@ -1,3 +1,5 @@
+import time
+
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import override_settings
@@ -10,6 +12,7 @@ from apps.posts.services import submit_comment
 from apps.votes.models import SavedPost
 
 from .models import Notification
+from .security import _totp_at, generate_totp_secret
 User = get_user_model()
 
 
@@ -186,6 +189,98 @@ class HandleSetupTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Continue with GitHub")
+
+    def test_account_settings_updates_privacy_and_notification_preferences(self):
+        user = User.objects.create_user(
+            username="settingsuser",
+            email="settingsuser@example.com",
+            password="password123",
+            handle="settingsuser",
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("account_settings"),
+            {
+                "display_name": "Settings User",
+                "bio": "Testing profile settings.",
+                "profile_visibility": User.ProfileVisibility.MEMBERS,
+                "email_notifications_enabled": "on",
+                "notify_on_replies": "on",
+            },
+        )
+
+        user.refresh_from_db()
+        self.assertRedirects(response, reverse("account_settings"))
+        self.assertEqual(user.display_name, "Settings User")
+        self.assertEqual(user.profile_visibility, User.ProfileVisibility.MEMBERS)
+        self.assertTrue(user.email_notifications_enabled)
+
+    def test_staff_user_is_redirected_to_mfa_setup_for_sensitive_routes(self):
+        user = User.objects.create_user(
+            username="staffer",
+            email="staffer@example.com",
+            password="password123",
+            handle="staffer",
+            is_staff=True,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get("/admin/")
+
+        self.assertRedirects(response, reverse("account_mfa_setup"))
+
+    def test_mfa_setup_enables_totp_for_staff(self):
+        user = User.objects.create_user(
+            username="mfastaff",
+            email="mfastaff@example.com",
+            password="password123",
+            handle="mfastaff",
+            is_staff=True,
+        )
+        user.mfa_totp_secret = generate_totp_secret()
+        user.save(update_fields=["mfa_totp_secret"])
+        self.client.force_login(user)
+        current_code = _totp_at(user.mfa_totp_secret, int(time.time()) // 30)
+
+        response = self.client.post(reverse("account_mfa_setup"), {"code": current_code})
+
+        user.refresh_from_db()
+        self.assertRedirects(response, reverse("account_settings"))
+        self.assertTrue(user.mfa_totp_enabled)
+
+    def test_reply_notifications_respect_user_preferences(self):
+        author = User.objects.create_user(
+            username="quietauthor",
+            email="quietauthor@example.com",
+            password="password123",
+            handle="quietauthor",
+            notify_on_replies=False,
+        )
+        replier = User.objects.create_user(
+            username="quietreplier",
+            email="quietreplier@example.com",
+            password="password123",
+            handle="quietreplier",
+        )
+        community = Community.objects.create(
+            name="Agora Quiet",
+            slug="agora-quiet",
+            title="Agora Quiet",
+            description="Preference tests.",
+            creator=author,
+        )
+        post = Post.objects.create(
+            community=community,
+            author=author,
+            post_type="text",
+            title="No alerts please",
+            body_md="Body",
+        )
+
+        submit_comment(replier, post, "Reply body")
+
+        self.assertFalse(Notification.objects.filter(user=author).exists())
 
 
 class AccountBootstrapCommandTests(TestCase):

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Offline — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto py-16 text-center">
+  <p class="text-xs font-semibold uppercase tracking-wide text-opal mb-2">Offline</p>
+  <h1 class="text-2xl font-semibold text-gray-900">You are offline right now</h1>
+  <p class="text-sm text-gray-500 mt-3">Cached sections of {{ APP_NAME }} still work, but this page needs a live connection.</p>
+  <a href="/" class="inline-flex mt-5 h-10 px-5 items-center justify-center rounded-g bg-primary text-white font-medium hover:bg-primary-hover">Try again</a>
+</div>
+{% endblock %}

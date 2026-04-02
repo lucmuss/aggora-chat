@@ -58,6 +58,8 @@ class CommunityFlowTests(TestCase):
         self.assertContains(response, "Community Settings")
 
     def test_owner_can_update_community_settings(self):
+        self.user.mfa_totp_enabled = True
+        self.user.save(update_fields=["mfa_totp_enabled"])
         CommunityMembership.objects.create(
             user=self.user,
             community=self.community,
@@ -85,6 +87,8 @@ class CommunityFlowTests(TestCase):
         self.assertEqual(self.community.vote_hide_minutes, 120)
 
     def test_owner_can_create_wiki_page(self):
+        self.user.mfa_totp_enabled = True
+        self.user.save(update_fields=["mfa_totp_enabled"])
         CommunityMembership.objects.create(
             user=self.user,
             community=self.community,

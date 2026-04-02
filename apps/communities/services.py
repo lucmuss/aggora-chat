@@ -272,6 +272,8 @@ def notify_followers_about_join(user: User, community: Community):
         return
     url = reverse("community_detail", kwargs={"slug": community.slug})
     for follower in followers:
+        if not follower.notify_on_follows:
+            continue
         if Notification.objects.filter(
             user=follower,
             actor=user,

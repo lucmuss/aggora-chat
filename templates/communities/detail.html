@@ -26,7 +26,15 @@
               class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
               Share page
             </a>
+            <a href="{% url 'community_share_card' slug=community.slug %}"
+              class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+              Share card
+            </a>
             {% if user.is_authenticated %}
+            <a href="{{ share_links.copy_url }}"
+              class="block w-full h-8 flex items-center justify-center rounded-g border border-opal-muted text-sm font-medium text-opal hover:bg-opal-light transition-colors">
+              Invite friends
+            </a>
             <a href="/c/{{ community.slug }}/submit/"
               class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
               New post
@@ -139,11 +147,12 @@
     {% endif %}
     {% if user.is_authenticated %}
     <div class="bg-white border border-gray-200 rounded-g p-4">
-      <h2 class="font-semibold text-sm text-opal mb-2">Moderation</h2>
+      <h2 class="font-semibold text-sm text-opal mb-2">Moderation & Growth</h2>
       <div class="space-y-1">
         <a href="/mod/{{ community.slug }}/queue/" class="block text-xs text-opal hover:underline">Mod queue</a>
         <a href="/mod/{{ community.slug }}/log/" class="block text-xs text-opal hover:underline">Mod log</a>
         <a href="/c/{{ community.slug }}/settings/" class="block text-xs text-opal hover:underline">Settings</a>
+        <a href="{% url 'community_landing' slug=community.slug %}" class="block text-xs text-opal hover:underline">Invite landing page</a>
       </div>
     </div>
     {% endif %}

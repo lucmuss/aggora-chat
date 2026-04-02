@@ -2,7 +2,7 @@ import asyncio
 import os
 from playwright.async_api import async_playwright
 
-BASE_URL = "https://aggora.kolibri-kollektiv.eu"
+BASE_URL = os.environ.get("BASE_URL", "https://aggora.kolibri-kollektiv.eu")
 OUTPUT_DIR = "output/gui-screenshots"
 
 ROUTES = [

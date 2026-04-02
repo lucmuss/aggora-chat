@@ -81,7 +81,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "apps.common.middleware.SimpleRateLimitMiddleware",
     "apps.accounts.middleware.HandleRequiredMiddleware",
+    "apps.accounts.middleware.StaffMfaEnforcementMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -230,7 +232,12 @@ CACHES = {
 }
 
 SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", IS_PRODUCTION)
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = env_str("DJANGO_SESSION_COOKIE_SAMESITE", "Lax")
+SESSION_COOKIE_AGE = env_int("DJANGO_SESSION_COOKIE_AGE", 1209600)
 CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", IS_PRODUCTION)
+CSRF_COOKIE_HTTPONLY = env_bool("DJANGO_CSRF_COOKIE_HTTPONLY", False)
+CSRF_COOKIE_SAMESITE = env_str("DJANGO_CSRF_COOKIE_SAMESITE", "Lax")
 SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", IS_PRODUCTION)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = env_bool("DJANGO_USE_X_FORWARDED_HOST", True)
@@ -238,6 +245,8 @@ SECURE_HSTS_SECONDS = env_int("SECURE_HSTS_SECONDS", 31536000 if IS_PRODUCTION e
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", IS_PRODUCTION)
 SECURE_HSTS_PRELOAD = env_bool("SECURE_HSTS_PRELOAD", IS_PRODUCTION)
 SECURE_REFERRER_POLICY = env_str("SECURE_REFERRER_POLICY", "same-origin")
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
 
 EMAIL_DELIVERY_MODE = env_str("EMAIL_DELIVERY_MODE", "console" if DEBUG else "smtp").lower()
 EMAIL_BACKEND_MAP = {

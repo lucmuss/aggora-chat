@@ -7,7 +7,9 @@ from apps.communities.services import (
     active_challenge_for_community,
     can_view_community,
     community_leaderboard,
+    create_invite_for_community,
     featured_challenges_for_user,
+    share_links_for_invite,
     suggested_communities_for_user,
 )
 from apps.feeds.caching import (
@@ -67,6 +69,7 @@ def community_feed(request, slug):
     if request.user.is_authenticated:
         joined = community.memberships.filter(user=request.user).exists()
         followed_member_count = community.memberships.filter(user__in=request.user.followed_users.all()).count()
+    invite = create_invite_for_community(community, request.user if request.user.is_authenticated else None)
     return render(
         request,
         "communities/detail.html",
@@ -84,6 +87,8 @@ def community_feed(request, slug):
             "leaderboard": community_leaderboard(community),
             "suggested_communities": suggested_communities_for_user(request.user),
             "followed_member_count": followed_member_count,
+            "invite": invite,
+            "share_links": share_links_for_invite(community, invite),
         },
     )
 

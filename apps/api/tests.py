@@ -179,6 +179,17 @@ class PublicApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["items"][0]["title"], "API thread")
 
+    def test_search_api_returns_matching_communities_and_users(self):
+        self.user.display_name = "API Captain"
+        self.user.bio = "Builds API search flows."
+        self.user.save(update_fields=["display_name", "bio"])
+
+        response = self.client.get(reverse("api_search"), {"q": "api"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["communities"][0]["slug"], self.community.slug)
+        self.assertEqual(response.data["users"][0]["handle"], self.user.handle)
+
     def test_authenticated_post_create_api_works(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
 

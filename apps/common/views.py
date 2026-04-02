@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from django.conf import settings
+from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.templatetags.static import static
 from django.views.decorators.http import require_GET, require_POST
@@ -31,6 +32,7 @@ def web_manifest(request):
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
+        "display_override": ["window-controls-overlay", "standalone", "browser"],
         "background_color": "#f9fafb",
         "theme_color": "#0D9488",
         "icons": [
@@ -49,7 +51,8 @@ def web_manifest(request):
 def service_worker(request):
     script = f"""
 const CACHE_NAME = "{settings.PROJECT_NAME}-shell-v{settings.APP_VERSION}";
-const ASSETS = ["/", "/popular/", "/search/", "/manifest.webmanifest", "{static('css/app.css')}", "{static('js/app.js')}"];
+const OFFLINE_URL = "/offline/";
+const ASSETS = ["/", "/popular/", "/search/", OFFLINE_URL, "/manifest.webmanifest", "{static('css/app.css')}", "{static('js/app.js')}", "{static('icons/agora-icon.svg')}"];
 
 self.addEventListener("install", (event) => {{
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -65,12 +68,24 @@ self.addEventListener("fetch", (event) => {{
   if (event.request.method !== "GET") {{
     return;
   }}
+  if (event.request.mode === "navigate") {{
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {{
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        }})
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match(OFFLINE_URL)))
+    );
+    return;
+  }}
   event.respondWith(
     caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {{
       const copy = response.clone();
       caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
       return response;
-    }}).catch(() => caches.match("/")))
+    }}).catch(() => caches.match(event.request).then((fallback) => fallback || caches.match(OFFLINE_URL))))
   );
 }});
 """.strip()
@@ -86,3 +101,8 @@ def markdown_preview(request):
         f"<div class='prose prose-sm max-w-none text-sm text-gray-700'>{html}</div>",
         content_type="text/html",
     )
+
+
+@require_GET
+def offline_page(request):
+    return render(request, "offline.html", status=200)

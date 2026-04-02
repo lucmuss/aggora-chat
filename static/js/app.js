@@ -1,7 +1,9 @@
 (() => {
   const statusNode = document.getElementById("shortcut-status");
+  const installPromptNode = document.getElementById("pwa-install-prompt");
   let activeCardIndex = -1;
   let markdownPreviewTimer;
+  let deferredInstallPrompt;
 
   const cards = () => Array.from(document.querySelectorAll("[data-post-card]"));
   const focusCard = (index) => {
@@ -99,6 +101,34 @@
     if (textarea.value.trim()) {
       requestMarkdownPreview(textarea);
     }
+  });
+
+  const dismissInstallPrompt = () => {
+    installPromptNode?.classList.add("hidden");
+  };
+
+  document.querySelector("[data-install-dismiss]")?.addEventListener("click", dismissInstallPrompt);
+  document.querySelector("[data-install-trigger]")?.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) {
+      dismissInstallPrompt();
+      return;
+    }
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice.catch(() => null);
+    deferredInstallPrompt = null;
+    dismissInstallPrompt();
+  });
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    installPromptNode?.classList.remove("hidden");
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    dismissInstallPrompt();
+    announce("Agora installed");
   });
 
   if ("serviceWorker" in navigator) {

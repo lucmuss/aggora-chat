@@ -65,6 +65,10 @@
         <span class="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary text-white text-[10px] flex items-center justify-center">{{ unread_notifications_count }}</span>
         {% endif %}
       </a>
+      <a href="{% url 'account_settings' %}"
+        class="h-8 px-3 flex items-center rounded-g text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+        Settings
+      </a>
       <a href="{% url 'profile' handle=user.handle|default:'me' %}"
         class="h-8 w-8 flex items-center justify-center rounded-full bg-opal text-white text-xs font-medium hover:bg-opal-hover transition-colors">
         {{ user.handle|default:user.email|first|upper }}

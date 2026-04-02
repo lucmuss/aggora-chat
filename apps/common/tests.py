@@ -49,6 +49,13 @@ class CommonFeatureTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("application/javascript", response["Content-Type"])
         self.assertContains(response, "CACHE_NAME")
+        self.assertContains(response, "OFFLINE_URL")
+
+    def test_offline_page_renders(self):
+        response = self.client.get(reverse("offline_page"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "You are offline right now")
 
     def test_markdown_preview_renders_html(self):
         response = self.client.post(reverse("markdown_preview"), {"markdown": "## Preview"})

@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework import status
@@ -12,16 +13,23 @@ from apps.moderation.models import CommunityAgentSettings, ModAction, ModQueueIt
 from apps.moderation.permissions import ModPermission, has_mod_permission
 from apps.moderation.utils import is_user_banned
 from apps.posts.forms import PostCreateForm
-from apps.posts.models import Poll, Post
+from apps.posts.models import Comment, Poll, Post
 from apps.posts.services import build_comment_tree, submit_comment, submit_poll_vote, submit_post
-from apps.search.backends import get_discovery_backend
+from apps.search.backends import get_discovery_backend, parse_search_query
 from apps.search.queries import community_feed_results, popular_feed_results
 from apps.search.tasks import index_post_task
 from apps.votes.models import Vote
 from apps.votes.tasks import recalculate_comment_vote_totals, recalculate_karma, recalculate_post_vote_totals
 
 from .pagination import AgoraCursorPagination
-from .serializers import CommentSerializer, PostDetailSerializer, PostListSerializer, UserProfileSerializer
+from .serializers import (
+    CommentSerializer,
+    PostDetailSerializer,
+    PostListSerializer,
+    SearchCommunitySerializer,
+    SearchUserSerializer,
+    UserProfileSerializer,
+)
 
 
 class AgentModActionView(APIView):
@@ -281,8 +289,39 @@ class SearchAPIView(generics.ListAPIView):
         sort = request.query_params.get("sort", "relevance")
         after = request.query_params.get("after")
         result = get_discovery_backend().search_posts(query, sort=sort, after=after)
-        serializer = self.get_serializer(result.posts, many=True)
-        return Response({"items": serializer.data, "after": result.next_cursor, "before": None, "count": len(serializer.data)})
+        post_serializer = self.get_serializer(result.posts, many=True)
+        query_text, _filters = parse_search_query(query) if query else ("", {})
+        directory_query = query_text or query
+        communities = []
+        users = []
+        if directory_query:
+            community_queryset = Community.objects.filter(
+                Q(title__icontains=directory_query)
+                | Q(name__icontains=directory_query)
+                | Q(slug__icontains=directory_query)
+                | Q(description__icontains=directory_query)
+            ).order_by("-subscriber_count", "title")
+            communities = [community for community in community_queryset[:12] if can_view_community(request.user, community)]
+            users = list(
+                User.objects.filter(handle__isnull=False)
+                .filter(
+                    Q(handle__icontains=directory_query)
+                    | Q(display_name__icontains=directory_query)
+                    | Q(bio__icontains=directory_query)
+                )
+                .order_by("handle")[:12]
+            )
+        return Response(
+            {
+                "items": post_serializer.data,
+                "posts": post_serializer.data,
+                "communities": SearchCommunitySerializer(communities, many=True).data,
+                "users": SearchUserSerializer(users, many=True).data,
+                "after": result.next_cursor,
+                "before": None,
+                "count": len(post_serializer.data),
+            }
+        )
 
 
 class UserProfileAPIView(generics.RetrieveAPIView):

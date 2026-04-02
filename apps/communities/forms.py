@@ -71,10 +71,10 @@ class CommunitySettingsForm(forms.ModelForm):
         ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
-            "sidebar_md": forms.Textarea(attrs={"rows": 6}),
-            "landing_intro_md": forms.Textarea(attrs={"rows": 5, "placeholder": "Why this community matters"}),
-            "faq_md": forms.Textarea(attrs={"rows": 6, "placeholder": "## FAQ\n\n### What is this place?"}),
-            "best_of_md": forms.Textarea(attrs={"rows": 6, "placeholder": "- Best discussion\n- Community resources"}),
+            "sidebar_md": forms.Textarea(attrs={"rows": 6, "data-markdown-preview-target": "sidebar-settings-preview"}),
+            "landing_intro_md": forms.Textarea(attrs={"rows": 5, "placeholder": "Why this community matters", "data-markdown-preview-target": "landing-intro-preview"}),
+            "faq_md": forms.Textarea(attrs={"rows": 6, "placeholder": "## FAQ\n\n### What is this place?", "data-markdown-preview-target": "faq-preview"}),
+            "best_of_md": forms.Textarea(attrs={"rows": 6, "placeholder": "- Best discussion\n- Community resources", "data-markdown-preview-target": "best-of-preview"}),
         }
 
 
@@ -83,7 +83,7 @@ class CommunityWikiPageForm(forms.ModelForm):
         model = CommunityWikiPage
         fields = ["slug", "title", "body_md"]
         widgets = {
-            "body_md": forms.Textarea(attrs={"rows": 14}),
+            "body_md": forms.Textarea(attrs={"rows": 14, "data-markdown-preview-target": "wiki-body-preview"}),
         }
 
     def clean_slug(self):

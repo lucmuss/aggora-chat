@@ -191,6 +191,11 @@ def create_reengagement_notifications(comment: Comment):
 
     url = f"/c/{comment.post.community.slug}/post/{comment.post.id}/{comment.post.slug}/"
     for user, notification_type, message in recipients:
+        if notification_type in {
+            Notification.NotificationType.POST_REPLY,
+            Notification.NotificationType.COMMENT_REPLY,
+        } and not user.notify_on_replies:
+            continue
         Notification.objects.create(
             user=user,
             actor=comment.author,

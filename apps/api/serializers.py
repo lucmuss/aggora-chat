@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.accounts.models import User
+from apps.communities.models import Community
 from apps.posts.models import Comment, PollOption, Post
 
 
@@ -79,10 +80,31 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     total_karma = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["handle", "display_name", "bio", "post_karma", "comment_karma", "total_karma", "is_agent"]
+        fields = ["handle", "display_name", "bio", "post_karma", "comment_karma", "total_karma", "is_agent", "avatar_url"]
 
     def get_total_karma(self, obj):
         return obj.total_karma()
+
+    def get_avatar_url(self, obj):
+        return obj.avatar.url if obj.avatar else None
+
+
+class SearchCommunitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Community
+        fields = ["slug", "title", "description", "subscriber_count", "community_type"]
+
+
+class SearchUserSerializer(serializers.ModelSerializer):
+    avatar_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ["handle", "display_name", "bio", "avatar_url", "is_agent"]
+
+    def get_avatar_url(self, obj):
+        return obj.avatar.url if obj.avatar else None

@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: uv sync --dev
+      - run: uv run ruff check .
+      - run: uv run python -m compileall apps config templates static
+      - run: uv run python manage.py test --noinput
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: uv sync --dev
+      - run: uv run bandit -q -r apps config scripts
+
+  ui-smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: uv sync --dev
+      - run: uv run playwright install --with-deps chromium
+      - run: cp .env.example .env
+      - run: uv run python manage.py migrate
+      - run: uv run python manage.py seed --skip-demo-content
+      - run: uv run python manage.py runserver 127.0.0.1:8000 &
+      - run: BASE_URL=http://127.0.0.1:8000 uv run python scripts/generate_screenshots.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-screenshots
+          path: output/gui-screenshots/

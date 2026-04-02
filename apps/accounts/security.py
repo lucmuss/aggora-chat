@@ -28,7 +28,7 @@ def _normalized_secret(secret: str) -> bytes:
 
 def _totp_at(secret: str, counter: int, digits: int = 6) -> str:
     key = _normalized_secret(secret)
-    digest = hmac.new(key, struct.pack(">Q", counter), hashlib.sha1).digest()
+    digest = hmac.new(key, struct.pack(">Q", counter), hashlib.sha1).digest()  # nosec B303
     offset = digest[-1] & 0x0F
     code_int = (struct.unpack(">I", digest[offset : offset + 4])[0] & 0x7FFFFFFF) % (10**digits)
     return str(code_int).zfill(digits)

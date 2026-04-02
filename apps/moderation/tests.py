@@ -38,6 +38,8 @@ class ModerationFlowTests(TestCase):
             description="Moderation tests.",
             creator=self.owner,
         )
+        self.owner.mfa_totp_enabled = True
+        self.owner.save(update_fields=["mfa_totp_enabled"])
         CommunityMembership.objects.create(
             user=self.owner,
             community=self.community,
