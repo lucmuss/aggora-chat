@@ -24,6 +24,11 @@ services:
       ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
       SEARCH_BACKEND: ${SEARCH_BACKEND:-sql}
       SEARCH_INDEX_ENABLED: ${SEARCH_INDEX_ENABLED:-0}
+      AUTO_MIGRATE_ON_START: ${AUTO_MIGRATE_ON_START:-1}
+      AUTO_SEED_ON_START: ${AUTO_SEED_ON_START:-1}
+      SEED_SKIP_DEMO_CONTENT: ${SEED_SKIP_DEMO_CONTENT:-0}
+      SEED_USERS_FILE: ${SEED_USERS_FILE:-data/seed/users.json}
+      SEED_ADMINS_FILE: ${SEED_ADMINS_FILE:-data/seed/admins.json}
     volumes:
       - .:/app
 

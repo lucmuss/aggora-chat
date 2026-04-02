@@ -9,7 +9,7 @@ from apps.accounts.seed_utils import ensure_account
 
 
 class Command(BaseCommand):
-    help = "Create or update the Freya-compatible bootstrap test user."
+    help = "Create or update the bootstrap QA test user."
 
     def handle(self, *args, **options):
         email = settings.TEST_USER_EMAIL or env_str("TEST_USER_EMAIL", "").strip().lower()

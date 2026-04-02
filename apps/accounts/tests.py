@@ -210,8 +210,10 @@ class AccountBootstrapCommandTests(TestCase):
         self.assertTrue(moderator_user.is_staff)
         self.assertFalse(moderator_user.is_superuser)
 
-    def test_seed_command_imports_freya_seed_users(self):
+    def test_seed_command_imports_demo_users_and_admins(self):
         call_command("seed", "--skip-demo-content")
 
         self.assertTrue(User.objects.filter(email="ariane.keller01@mailseed.test").exists())
+        self.assertTrue(User.objects.filter(email="ops-admin@aggora.app", is_superuser=True).exists())
+        self.assertTrue(User.objects.filter(email="ops-moderator@aggora.app", is_staff=True).exists())
         self.assertTrue(Community.objects.filter(slug="freya-seed-lounge").exists())

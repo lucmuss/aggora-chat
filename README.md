@@ -40,7 +40,7 @@ uv run python manage.py migrate
 4. Optional: load demo/seed data:
 
 ```bash
-uv run python manage.py seed --skip-demo-content
+uv run python manage.py seed
 ```
 
 ## Run
@@ -89,6 +89,8 @@ Commonly relevant variables:
 - `DJANGO_ENV`, `DJANGO_DEBUG`, `DJANGO_SECRET_KEY`
 - `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`
 - `APP_NAME`, `APP_TAGLINE`, `APP_PUBLIC_URL`
+- `SEED_USERS_FILE`, `SEED_ADMINS_FILE`
+- `AUTO_MIGRATE_ON_START`, `AUTO_SEED_ON_START`, `SEED_SKIP_DEMO_CONTENT`
 - `DATABASE_URL` or the `POSTGRES_*` fallback variables
 - `REDIS_CACHE_URL`, `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND`
 - `SEARCH_BACKEND`, `SEARCH_INDEX_ENABLED`, `ELASTICSEARCH_URL`
@@ -99,13 +101,35 @@ Use [`.env.example`](/srv/projects/web/aggora-chat/.env.example) as the canonica
 
 ## Seed Data
 
-The project ships with seed helpers and management commands:
+The project ships with JSON-backed demo seed data and helper commands:
 
+- `uv run python manage.py seed`
 - `uv run python manage.py seed --skip-demo-content`
 - `uv run python manage.py create_test_user`
 - `uv run python manage.py sync_staff_accounts`
 
-Seed source files live under [`data/seed`](/srv/projects/web/aggora-chat/data/seed).
+Canonical seed sources:
+
+- [`data/seed/users.json`](/srv/projects/web/aggora-chat/data/seed/users.json): 5 demo users
+- [`data/seed/admins.json`](/srv/projects/web/aggora-chat/data/seed/admins.json): 2 admin accounts
+- [`docs/test-accounts.md`](/srv/projects/web/aggora-chat/docs/test-accounts.md): human-readable credentials list
+- [`docs/seeding.md`](/srv/projects/web/aggora-chat/docs/seeding.md): seeding workflow and container startup behavior
+
+The main seeded community is `c/freya-seed-lounge`. The seed command is idempotent and can be re-run safely.
+
+Use a custom seed file set if needed:
+
+```bash
+uv run python manage.py seed --file data/seed/users.json --admins-file data/seed/admins.json
+```
+
+Docker Compose now auto-runs migrations and demo seeding on container start by default. Control it with:
+
+```bash
+AUTO_MIGRATE_ON_START=1
+AUTO_SEED_ON_START=1
+SEED_SKIP_DEMO_CONTENT=0
+```
 
 ## Architecture
 

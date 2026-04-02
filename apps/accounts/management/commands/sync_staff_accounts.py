@@ -9,7 +9,7 @@ from apps.accounts.seed_utils import ensure_account
 
 
 class Command(BaseCommand):
-    help = "Create or update Freya-compatible operations admin and moderator accounts."
+    help = "Create or update operations admin and moderator accounts from environment variables."
 
     def handle(self, *args, **options):
         processed = 0

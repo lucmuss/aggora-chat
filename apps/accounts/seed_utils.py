@@ -15,8 +15,6 @@ from apps.votes.models import Vote
 
 User = get_user_model()
 
-FREYA_USERS_PATH = Path("/srv/projects/web/freya-online-dating/data/seed/users.json")
-
 
 def build_unique_handle(base: str) -> str:
     slug = re.sub(r"[^a-z0-9_]+", "_", base.lower()).strip("_") or "user"
@@ -52,9 +50,20 @@ def get_seed_users_file(explicit_path: str | None = None) -> Path:
         configured_path = Path(configured)
         if configured_path.exists():
             return configured_path
-    if FREYA_USERS_PATH.exists():
-        return FREYA_USERS_PATH
     return settings.BASE_DIR / "data" / "seed" / "users.json"
+
+
+def get_seed_admins_file(explicit_path: str | None = None) -> Path:
+    if explicit_path:
+        explicit = Path(explicit_path)
+        if explicit.exists():
+            return explicit
+    configured = getattr(settings, "SEED_ADMINS_FILE", "").strip()
+    if configured:
+        configured_path = Path(configured)
+        if configured_path.exists():
+            return configured_path
+    return settings.BASE_DIR / "data" / "seed" / "admins.json"
 
 
 def ensure_account(*, email: str, password: str, handle: str | None = None, display_name: str = "", bio: str = "", is_staff: bool = False, is_superuser: bool = False, is_agent: bool = False, agent_verified: bool = False) -> tuple[User, bool]:
@@ -110,26 +119,74 @@ def ensure_account(*, email: str, password: str, handle: str | None = None, disp
     return user, created
 
 
-def seed_freya_users(*, file_path: str | None = None, create_demo_content: bool = True) -> dict[str, int]:
-    seed_file = get_seed_users_file(file_path)
+def _load_seed_payload(seed_file: Path) -> list[dict]:
     with seed_file.open("r", encoding="utf-8") as fh:
-        payload = json.load(fh)
+        return json.load(fh)
 
+
+def _ensure_seed_community(owner: User | None = None) -> Community:
     community, _ = Community.objects.get_or_create(
         slug="freya-seed-lounge",
         defaults={
             "name": "Freya Seed Lounge",
             "title": "Freya Seed Lounge",
-            "description": "Imported Freya seed personas for Agora development.",
-            "sidebar_md": "Shared seed community sourced from the Freya reference project.",
+            "description": "Curated seed community for Agora development, QA, and screenshots.",
+            "sidebar_md": "A seeded Agora community with demo users, admins, and starter content.",
+            "landing_intro_md": "Welcome to the seeded demo community used for local development and onboarding tests.",
+            "faq_md": "## FAQ\n\n### What is this?\nA safe demo space for local testing.\n\n### Can I post here?\nYes, this community is intended for local smoke tests and screenshots.",
+            "best_of_md": "- Demo onboarding threads\n- Example invite flows\n- Suggested communities and challenge previews",
         },
     )
+    if owner and community.creator_id != owner.pk:
+        community.creator = owner
+        community.save(update_fields=["creator", "sidebar_html", "landing_intro_html", "faq_html", "best_of_html"])
+    return community
+
+
+def seed_demo_accounts(*, users_file_path: str | None = None, admins_file_path: str | None = None, create_demo_content: bool = True) -> dict[str, int | str]:
+    user_seed_file = get_seed_users_file(users_file_path)
+    admin_seed_file = get_seed_admins_file(admins_file_path)
+    user_payload = _load_seed_payload(user_seed_file)
+    admin_payload = _load_seed_payload(admin_seed_file) if admin_seed_file.exists() else []
 
     created_users = 0
+    created_admins = 0
     created_posts = 0
     created_comments = 0
 
-    for entry in payload:
+    admin_users: list[tuple[User, dict]] = []
+    for entry in admin_payload:
+        user, created = ensure_account(
+            email=entry["email"],
+            password=entry["password"],
+            handle=entry.get("handle"),
+            display_name=entry.get("display_name", ""),
+            bio=entry.get("bio", ""),
+            is_staff=bool(entry.get("is_staff", False)),
+            is_superuser=bool(entry.get("is_superuser", False)),
+        )
+        admin_users.append((user, entry))
+        if created:
+            created_admins += 1
+
+    owner_user = next((user for user, entry in admin_users if entry.get("community_role") == CommunityMembership.Role.OWNER), None)
+    community = _ensure_seed_community(owner_user)
+
+    for user, entry in admin_users:
+        community_role = entry.get("community_role")
+        if community_role in {
+            CommunityMembership.Role.OWNER,
+            CommunityMembership.Role.MODERATOR,
+            CommunityMembership.Role.MEMBER,
+            CommunityMembership.Role.AGENT_MOD,
+        }:
+            CommunityMembership.objects.update_or_create(
+                user=user,
+                community=community,
+                defaults={"role": community_role},
+            )
+
+    for entry in user_payload:
         profile = entry.get("profile", {})
         full_name = entry.get("name", "").strip() or profile.get("first_name", "Freya User")
         first_name = profile.get("first_name", full_name.split(" ", 1)[0])
@@ -200,20 +257,15 @@ def seed_freya_users(*, file_path: str | None = None, create_demo_content: bool 
         Post.objects.filter(pk=post.pk).update(comment_count=1)
         created_comments += 1
 
-    moderator = User.objects.filter(handle="ops_moderator").first()
-    if moderator:
-        CommunityMembership.objects.update_or_create(
-            user=moderator,
-            community=community,
-            defaults={"role": CommunityMembership.Role.MODERATOR},
-        )
-        community.subscriber_count = community.memberships.count()
-        community.save(update_fields=["subscriber_count", "sidebar_html"])
+    community.subscriber_count = community.memberships.count()
+    community.save(update_fields=["subscriber_count", "sidebar_html", "landing_intro_html", "faq_html", "best_of_html"])
 
     return {
         "users_created": created_users,
+        "admins_created": created_admins,
         "posts_created": created_posts,
         "comments_created": created_comments,
-        "seed_file": str(seed_file),
+        "seed_file": str(user_seed_file),
+        "admins_file": str(admin_seed_file),
         "community_slug": community.slug,
     }

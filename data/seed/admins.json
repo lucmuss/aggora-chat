@@ -1,0 +1,24 @@
+[
+  {
+    "email": "ops-admin@aggora.app",
+    "password": "AdminPass!2026",
+    "phone": "+491520599991",
+    "handle": "ops_admin",
+    "display_name": "Operations Admin",
+    "bio": "Primary seeded superuser for local Agora development and container smoke tests.",
+    "is_staff": true,
+    "is_superuser": true,
+    "community_role": "owner"
+  },
+  {
+    "email": "ops-moderator@aggora.app",
+    "password": "ModeratorPass!2026",
+    "phone": "+491520599992",
+    "handle": "ops_moderator",
+    "display_name": "Operations Moderator",
+    "bio": "Seeded moderator account for local Agora moderation and QA flows.",
+    "is_staff": true,
+    "is_superuser": false,
+    "community_role": "moderator"
+  }
+]

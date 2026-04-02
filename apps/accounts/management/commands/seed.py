@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from django.core.management.base import BaseCommand
 
-from apps.accounts.seed_utils import seed_freya_users
+from apps.accounts.seed_utils import seed_demo_accounts
 
 
 class Command(BaseCommand):
-    help = "Import Freya seed users into Agora and optionally create demo community content."
+    help = "Seed Agora with demo users, admin accounts, memberships, and starter content."
 
     def add_arguments(self, parser):
-        parser.add_argument("--file", dest="file_path", default="", help="Path to a seed users JSON file.")
+        parser.add_argument("--file", dest="file_path", default="", help="Path to a demo users JSON file.")
+        parser.add_argument("--admins-file", dest="admins_file_path", default="", help="Path to a demo admins JSON file.")
         parser.add_argument(
             "--skip-demo-content",
             action="store_true",
@@ -22,12 +23,15 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        summary = seed_freya_users(
-            file_path=options["file_path"] or None,
+        summary = seed_demo_accounts(
+            users_file_path=options["file_path"] or None,
+            admins_file_path=options["admins_file_path"] or None,
             create_demo_content=not options["skip_demo_content"],
         )
         self.stdout.write(self.style.SUCCESS(f"seed file: {summary['seed_file']}"))
+        self.stdout.write(self.style.SUCCESS(f"admins file: {summary['admins_file']}"))
         self.stdout.write(self.style.SUCCESS(f"community: c/{summary['community_slug']}"))
         self.stdout.write(self.style.SUCCESS(f"users created: {summary['users_created']}"))
+        self.stdout.write(self.style.SUCCESS(f"admins created: {summary['admins_created']}"))
         self.stdout.write(self.style.SUCCESS(f"posts created: {summary['posts_created']}"))
         self.stdout.write(self.style.SUCCESS(f"comments created: {summary['comments_created']}"))
