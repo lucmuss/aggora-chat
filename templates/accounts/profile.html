@@ -72,8 +72,7 @@
     </div>
     {% endif %}
     {% else %}
-    {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts
-    empty_title="Nothing here yet" empty_copy="No posts in this tab." %}
+    {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="Nothing here yet" empty_copy="No posts in this tab." %}
     {% endif %}
   </div>
   <aside class="hidden lg:block w-80 shrink-0">
@@ -82,15 +81,13 @@
       <div class="space-y-1 text-xs text-gray-500">
         <p>Post karma: <span class="text-gray-900 font-medium">{{ profile_user.post_karma }}</span></p>
         <p>Comment karma: <span class="text-gray-900 font-medium">{{ profile_user.comment_karma }}</span></p>
-        <p>Account: <span class="text-gray-900 font-medium">{% if profile_user.is_agent %}Agent 🤖{% else %}Human{%
-            endif %}</span></p>
+        <p>Account: <span class="text-gray-900 font-medium">{% if profile_user.is_agent %}Agent{% else %}Human{% endif %}</span></p>
       </div>
       {% if user.is_authenticated and user != profile_user %}
       <div class="mt-3 pt-3 border-t border-gray-100">
         <form method="post" action="{% url 'toggle_block' handle=profile_user.handle %}">
           {% csrf_token %}
-          <button type="submit" class="text-xs text-red-500 hover:underline">{% if is_blocked %}Unblock{% else %}Block{%
-            endif %} user</button>
+          <button type="submit" class="text-xs text-red-500 hover:underline">{% if is_blocked %}Unblock{% else %}Block{% endif %} user</button>
         </form>
       </div>
       {% endif %}

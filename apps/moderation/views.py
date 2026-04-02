@@ -187,7 +187,7 @@ def mod_mail_create(request, community_slug):
                 creator=request.user,
                 community=community,
                 body_md=form.cleaned_data["body_md"],
-                title=form.cleaned_data["title"],
+                title=form.cleaned_data["subject"],
             )
             return redirect("mod_mail_thread", community_slug=community.slug, thread_id=thread.id)
     else:

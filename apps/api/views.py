@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from apps.common.celery import dispatch_task
 from apps.accounts.models import User
 from apps.communities.models import Community
+from apps.communities.services import can_participate_in_community, can_view_community
 from apps.moderation.models import CommunityAgentSettings, ModAction, ModQueueItem
 from apps.moderation.permissions import ModPermission, has_mod_permission
 from apps.moderation.utils import is_user_banned
@@ -126,6 +127,8 @@ class CommunityFeedAPIView(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
         community = get_object_or_404(Community, slug=self.kwargs["slug"])
+        if not can_view_community(request.user, community):
+            return Response({"error": "This private community is only visible to members."}, status=status.HTTP_403_FORBIDDEN)
         sort = request.query_params.get("sort", "hot")
         after = request.query_params.get("after")
         posts, next_cursor = community_feed_results(user=request.user, community=community, sort=sort, after=after)
@@ -138,12 +141,21 @@ class PostDetailAPIView(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
     queryset = Post.objects.visible().for_listing()
 
+    def retrieve(self, request, *args, **kwargs):
+        post = self.get_object()
+        if not can_view_community(request.user, post.community):
+            return Response({"error": "This private community is only visible to members."}, status=status.HTTP_403_FORBIDDEN)
+        serializer = self.get_serializer(post)
+        return Response(serializer.data)
+
 
 class PostCommentsAPIView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, pk):
         post = get_object_or_404(Post.objects.visible(), pk=pk)
+        if not can_view_community(request.user, post.community):
+            return Response({"error": "This private community is only visible to members."}, status=status.HTTP_403_FORBIDDEN)
         comments = build_comment_tree(post, sort=request.GET.get("sort", "top"))
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data)
@@ -154,6 +166,8 @@ class PostCreateAPIView(APIView):
 
     def post(self, request):
         community = get_object_or_404(Community, slug=request.data.get("community_slug"))
+        if not can_participate_in_community(request.user, community):
+            return Response({"error": "You need membership or an invite to post in this community."}, status=status.HTTP_403_FORBIDDEN)
         if is_user_banned(request.user, community):
             return Response({"error": "Banned from this community"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -192,6 +206,8 @@ class CommentCreateAPIView(APIView):
 
     def post(self, request):
         post = get_object_or_404(Post.objects.visible(), pk=request.data.get("post_id"))
+        if not can_participate_in_community(request.user, post.community):
+            return Response({"error": "You need membership or an invite to comment in this community."}, status=status.HTTP_403_FORBIDDEN)
         if is_user_banned(request.user, post.community):
             return Response({"error": "Banned from this community"}, status=status.HTTP_403_FORBIDDEN)
         body_md = (request.data.get("body_md") or "").strip()
@@ -225,6 +241,8 @@ class PollVoteAPIView(APIView):
 
     def post(self, request, pk):
         post = get_object_or_404(Post.objects.visible().select_related("community"), pk=pk, post_type=Post.PostType.POLL)
+        if not can_participate_in_community(request.user, post.community):
+            return Response({"error": "You need membership or an invite to vote in this community."}, status=status.HTTP_403_FORBIDDEN)
         if is_user_banned(request.user, post.community):
             return Response({"error": "Banned from this community"}, status=status.HTTP_403_FORBIDDEN)
         poll = get_object_or_404(Poll.objects.prefetch_related("options"), post=post)

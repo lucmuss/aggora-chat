@@ -16,9 +16,7 @@
     {% include "feeds/partials/sort_tabs.html" with sort=sort %}
     <div id="feed-container" class="space-y-3">
       <div id="feed-container-inner">
-        {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts
-        empty_title="No popular posts yet" empty_copy="As communities grow, this feed will surface the strongest threads
-        globally." %}
+        {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No popular posts yet" empty_copy="As communities grow, this feed will surface the strongest threads globally." %}
       </div>
     </div>
   </div>

@@ -20,8 +20,7 @@
     {% include "feeds/partials/sort_tabs.html" with sort=sort %}
     <div id="feed-container" class="space-y-3">
       <div id="feed-container-inner">
-        {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts
-        empty_title="No posts yet" empty_copy="Create the first post in one of your communities to start the feed." %}
+        {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Create the first post in one of your communities to start the feed." %}
       </div>
     </div>
   </div>

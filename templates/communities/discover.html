@@ -25,9 +25,10 @@
             </div>
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2">
-                <p class="font-medium text-sm text-gray-900 group-hover:text-primary transition-colors">c/{{ community.slug }}</p>
+                <p class="font-medium text-sm text-gray-900 group-hover:text-primary transition-colors">{{ community.title|default:community.name }}</p>
                 <span class="text-xs text-gray-400">{{ community.subscriber_count }} member{{ community.subscriber_count|pluralize }}</span>
               </div>
+              <p class="text-xs text-gray-400 mt-0.5">c/{{ community.slug }}</p>
               <p class="text-xs text-gray-500 mt-0.5 line-clamp-2">{{ community.description|default:"No description yet." }}</p>
             </div>
           </a>

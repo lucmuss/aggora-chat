@@ -258,6 +258,39 @@ class PublicApiTests(APITestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["crosspost_parent_id"], original.id)
 
+    def test_private_community_feed_api_is_hidden_from_anonymous(self):
+        self.community.community_type = Community.CommunityType.PRIVATE
+        self.community.save(update_fields=["community_type"])
+
+        response = self.client.get(reverse("api_community_feed", kwargs={"slug": self.community.slug}))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_restricted_community_post_create_api_requires_membership(self):
+        outsider = User.objects.create_user(
+            username="outsider_api",
+            email="outsider_api@example.com",
+            password="password123",
+            handle="outsider_api",
+        )
+        outsider_token = Token.objects.create(user=outsider)
+        self.community.community_type = Community.CommunityType.RESTRICTED
+        self.community.save(update_fields=["community_type"])
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {outsider_token.key}")
+
+        response = self.client.post(
+            reverse("api_post_create"),
+            {
+                "community_slug": self.community.slug,
+                "post_type": "text",
+                "title": "Should fail",
+                "body_md": "No membership",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
     def test_poll_vote_api_records_votes(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
         self.community.allow_polls = True
