@@ -7,7 +7,9 @@ from apps.communities.services import (
     can_view_community,
     community_leaderboard,
     create_invite_for_community,
+    enrich_challenges_for_user,
     featured_challenges_for_user,
+    following_activity_for_user,
     share_links_for_invite,
     suggested_communities_for_user,
 )
@@ -53,6 +55,7 @@ def home(request):
             "communities": communities,
             "suggested_communities": suggested,
             "featured_challenges": featured_challenges_for_user(request.user),
+            "following_activity": following_activity_for_user(request.user),
         },
     )
 
@@ -94,6 +97,9 @@ def community_feed(request, slug):
         or has_mod_permission(request.user, community, ModPermission.MOD_MAIL)
     )
     invite = create_invite_for_community(community, request.user if request.user.is_authenticated else None)
+    challenge = active_challenge_for_community(community)
+    if challenge:
+        challenge = enrich_challenges_for_user([challenge], request.user)[0]
     return render(
         request,
         "communities/detail.html",
@@ -107,7 +113,7 @@ def community_feed(request, slug):
             "next_cursor": next_cursor,
             "user_votes": user_votes,
             "saved_posts": saved_posts,
-            "active_challenge": active_challenge_for_community(community),
+            "active_challenge": challenge,
             "leaderboard": community_leaderboard(community),
             "suggested_communities": suggested_communities_for_user(request.user),
             "followed_member_count": followed_member_count,

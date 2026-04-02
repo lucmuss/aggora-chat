@@ -4,6 +4,7 @@ from django.db.models import Count, Q
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from apps.moderation.permissions import ModPermission, has_mod_permission
 
@@ -13,9 +14,12 @@ from .services import (
     active_challenge_for_community,
     best_posts_for_community,
     can_join_community,
+    can_participate_in_community,
     can_view_community,
     community_leaderboard,
     create_invite_for_community,
+    enrich_challenges_for_user,
+    join_challenge,
     redeem_invite,
     save_wiki_page,
     share_links_for_invite,
@@ -141,6 +145,8 @@ def community_landing(request, slug):
     leaderboard = community_leaderboard(community)
     best_posts = best_posts_for_community(community)
     challenge = active_challenge_for_community(community)
+    if challenge:
+        challenge = enrich_challenges_for_user([challenge], request.user)[0]
     return render(
         request,
         "communities/landing.html",
@@ -196,6 +202,36 @@ def community_invite(request, slug, token):
             "leaderboard": community_leaderboard(invite.community),
         },
     )
+
+
+@login_required
+def join_community_challenge(request, slug, challenge_id):
+    if request.method != "POST":
+        return HttpResponseForbidden("POST required")
+
+    community = get_object_or_404(Community, slug=slug)
+    if not can_participate_in_community(request.user, community):
+        return render(
+            request,
+            "403.html",
+            {
+                "access_title": "Join the community first",
+                "access_copy": f"You need access to c/{community.slug} before joining its challenge.",
+                "access_primary_href": f"/c/{community.slug}/",
+                "access_primary_label": "Back to community",
+            },
+            status=403,
+        )
+
+    challenge = get_object_or_404(community.challenges, pk=challenge_id)
+    _, created = join_challenge(request.user, challenge)
+    if created:
+        messages.success(request, f"You're in for {challenge.title}.")
+    else:
+        messages.info(request, f"You're already part of {challenge.title}.")
+
+    next_url = request.POST.get("next") or reverse("community_detail", kwargs={"slug": community.slug})
+    return redirect(next_url)
 
 
 def wiki_page(request, slug, page_slug="home"):

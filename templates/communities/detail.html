@@ -66,11 +66,20 @@
           <p class="text-[11px] uppercase tracking-wide text-opal font-semibold">Challenge of the week</p>
           <h2 class="text-base font-semibold text-gray-900 mt-1">{{ active_challenge.title }}</h2>
           <div class="prose prose-sm mt-2 text-sm">{{ active_challenge.prompt_html|safe }}</div>
+          <p class="text-xs text-gray-500 mt-2">{{ active_challenge.participant_count }} participant{{ active_challenge.participant_count|pluralize }} so far.</p>
         </div>
-        {% if user.is_authenticated %}
-        <a href="{% url 'create_post' community_slug=community.slug %}"
-          class="shrink-0 h-8 px-3 rounded-g bg-primary text-white text-sm font-medium flex items-center hover:bg-primary-hover">Join in</a>
-        {% endif %}
+        <div class="shrink-0 flex flex-col gap-2">
+          {% if user.is_authenticated %}
+          <form method="post" action="{% url 'community_challenge_join' slug=community.slug challenge_id=active_challenge.id %}">
+            {% csrf_token %}
+            <button type="submit" class="h-8 px-3 rounded-g text-sm font-medium flex items-center justify-center {% if active_challenge.is_joined %}border border-gray-200 text-gray-600 bg-white{% else %}bg-primary text-white hover:bg-primary-hover{% endif %}">
+              {% if active_challenge.is_joined %}Joined{% else %}Join challenge{% endif %}
+            </button>
+          </form>
+          {% endif %}
+          <a href="{% url 'create_post' community_slug=community.slug %}"
+            class="h-8 px-3 rounded-g border border-gray-200 text-sm font-medium text-gray-600 flex items-center justify-center hover:bg-gray-50">Post for it</a>
+        </div>
       </div>
     </div>
     {% endif %}

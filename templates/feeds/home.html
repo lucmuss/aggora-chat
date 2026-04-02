@@ -12,18 +12,35 @@
         <a href="?scope=all&sort={{ sort }}" class="h-8 px-3 flex items-center rounded-g text-sm font-medium transition-colors {% if scope == 'all' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">For You</a>
         <a href="?scope=communities&sort={{ sort }}" class="h-8 px-3 flex items-center rounded-g text-sm font-medium transition-colors {% if scope == 'communities' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">My Communities</a>
         <a href="?scope=following&sort={{ sort }}" class="h-8 px-3 flex items-center rounded-g text-sm font-medium transition-colors {% if scope == 'following' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">Following</a>
+        <span class="text-xs text-gray-400 ml-auto hidden md:inline">For You now blends your follows, joined communities, saved patterns, and live challenges.</span>
       </div>
     </div>
     {% endif %}
     {% if featured_challenges %}
     <div class="space-y-2 mb-3">
       {% for challenge in featured_challenges %}
-      <a href="{% url 'community_landing' slug=challenge.community.slug %}"
-        class="block bg-gradient-to-r from-opal to-teal-700 rounded-g p-4 text-white">
-        <p class="text-[11px] uppercase tracking-wide text-white/70">Community Challenge</p>
-        <h2 class="font-semibold text-base mt-1">{{ challenge.title }}</h2>
-        <p class="text-sm text-white/85 mt-1">{{ challenge.share_text|default:challenge.prompt_md|truncatechars:120 }}</p>
-      </a>
+      <div class="block bg-gradient-to-r from-opal to-teal-700 rounded-g p-4 text-white">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-[11px] uppercase tracking-wide text-white/70">Community Challenge</p>
+            <h2 class="font-semibold text-base mt-1">{{ challenge.title }}</h2>
+            <p class="text-sm text-white/85 mt-1">{{ challenge.share_text|default:challenge.prompt_md|truncatechars:120 }}</p>
+            <p class="text-xs text-white/70 mt-2">{{ challenge.participant_count }} participant{{ challenge.participant_count|pluralize }} · ends {{ challenge.ends_at|date:"M d" }}</p>
+          </div>
+          <div class="shrink-0 flex flex-col gap-2">
+            <a href="{% url 'community_landing' slug=challenge.community.slug %}" class="h-8 px-3 rounded-g bg-white text-opal text-xs font-semibold flex items-center justify-center">Open</a>
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'community_challenge_join' slug=challenge.community.slug challenge_id=challenge.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="h-8 px-3 rounded-g border border-white/30 text-xs font-semibold flex items-center justify-center {% if challenge.is_joined %}bg-white/15 text-white{% else %}bg-transparent text-white hover:bg-white/10{% endif %}">
+                {% if challenge.is_joined %}Joined{% else %}Join{% endif %}
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
       {% endfor %}
     </div>
     {% endif %}
@@ -122,6 +139,28 @@
         <p class="text-sm text-gray-600">Share your invite links, track referrals, and unlock activation badges with a few simple actions.</p>
         <a href="{% url 'account_referrals' %}" class="inline-flex h-9 px-4 items-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover">Referral links</a>
       </div>
+    </div>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100">
+        <h2 class="font-semibold text-sm text-gray-900">Friend Activity</h2>
+      </div>
+      {% if following_activity %}
+      <div class="divide-y divide-gray-100">
+        {% for item in following_activity %}
+        <a href="{{ item.url }}" class="block px-4 py-3 hover:bg-gray-50">
+          <p class="text-sm font-medium text-gray-900">{{ item.label }}</p>
+          <p class="text-xs text-gray-500 mt-1">{{ item.detail }}</p>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="px-4 py-4">
+        <p class="text-sm text-gray-600">Follow a few people to turn this into a lightweight activity rail.</p>
+      </div>
+      {% endif %}
     </div>
     {% endif %}
 

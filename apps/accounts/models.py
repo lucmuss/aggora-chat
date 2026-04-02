@@ -152,6 +152,8 @@ class UserBadge(models.Model):
         FIRST_COMMENT = "first_comment", "First Comment"
         FIRST_REFERRAL = "first_referral", "First Referral"
         CREW_BUILDER = "crew_builder", "Crew Builder"
+        CHALLENGE_ACCEPTED = "challenge_accepted", "Challenge Accepted"
+        MOMENTUM = "momentum", "Momentum"
 
     user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="badges")
     code = models.CharField(max_length=32, choices=BadgeCode.choices)

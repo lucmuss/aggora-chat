@@ -7,10 +7,11 @@ from urllib.parse import quote_plus
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Q
+from django.db.models import Case, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404
 
 from apps.common.celery import dispatch_task
+from apps.communities.models import Community, CommunityChallenge
 from apps.search.tasks import index_post_task
 from apps.votes.models import SavedPost, Vote
 from apps.votes.tasks import recalculate_post_vote_totals
@@ -151,24 +152,81 @@ def apply_post_sort(queryset, sort="hot"):
     return queryset.order_by(*POST_SORT_MAP.get(sort, POST_SORT_MAP["hot"]))
 
 
+def apply_personalized_post_sort(queryset, sort="hot"):
+    sort_fields = POST_SORT_MAP.get(sort, POST_SORT_MAP["hot"])
+    return queryset.order_by("-personal_boost", *sort_fields)
+
+
 def pg_feed_queryset(user, community=None, sort="hot", scope="all"):
     queryset = Post.objects.visible().for_listing()
+    memberships = []
     if user is not None and user.is_authenticated:
         blocked_ids = list(user.blocked_users.values_list("id", flat=True))
+        memberships = list(user.communitymembership_set.values_list("community_id", flat=True))
         if blocked_ids:
             queryset = queryset.exclude(author_id__in=blocked_ids)
     if community is not None:
         queryset = queryset.filter(community=community)
-    elif user is not None and user.is_authenticated:
-        memberships = user.communitymembership_set.values_list("community_id", flat=True)
-        followed_users = user.followed_users.values_list("id", flat=True)
-        filters = Q()
-        if scope in {"all", "communities"} and memberships:
-            filters |= Q(community_id__in=memberships)
-        if scope in {"all", "following"} and followed_users:
-            filters |= Q(author_id__in=followed_users)
-        if filters:
-            queryset = queryset.filter(filters)
+    else:
+        visible_filters = Q(
+            community__community_type__in=[Community.CommunityType.PUBLIC, Community.CommunityType.RESTRICTED]
+        )
+        if memberships:
+            visible_filters |= Q(community_id__in=memberships)
+        queryset = queryset.filter(visible_filters)
+
+    if user is not None and user.is_authenticated and community is None:
+        followed_users = list(user.followed_users.values_list("id", flat=True))
+        if scope == "communities":
+            if memberships:
+                queryset = queryset.filter(community_id__in=memberships)
+            else:
+                queryset = queryset.none()
+        elif scope == "following":
+            if followed_users:
+                queryset = queryset.filter(author_id__in=followed_users)
+            else:
+                queryset = queryset.none()
+        else:
+            engaged_community_ids = set()
+            engaged_community_ids.update(
+                Vote.objects.filter(user=user, post__isnull=False).values_list("post__community_id", flat=True)
+            )
+            engaged_community_ids.update(
+                SavedPost.objects.filter(user=user).values_list("post__community_id", flat=True)
+            )
+            challenge_community_ids = set(
+                CommunityChallenge.objects.filter(
+                    starts_at__lte=models.functions.Now(),
+                    ends_at__gte=models.functions.Now(),
+                    is_featured=True,
+                ).values_list("community_id", flat=True)
+            )
+            queryset = queryset.annotate(
+                personal_boost=(
+                    Case(
+                        When(author_id__in=followed_users, then=Value(12)),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    )
+                    + Case(
+                        When(community_id__in=memberships, then=Value(8)),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    )
+                    + Case(
+                        When(community_id__in=engaged_community_ids, then=Value(4)),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    )
+                    + Case(
+                        When(community_id__in=challenge_community_ids, then=Value(2)),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    )
+                )
+            )
+            return apply_personalized_post_sort(queryset, sort=sort)
     return apply_post_sort(queryset, sort=sort)
 
 

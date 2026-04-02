@@ -31,9 +31,25 @@
     <div class="space-y-4">
       {% if challenge %}
       <section class="bg-gradient-to-r from-opal-light to-white border border-opal-muted rounded-g p-4">
-        <p class="text-[11px] uppercase tracking-wide text-opal font-semibold">Featured challenge</p>
-        <h2 class="text-lg font-semibold text-gray-900 mt-1">{{ challenge.title }}</h2>
-        <div class="prose mt-2">{{ challenge.prompt_html|safe }}</div>
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-[11px] uppercase tracking-wide text-opal font-semibold">Featured challenge</p>
+            <h2 class="text-lg font-semibold text-gray-900 mt-1">{{ challenge.title }}</h2>
+            <div class="prose mt-2">{{ challenge.prompt_html|safe }}</div>
+            <p class="text-xs text-gray-500 mt-2">{{ challenge.participant_count }} participant{{ challenge.participant_count|pluralize }} · ends {{ challenge.ends_at|date:"M d" }}</p>
+          </div>
+          <div class="shrink-0 flex flex-col gap-2">
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'community_challenge_join' slug=community.slug challenge_id=challenge.id %}">
+              {% csrf_token %}
+              <button type="submit" class="h-9 px-4 rounded-g text-sm font-medium flex items-center justify-center {% if challenge.is_joined %}border border-gray-200 text-gray-600 bg-white{% else %}bg-primary text-white hover:bg-primary-hover{% endif %}">
+                {% if challenge.is_joined %}Joined{% else %}Join challenge{% endif %}
+              </button>
+            </form>
+            {% endif %}
+            <a href="{{ challenge.share_links.x }}" target="_blank" rel="noopener" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center justify-center hover:bg-gray-50 transition-colors">Share challenge</a>
+          </div>
+        </div>
       </section>
       {% endif %}
 

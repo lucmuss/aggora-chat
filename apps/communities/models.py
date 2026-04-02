@@ -204,3 +204,29 @@ class CommunityChallenge(models.Model):
 
         now = timezone.now()
         return self.starts_at <= now <= self.ends_at
+
+
+class CommunityChallengeParticipation(models.Model):
+    challenge = models.ForeignKey(
+        CommunityChallenge,
+        on_delete=models.CASCADE,
+        related_name="participations",
+    )
+    user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="challenge_participations",
+    )
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-joined_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["challenge", "user"],
+                name="communities_unique_challenge_participant",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} joined {self.challenge.title}"

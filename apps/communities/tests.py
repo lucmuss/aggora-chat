@@ -7,7 +7,14 @@ from django.utils import timezone
 from apps.accounts.models import UserBadge
 from apps.posts.models import Comment, Post
 
-from .models import Community, CommunityChallenge, CommunityInvite, CommunityMembership, CommunityWikiPage
+from .models import (
+    Community,
+    CommunityChallenge,
+    CommunityChallengeParticipation,
+    CommunityInvite,
+    CommunityMembership,
+    CommunityWikiPage,
+)
 
 
 User = get_user_model()
@@ -192,6 +199,35 @@ class CommunityFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Weekly prompt")
         self.assertContains(response, "Top Contributors This Week")
+
+    def test_logged_in_user_can_join_active_challenge(self):
+        member = User.objects.create_user(
+            username="challengejoiner",
+            email="challengejoiner@example.com",
+            password="password123",
+            handle="challengejoiner",
+        )
+        CommunityMembership.objects.create(
+            user=member,
+            community=self.community,
+            role=CommunityMembership.Role.MEMBER,
+        )
+        challenge = CommunityChallenge.objects.create(
+            community=self.community,
+            created_by=self.user,
+            title="Share your setup",
+            prompt_md="Post one screenshot or workflow note.",
+            starts_at=timezone.now() - timezone.timedelta(days=1),
+            ends_at=timezone.now() + timezone.timedelta(days=5),
+        )
+        self.client.force_login(member)
+
+        response = self.client.post(
+            reverse("community_challenge_join", kwargs={"slug": self.community.slug, "challenge_id": challenge.id})
+        )
+
+        self.assertRedirects(response, reverse("community_detail", kwargs={"slug": self.community.slug}))
+        self.assertTrue(CommunityChallengeParticipation.objects.filter(user=member, challenge=challenge).exists())
 
     def test_private_community_is_hidden_from_anonymous_discovery_and_detail(self):
         self.community.community_type = Community.CommunityType.PRIVATE

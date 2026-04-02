@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from apps.communities.models import CommunityMembership
+from apps.communities.models import CommunityChallengeParticipation, CommunityMembership
 from apps.communities.services import create_invite_for_community, share_links_for_invite
 from apps.posts.models import Comment, Post
 
@@ -39,6 +39,16 @@ BADGE_META = {
         "title": "Crew Builder",
         "description": "Referred three new joins across your invite links.",
         "icon": "⚑",
+    },
+    UserBadge.BadgeCode.CHALLENGE_ACCEPTED: {
+        "title": "Challenge Accepted",
+        "description": "Joined your first community challenge.",
+        "icon": "⚡",
+    },
+    UserBadge.BadgeCode.MOMENTUM: {
+        "title": "Momentum",
+        "description": "Stacked multiple engagement milestones and kept the energy going.",
+        "icon": "▲",
     },
 }
 
@@ -84,6 +94,27 @@ def award_referral_badges(user: User):
         award_badge(user, UserBadge.BadgeCode.FIRST_REFERRAL)
     if total_referrals >= 3:
         award_badge(user, UserBadge.BadgeCode.CREW_BUILDER)
+    award_momentum_badge(user)
+
+
+def award_challenge_badges(user: User):
+    total_participations = CommunityChallengeParticipation.objects.filter(user=user).count()
+    if total_participations >= 1:
+        award_badge(user, UserBadge.BadgeCode.CHALLENGE_ACCEPTED)
+    award_momentum_badge(user)
+
+
+def award_momentum_badge(user: User):
+    earned_codes = set(user.badges.values_list("code", flat=True))
+    anchor_codes = {
+        UserBadge.BadgeCode.FIRST_STEPS,
+        UserBadge.BadgeCode.FIRST_POST,
+        UserBadge.BadgeCode.FIRST_COMMENT,
+        UserBadge.BadgeCode.FIRST_REFERRAL,
+        UserBadge.BadgeCode.CHALLENGE_ACCEPTED,
+    }
+    if len(earned_codes & anchor_codes) >= 3:
+        award_badge(user, UserBadge.BadgeCode.MOMENTUM)
 
 
 @dataclass
@@ -122,6 +153,7 @@ def onboarding_progress_for_user(user: User):
     has_post = Post.objects.filter(author=user).exists()
     has_comment = Comment.objects.filter(author=user).exists()
     has_referral = user.community_invites.filter(usage_count__gt=0).exists()
+    has_challenge = CommunityChallengeParticipation.objects.filter(user=user).exists()
     return {
         "has_profile": has_profile,
         "joined_count": joined_count,
@@ -129,13 +161,15 @@ def onboarding_progress_for_user(user: User):
         "has_post": has_post,
         "has_comment": has_comment,
         "has_referral": has_referral,
+        "has_challenge": has_challenge,
         "completed_steps": sum(
             [
                 has_profile,
                 joined_count >= 3,
                 has_post or has_comment,
                 has_referral,
+                has_challenge,
             ]
         ),
-        "total_steps": 4,
+        "total_steps": 5,
     }

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import secrets
 from collections import Counter, defaultdict
+from dataclasses import dataclass
 from urllib.parse import quote_plus
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db.models import Count
 from django.urls import reverse
 from django.utils import timezone
 
@@ -13,7 +15,14 @@ from apps.accounts.models import User
 from apps.posts.models import Comment, Post
 from apps.votes.models import SavedPost, Vote
 
-from .models import Community, CommunityChallenge, CommunityInvite, CommunityMembership, CommunityWikiPage
+from .models import (
+    Community,
+    CommunityChallenge,
+    CommunityChallengeParticipation,
+    CommunityInvite,
+    CommunityMembership,
+    CommunityWikiPage,
+)
 
 
 def submit_community(creator: User, form) -> Community:
@@ -258,7 +267,8 @@ def featured_challenges_for_user(user: User, limit: int = 3):
         joined_ids = list(user.communitymembership_set.values_list("community_id", flat=True))
         if joined_ids:
             queryset = queryset.filter(community_id__in=joined_ids)
-    return list(queryset.order_by("ends_at", "-created_at")[:limit])
+    challenges = list(queryset.order_by("ends_at", "-created_at")[:limit])
+    return enrich_challenges_for_user(challenges, user)
 
 
 def best_posts_for_community(community: Community, limit: int = 5):
@@ -311,3 +321,143 @@ def share_links_for_invite(community: Community, invite: CommunityInvite):
         "x": f"https://twitter.com/intent/tweet?text={share_text}&url={encoded_url}",
         "email": f"mailto:?subject={quote_plus(f'Join me on {settings.APP_NAME}')}&body={quote_plus(f'{share_message}\n\n{invite_url}')}",
     }
+
+
+def share_links_for_challenge(challenge: CommunityChallenge):
+    base_url = getattr(settings, "APP_PUBLIC_URL", "").rstrip("/")
+    path = reverse("community_landing", kwargs={"slug": challenge.community.slug})
+    landing_url = f"{base_url}{path}" if base_url else path
+    share_message = challenge.share_text or f"Jump into the {challenge.title} challenge in c/{challenge.community.slug}."
+    encoded_url = quote_plus(landing_url)
+    encoded_text = quote_plus(share_message)
+    return {
+        "copy_url": landing_url,
+        "share_text": share_message,
+        "whatsapp": f"https://wa.me/?text={encoded_text}%20{encoded_url}",
+        "telegram": f"https://t.me/share/url?url={encoded_url}&text={encoded_text}",
+        "x": f"https://twitter.com/intent/tweet?text={encoded_text}&url={encoded_url}",
+        "email": f"mailto:?subject={quote_plus(challenge.title)}&body={quote_plus(f'{share_message}\n\n{landing_url}')}",
+    }
+
+
+def join_challenge(user: User, challenge: CommunityChallenge):
+    participation, created = CommunityChallengeParticipation.objects.get_or_create(user=user, challenge=challenge)
+    if created:
+        from apps.accounts.growth import award_challenge_badges
+
+        award_challenge_badges(user)
+    return participation, created
+
+
+def enrich_challenges_for_user(challenges, user: User | None):
+    challenge_ids = [challenge.id for challenge in challenges]
+    if not challenge_ids:
+        return []
+    participant_rows = (
+        CommunityChallengeParticipation.objects.filter(challenge_id__in=challenge_ids)
+        .values("challenge_id")
+        .annotate(count=Count("id"))
+    )
+    participant_counts = {row["challenge_id"]: row["count"] for row in participant_rows}
+    joined_ids = set()
+    if user is not None and getattr(user, "is_authenticated", False):
+        joined_ids = set(
+            CommunityChallengeParticipation.objects.filter(user=user, challenge_id__in=challenge_ids).values_list(
+                "challenge_id",
+                flat=True,
+            )
+        )
+    for challenge in challenges:
+        challenge.participant_count = participant_counts.get(challenge.id, 0)
+        challenge.is_joined = challenge.id in joined_ids
+        challenge.share_links = share_links_for_challenge(challenge)
+    return challenges
+
+
+@dataclass
+class FollowingActivityItem:
+    actor: User
+    kind: str
+    label: str
+    detail: str
+    url: str
+    created_at: object
+
+
+def following_activity_for_user(user: User | None, limit: int = 6):
+    if user is None or not getattr(user, "is_authenticated", False):
+        return []
+    followed_ids = list(user.followed_users.values_list("id", flat=True))
+    if not followed_ids:
+        return []
+
+    items = []
+
+    recent_posts = (
+        Post.objects.visible()
+        .for_listing()
+        .filter(author_id__in=followed_ids)
+        .select_related("community", "author")
+        .order_by("-created_at")[: limit * 3]
+    )
+    for post in recent_posts:
+        if can_view_community(user, post.community):
+            items.append(
+                FollowingActivityItem(
+                    actor=post.author,
+                    kind="post",
+                    label=f"{post.author.display_name or post.author.handle} posted",
+                    detail=f"{post.title} in c/{post.community.slug}",
+                    url=reverse(
+                        "post_detail",
+                        kwargs={"community_slug": post.community.slug, "post_id": post.id, "slug": post.slug},
+                    ),
+                    created_at=post.created_at,
+                )
+            )
+
+    recent_comments = (
+        Comment.objects.filter(author_id__in=followed_ids, is_removed=False)
+        .select_related("author", "post", "post__community")
+        .order_by("-created_at")[: limit * 3]
+    )
+    for comment in recent_comments:
+        if can_view_community(user, comment.post.community):
+            items.append(
+                FollowingActivityItem(
+                    actor=comment.author,
+                    kind="comment",
+                    label=f"{comment.author.display_name or comment.author.handle} replied",
+                    detail=f"In {comment.post.title}",
+                    url=reverse(
+                        "post_detail",
+                        kwargs={
+                            "community_slug": comment.post.community.slug,
+                            "post_id": comment.post.id,
+                            "slug": comment.post.slug,
+                        },
+                    ),
+                    created_at=comment.created_at,
+                )
+            )
+
+    recent_joins = (
+        CommunityMembership.objects.filter(user_id__in=followed_ids)
+        .select_related("user", "community")
+        .order_by("-joined_at")[: limit * 3]
+    )
+    for membership in recent_joins:
+        if can_view_community(user, membership.community):
+            items.append(
+                FollowingActivityItem(
+                    actor=membership.user,
+                    kind="join",
+                    label=f"{membership.user.display_name or membership.user.handle} joined",
+                    detail=f"c/{membership.community.slug}",
+                    url=reverse("community_detail", kwargs={"slug": membership.community.slug}),
+                    created_at=membership.joined_at,
+                )
+            )
+
+    items.sort(key=lambda item: item.created_at, reverse=True)
+    return items[:limit]

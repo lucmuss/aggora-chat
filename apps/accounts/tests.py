@@ -6,7 +6,9 @@ from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.communities.models import Community
+from django.utils import timezone
+
+from apps.communities.models import Community, CommunityChallenge
 from apps.posts.models import Comment, Post
 from apps.posts.services import submit_comment, submit_post
 from apps.votes.models import SavedPost
@@ -317,6 +319,38 @@ class HandleSetupTests(TestCase):
 
         self.assertTrue(UserBadge.objects.filter(user=user, code=UserBadge.BadgeCode.FIRST_POST).exists())
         self.assertTrue(UserBadge.objects.filter(user=user, code=UserBadge.BadgeCode.FIRST_COMMENT).exists())
+
+    def test_joining_a_challenge_awards_engagement_badges(self):
+        user = User.objects.create_user(
+            username="challenger",
+            email="challenger@example.com",
+            password="password123",
+            handle="challenger",
+        )
+        community = Community.objects.create(
+            name="Agora Challenges",
+            slug="agora-challenges",
+            title="Agora Challenges",
+            description="Challenge tests.",
+            creator=user,
+        )
+        challenge = CommunityChallenge.objects.create(
+            community=community,
+            created_by=user,
+            title="Ship it week",
+            prompt_md="Share one thing you shipped.",
+            starts_at=timezone.now() - timezone.timedelta(days=1),
+            ends_at=timezone.now() + timezone.timedelta(days=3),
+        )
+        community.memberships.create(user=user, role=community.memberships.model.Role.MEMBER)
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("community_challenge_join", kwargs={"slug": community.slug, "challenge_id": challenge.id})
+        )
+
+        self.assertRedirects(response, reverse("community_detail", kwargs={"slug": community.slug}))
+        self.assertTrue(UserBadge.objects.filter(user=user, code=UserBadge.BadgeCode.CHALLENGE_ACCEPTED).exists())
 
     def test_account_settings_updates_privacy_and_notification_preferences(self):
         user = User.objects.create_user(

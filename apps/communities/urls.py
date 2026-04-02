@@ -9,6 +9,7 @@ urlpatterns = [
     path("<slug:slug>/landing/", views.community_landing, name="community_landing"),
     path("<slug:slug>/share-card/", views.community_share_card, name="community_share_card"),
     path("<slug:slug>/invite/<str:token>/", views.community_invite, name="community_invite"),
+    path("<slug:slug>/challenges/<int:challenge_id>/join/", views.join_community_challenge, name="community_challenge_join"),
     path("<slug:slug>/wiki/edit/", views.wiki_edit, name="community_wiki_edit_home"),
     path("<slug:slug>/wiki/<slug:page_slug>/edit/", views.wiki_edit, name="community_wiki_edit"),
     path("<slug:slug>/wiki/", views.wiki_page, name="community_wiki_home"),

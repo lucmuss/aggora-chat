@@ -2,9 +2,10 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from apps.communities.models import Community
-from apps.posts.models import Post
+from apps.communities.models import Community, CommunityMembership
+from apps.posts.models import Comment, Post
 
 
 User = get_user_model()
@@ -130,3 +131,93 @@ class DiscoveryFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, following_post.title)
         self.assertNotContains(response, community_post.title)
+
+    def test_for_you_feed_prioritizes_followed_and_joined_signals(self):
+        followed_author = User.objects.create_user(
+            username="priorityfollowed",
+            email="priorityfollowed@example.com",
+            password="password123",
+            handle="priorityfollowed",
+        )
+        other_author = User.objects.create_user(
+            username="priorityother",
+            email="priorityother@example.com",
+            password="password123",
+            handle="priorityother",
+        )
+        joined_community = Community.objects.create(
+            name="Joined Signals",
+            slug="joined-signals",
+            title="Joined Signals",
+            description="Joined feed tests.",
+            creator=self.user,
+        )
+        CommunityMembership.objects.create(user=self.user, community=joined_community)
+        low_score_followed = Post.objects.create(
+            community=self.community,
+            author=followed_author,
+            post_type="text",
+            title="Followed priority thread",
+            body_md="Priority",
+            score=1,
+            hot_score=1,
+        )
+        high_score_other = Post.objects.create(
+            community=self.community,
+            author=other_author,
+            post_type="text",
+            title="Other high score thread",
+            body_md="Other",
+            score=20,
+            hot_score=20,
+        )
+        joined_post = Post.objects.create(
+            community=joined_community,
+            author=other_author,
+            post_type="text",
+            title="Joined community thread",
+            body_md="Joined",
+            score=2,
+            hot_score=2,
+        )
+        self.user.followed_users.add(followed_author)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("home"), {"scope": "all"})
+
+        self.assertEqual(response.status_code, 200)
+        posts = list(response.context["posts"])
+        self.assertEqual(posts[0].title, low_score_followed.title)
+        self.assertIn(joined_post.title, [post.title for post in posts[:3]])
+        self.assertIn(high_score_other.title, [post.title for post in posts])
+
+    def test_home_feed_surfaces_friend_activity(self):
+        followed_author = User.objects.create_user(
+            username="activityfriend",
+            email="activityfriend@example.com",
+            password="password123",
+            handle="activityfriend",
+        )
+        self.user.followed_users.add(followed_author)
+        activity_post = Post.objects.create(
+            community=self.community,
+            author=followed_author,
+            post_type="text",
+            title="Activity thread",
+            body_md="Activity",
+            score=5,
+            hot_score=5,
+        )
+        Comment.objects.create(
+            post=activity_post,
+            author=followed_author,
+            body_md="Recent reply",
+            created_at=timezone.now(),
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Friend Activity")
+        self.assertContains(response, "activityfriend")
