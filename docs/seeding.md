@@ -8,6 +8,8 @@ This repository uses JSON-backed seed data for local development, screenshots, a
   Contains 5 curated demo users.
 - [`data/seed/admins.json`](/srv/projects/web/aggora-chat/data/seed/admins.json)
   Contains 2 admin accounts: one superuser and one moderator.
+- [`data/seed/communities.json`](/srv/projects/web/aggora-chat/data/seed/communities.json)
+  Contains multiple demo communities, rules, flairs, wiki pages, challenges, posts, comments, votes, and saved-post references.
 - [`docs/test-accounts.md`](/srv/projects/web/aggora-chat/docs/test-accounts.md)
   Lists all seeded credentials in a readable format.
 
@@ -40,6 +42,7 @@ The image entrypoint respects those flags and otherwise does nothing automatical
 
 - 5 demo users
 - 2 admin accounts
-- `c/freya-seed-lounge`
-- memberships for all seeded accounts
-- starter intro posts and comments for the 5 demo users
+- 3 seeded communities with memberships for all seeded accounts
+- rules, flairs, wiki pages, featured challenges, and shareable landing content
+- curated starter posts, comments, votes, and saved posts
+- intro posts/comments for the seeded demo users across the communities

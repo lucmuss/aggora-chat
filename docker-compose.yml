@@ -29,11 +29,16 @@ services:
       SEED_SKIP_DEMO_CONTENT: ${SEED_SKIP_DEMO_CONTENT:-0}
       SEED_USERS_FILE: ${SEED_USERS_FILE:-data/seed/users.json}
       SEED_ADMINS_FILE: ${SEED_ADMINS_FILE:-data/seed/admins.json}
+      SEED_COMMUNITIES_FILE: ${SEED_COMMUNITIES_FILE:-data/seed/communities.json}
     volumes:
       - .:/app
 
   db:
     image: postgres:16
+    networks:
+      default:
+        aliases:
+          - postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-agora}
       POSTGRES_USER: ${POSTGRES_USER:-agora}

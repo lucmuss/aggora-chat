@@ -326,3 +326,5 @@ class AccountBootstrapCommandTests(TestCase):
         self.assertTrue(User.objects.filter(email="ops-admin@aggora.app", is_superuser=True).exists())
         self.assertTrue(User.objects.filter(email="ops-moderator@aggora.app", is_staff=True).exists())
         self.assertTrue(Community.objects.filter(slug="freya-seed-lounge").exists())
+        self.assertTrue(Community.objects.filter(slug="product-design").exists())
+        self.assertTrue(Community.objects.filter(slug="slow-tech-club").exists())

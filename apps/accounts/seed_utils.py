@@ -8,9 +8,9 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from apps.communities.models import Community, CommunityMembership
-from apps.posts.models import Comment, Post
-from apps.votes.models import Vote
+from apps.communities.models import Community, CommunityChallenge, CommunityMembership, CommunityRule, CommunityWikiPage, PostFlair
+from apps.posts.models import Comment, Poll, PollOption, Post
+from apps.votes.models import SavedPost, Vote
 
 
 User = get_user_model()
@@ -64,6 +64,19 @@ def get_seed_admins_file(explicit_path: str | None = None) -> Path:
         if configured_path.exists():
             return configured_path
     return settings.BASE_DIR / "data" / "seed" / "admins.json"
+
+
+def get_seed_communities_file(explicit_path: str | None = None) -> Path:
+    if explicit_path:
+        explicit = Path(explicit_path)
+        if explicit.exists():
+            return explicit
+    configured = getattr(settings, "SEED_COMMUNITIES_FILE", "").strip()
+    if configured:
+        configured_path = Path(configured)
+        if configured_path.exists():
+            return configured_path
+    return settings.BASE_DIR / "data" / "seed" / "communities.json"
 
 
 def ensure_account(*, email: str, password: str, handle: str | None = None, display_name: str = "", bio: str = "", is_staff: bool = False, is_superuser: bool = False, is_agent: bool = False, agent_verified: bool = False) -> tuple[User, bool]:
@@ -143,18 +156,265 @@ def _ensure_seed_community(owner: User | None = None) -> Community:
     return community
 
 
-def seed_demo_accounts(*, users_file_path: str | None = None, admins_file_path: str | None = None, create_demo_content: bool = True) -> dict[str, int | str]:
+def _get_user_by_email(users_by_email: dict[str, User], email: str | None) -> User | None:
+    if not email:
+        return None
+    return users_by_email.get(email.strip().lower())
+
+
+def _sync_community_metadata(community: Community, entry: dict, creator: User | None):
+    updates = {
+        "name": entry.get("name", community.name),
+        "title": entry.get("title", community.title),
+        "description": entry.get("description", community.description),
+        "seo_description": entry.get("seo_description", community.seo_description),
+        "sidebar_md": entry.get("sidebar_md", community.sidebar_md),
+        "landing_intro_md": entry.get("landing_intro_md", community.landing_intro_md),
+        "faq_md": entry.get("faq_md", community.faq_md),
+        "best_of_md": entry.get("best_of_md", community.best_of_md),
+        "community_type": entry.get("community_type", community.community_type),
+        "allow_text_posts": bool(entry.get("allow_text_posts", community.allow_text_posts)),
+        "allow_link_posts": bool(entry.get("allow_link_posts", community.allow_link_posts)),
+        "allow_image_posts": bool(entry.get("allow_image_posts", community.allow_image_posts)),
+        "allow_polls": bool(entry.get("allow_polls", community.allow_polls)),
+        "creator": creator or community.creator,
+    }
+    changed = False
+    for field, value in updates.items():
+        if getattr(community, field) != value:
+            setattr(community, field, value)
+            changed = True
+    if changed:
+        community.save()
+
+
+def _sync_rules(community: Community, rules: list[dict]):
+    seen_titles: set[str] = set()
+    for rule in rules:
+        title = rule.get("title", "").strip()
+        if not title:
+            continue
+        seen_titles.add(title)
+        CommunityRule.objects.update_or_create(
+            community=community,
+            title=title,
+            defaults={
+                "order": int(rule.get("order", 0)),
+                "description": rule.get("description", "").strip(),
+            },
+        )
+
+
+def _sync_flairs(community: Community, flairs: list[dict]):
+    for flair in flairs:
+        text = flair.get("text", "").strip()
+        if not text:
+            continue
+        PostFlair.objects.update_or_create(
+            community=community,
+            text=text,
+            defaults={
+                "css_class": flair.get("css_class", "").strip(),
+                "bg_color": flair.get("bg_color", "#6B7280").strip() or "#6B7280",
+            },
+        )
+
+
+def _sync_wiki_pages(community: Community, pages: list[dict], updated_by: User | None):
+    for page in pages:
+        slug = page.get("slug", "").strip()
+        if not slug:
+            continue
+        CommunityWikiPage.objects.update_or_create(
+            community=community,
+            slug=slug,
+            defaults={
+                "title": page.get("title", slug.replace("-", " ").title()).strip(),
+                "body_md": page.get("body_md", "").strip(),
+                "updated_by": updated_by,
+            },
+        )
+
+
+def _sync_challenge(community: Community, challenge_entry: dict | None, created_by: User | None):
+    if not challenge_entry:
+        return
+    now = timezone.now()
+    starts_at = now - timezone.timedelta(days=1)
+    ends_at = now + timezone.timedelta(days=14)
+    CommunityChallenge.objects.update_or_create(
+        community=community,
+        title=challenge_entry.get("title", "Seed Challenge").strip(),
+        defaults={
+            "created_by": created_by,
+            "prompt_md": challenge_entry.get("prompt_md", "").strip(),
+            "share_text": challenge_entry.get("share_text", "").strip(),
+            "starts_at": starts_at,
+            "ends_at": ends_at,
+            "is_featured": True,
+        },
+    )
+
+
+def _apply_post_votes(post: Post, users_by_email: dict[str, User], upvoters: list[str], downvoters: list[str] | None = None):
+    upvote_count = 0
+    downvote_count = 0
+    for email in upvoters or []:
+        voter = _get_user_by_email(users_by_email, email)
+        if not voter:
+            continue
+        Vote.objects.update_or_create(
+            user=voter,
+            post=post,
+            defaults={"value": Vote.VoteType.UPVOTE},
+        )
+        upvote_count += 1
+    for email in downvoters or []:
+        voter = _get_user_by_email(users_by_email, email)
+        if not voter:
+            continue
+        Vote.objects.update_or_create(
+            user=voter,
+            post=post,
+            defaults={"value": Vote.VoteType.DOWNVOTE},
+        )
+        downvote_count += 1
+    score = upvote_count - downvote_count
+    hot_score = max(float(score), 0.0)
+    Post.objects.filter(pk=post.pk).update(
+        upvote_count=upvote_count,
+        downvote_count=downvote_count,
+        score=score,
+        hot_score=hot_score,
+    )
+
+
+def _apply_comment_votes(comment: Comment, users_by_email: dict[str, User], upvoters: list[str] | None = None):
+    upvote_count = 0
+    for email in upvoters or []:
+        voter = _get_user_by_email(users_by_email, email)
+        if not voter:
+            continue
+        Vote.objects.update_or_create(
+            user=voter,
+            comment=comment,
+            defaults={"value": Vote.VoteType.UPVOTE},
+        )
+        upvote_count += 1
+    Comment.objects.filter(pk=comment.pk).update(
+        upvote_count=upvote_count,
+        downvote_count=0,
+        score=upvote_count,
+    )
+
+
+def _create_or_update_post(*, community: Community, users_by_email: dict[str, User], post_entry: dict) -> tuple[Post | None, bool]:
+    author = _get_user_by_email(users_by_email, post_entry.get("author_email"))
+    if not author:
+        return None, False
+
+    flair = None
+    flair_text = post_entry.get("flair", "").strip()
+    if flair_text:
+        flair = PostFlair.objects.filter(community=community, text=flair_text).first()
+
+    defaults = {
+        "post_type": post_entry.get("post_type", Post.PostType.TEXT),
+        "body_md": post_entry.get("body_md", "").strip(),
+        "url": post_entry.get("url", "").strip(),
+        "author": author,
+        "flair": flair,
+        "is_spoiler": bool(post_entry.get("is_spoiler", False)),
+        "is_nsfw": bool(post_entry.get("is_nsfw", False)),
+    }
+    post, created = Post.objects.get_or_create(
+        community=community,
+        author=author,
+        title=post_entry.get("title", "").strip(),
+        defaults=defaults,
+    )
+    changed_fields: list[str] = []
+    for field, value in defaults.items():
+        if getattr(post, field) != value:
+            setattr(post, field, value)
+            changed_fields.append(field)
+    if changed_fields:
+        post.save(update_fields=changed_fields + ["body_html"])
+
+    poll_entry = post_entry.get("poll") or {}
+    if post.post_type == Post.PostType.POLL and poll_entry:
+        poll, _ = Poll.objects.get_or_create(
+            post=post,
+            defaults={
+                "multiple_choice": bool(poll_entry.get("multiple_choice", False)),
+                "closes_at": timezone.now() + timezone.timedelta(days=7),
+            },
+        )
+        if poll.multiple_choice != bool(poll_entry.get("multiple_choice", False)):
+            poll.multiple_choice = bool(poll_entry.get("multiple_choice", False))
+            poll.save(update_fields=["multiple_choice"])
+        for position, label in enumerate(poll_entry.get("options", []), start=1):
+            PollOption.objects.get_or_create(
+                poll=poll,
+                label=label.strip(),
+                defaults={"position": position},
+            )
+
+    comment_count = 0
+    for comment_entry in post_entry.get("comments", []):
+        comment_author = _get_user_by_email(users_by_email, comment_entry.get("author_email"))
+        if not comment_author:
+            continue
+        comment, _ = Comment.objects.get_or_create(
+            post=post,
+            author=comment_author,
+            body_md=comment_entry.get("body_md", "").strip(),
+            defaults={
+                "body_html": "",
+                "depth": 0,
+            },
+        )
+        _apply_comment_votes(comment, users_by_email, comment_entry.get("upvoters", []))
+        comment_count += 1
+    Post.objects.filter(pk=post.pk).update(comment_count=comment_count)
+
+    _apply_post_votes(
+        post,
+        users_by_email,
+        post_entry.get("upvoters", []),
+        post_entry.get("downvoters", []),
+    )
+
+    for email in post_entry.get("saved_by", []):
+        saver = _get_user_by_email(users_by_email, email)
+        if saver:
+            SavedPost.objects.get_or_create(user=saver, post=post)
+
+    return post, created
+
+
+def seed_demo_accounts(
+    *,
+    users_file_path: str | None = None,
+    admins_file_path: str | None = None,
+    communities_file_path: str | None = None,
+    create_demo_content: bool = True,
+) -> dict[str, int | str]:
     user_seed_file = get_seed_users_file(users_file_path)
     admin_seed_file = get_seed_admins_file(admins_file_path)
+    communities_seed_file = get_seed_communities_file(communities_file_path)
     user_payload = _load_seed_payload(user_seed_file)
     admin_payload = _load_seed_payload(admin_seed_file) if admin_seed_file.exists() else []
+    communities_payload = _load_seed_payload(communities_seed_file) if communities_seed_file.exists() else []
 
     created_users = 0
     created_admins = 0
     created_posts = 0
     created_comments = 0
+    created_communities = 0
 
     admin_users: list[tuple[User, dict]] = []
+    users_by_email: dict[str, User] = {}
     for entry in admin_payload:
         user, created = ensure_account(
             email=entry["email"],
@@ -166,25 +426,11 @@ def seed_demo_accounts(*, users_file_path: str | None = None, admins_file_path: 
             is_superuser=bool(entry.get("is_superuser", False)),
         )
         admin_users.append((user, entry))
+        users_by_email[user.email] = user
         if created:
             created_admins += 1
 
     owner_user = next((user for user, entry in admin_users if entry.get("community_role") == CommunityMembership.Role.OWNER), None)
-    community = _ensure_seed_community(owner_user)
-
-    for user, entry in admin_users:
-        community_role = entry.get("community_role")
-        if community_role in {
-            CommunityMembership.Role.OWNER,
-            CommunityMembership.Role.MODERATOR,
-            CommunityMembership.Role.MEMBER,
-            CommunityMembership.Role.AGENT_MOD,
-        }:
-            CommunityMembership.objects.update_or_create(
-                user=user,
-                community=community,
-                defaults={"role": community_role},
-            )
 
     for entry in user_payload:
         profile = entry.get("profile", {})
@@ -206,66 +452,136 @@ def seed_demo_accounts(*, users_file_path: str | None = None, admins_file_path: 
         )
         if created:
             created_users += 1
+        users_by_email[user.email] = user
 
-        membership, membership_created = CommunityMembership.objects.get_or_create(
-            user=user,
-            community=community,
-            defaults={"role": CommunityMembership.Role.MEMBER},
+    if not communities_payload:
+        communities_payload = [
+            {
+                "slug": "freya-seed-lounge",
+                "name": "Freya Seed Lounge",
+                "title": "Freya Seed Lounge",
+            }
+        ]
+
+    primary_slug = communities_payload[0].get("slug", "freya-seed-lounge")
+    for community_index, community_entry in enumerate(communities_payload):
+        slug = community_entry.get("slug", "").strip()
+        if not slug:
+            continue
+        community, community_created = Community.objects.get_or_create(
+            slug=slug,
+            defaults={
+                "name": community_entry.get("name", slug.replace("-", " ").title()),
+                "title": community_entry.get("title", slug.replace("-", " ").title()),
+                "description": community_entry.get("description", ""),
+                "creator": owner_user,
+            },
         )
-        if membership_created:
-            community.subscriber_count = community.memberships.count()
-            community.save(update_fields=["subscriber_count", "sidebar_html"])
+        if community_created:
+            created_communities += 1
+
+        if community_index == 0 and community.slug == "freya-seed-lounge":
+            seeded = _ensure_seed_community(owner_user)
+            if seeded.pk != community.pk:
+                community = seeded
+
+        _sync_community_metadata(community, community_entry, owner_user)
+
+        for user, entry in admin_users:
+            community_role = entry.get("community_role")
+            if community_role in {
+                CommunityMembership.Role.OWNER,
+                CommunityMembership.Role.MODERATOR,
+                CommunityMembership.Role.MEMBER,
+                CommunityMembership.Role.AGENT_MOD,
+            }:
+                CommunityMembership.objects.update_or_create(
+                    user=user,
+                    community=community,
+                    defaults={"role": community_role},
+                )
+
+        for email, user in users_by_email.items():
+            if user.is_staff:
+                continue
+            CommunityMembership.objects.get_or_create(
+                user=user,
+                community=community,
+                defaults={"role": CommunityMembership.Role.MEMBER},
+            )
+
+        _sync_rules(community, community_entry.get("rules", []))
+        _sync_flairs(community, community_entry.get("flairs", []))
+        _sync_wiki_pages(community, community_entry.get("wiki_pages", []), owner_user)
+        _sync_challenge(community, community_entry.get("challenge"), owner_user)
 
         if not create_demo_content:
             continue
 
-        intro_title = f"Intro from {full_name}"
-        post, post_created = Post.objects.get_or_create(
-            community=community,
-            author=user,
-            title=intro_title,
-            defaults={
-                "post_type": Post.PostType.TEXT,
-                "body_md": (
-                    f"{profile.get('about', '')}\n\n"
-                    f"Interests: {', '.join(profile.get('interests', [])) or 'n/a'}\n"
-                    f"City: {profile.get('city', 'Unknown')}, {profile.get('country', 'Unknown')}"
-                ).strip(),
-            },
-        )
-        if post_created:
-            Vote.objects.get_or_create(user=user, post=post, defaults={"value": Vote.VoteType.UPVOTE})
-            post.upvote_count = 1
-            post.score = 1
-            post.hot_score = max(post.hot_score, 1.0)
-            post.save(update_fields=["upvote_count", "score", "hot_score", "body_html", "slug"])
-            created_posts += 1
+        for post_entry in community_entry.get("posts", []):
+            _, post_created = _create_or_update_post(
+                community=community,
+                users_by_email=users_by_email,
+                post_entry=post_entry,
+            )
+            if post_created:
+                created_posts += 1
+            created_comments += len(post_entry.get("comments", []))
 
-        if Comment.objects.filter(post=post, author=user).exists():
-            continue
+        for email, user in users_by_email.items():
+            if user.is_staff:
+                continue
+            profile = {
+                "about": user.bio,
+                "city": community_entry.get("title", community.title),
+                "country": "Seeded",
+                "interests": ["Agora", "Community building", "QA"],
+            }
+            intro_title = f"Intro from {user.display_name or user.handle or email.split('@', 1)[0]}"
+            intro_post, intro_created = Post.objects.get_or_create(
+                community=community,
+                author=user,
+                title=intro_title,
+                defaults={
+                    "post_type": Post.PostType.TEXT,
+                    "body_md": (
+                        f"{profile.get('about', '')}\n\n"
+                        f"Interests: {', '.join(profile.get('interests', [])) or 'n/a'}\n"
+                        f"Context: testing {community.title}"
+                    ).strip(),
+                },
+            )
+            if intro_created:
+                created_posts += 1
+                Vote.objects.get_or_create(user=user, post=intro_post, defaults={"value": Vote.VoteType.UPVOTE})
+                Post.objects.filter(pk=intro_post.pk).update(
+                    upvote_count=1,
+                    score=1,
+                    hot_score=1.0,
+                )
+            comment, comment_created = Comment.objects.get_or_create(
+                post=intro_post,
+                author=user,
+                body_md=f"Happy to help test Agora with the richer seed dataset on {timezone.now().date().isoformat()}.",
+                defaults={"body_html": "", "depth": 0},
+            )
+            if comment_created:
+                Vote.objects.get_or_create(user=user, comment=comment, defaults={"value": Vote.VoteType.UPVOTE})
+                Comment.objects.filter(pk=comment.pk).update(score=1, upvote_count=1)
+                Post.objects.filter(pk=intro_post.pk).update(comment_count=intro_post.comments.count())
+                created_comments += 1
 
-        comment = Comment.objects.create(
-            post=post,
-            author=user,
-            body_md=f"Happy to help test Agora with the Freya seed dataset. Joined on {timezone.now().date().isoformat()}.",
-            body_html="",
-            depth=0,
-            score=1,
-            upvote_count=1,
-        )
-        Vote.objects.get_or_create(user=user, comment=comment, defaults={"value": Vote.VoteType.UPVOTE})
-        Post.objects.filter(pk=post.pk).update(comment_count=1)
-        created_comments += 1
-
-    community.subscriber_count = community.memberships.count()
-    community.save(update_fields=["subscriber_count", "sidebar_html", "landing_intro_html", "faq_html", "best_of_html"])
+        community.subscriber_count = community.memberships.count()
+        community.save(update_fields=["subscriber_count", "sidebar_html", "landing_intro_html", "faq_html", "best_of_html"])
 
     return {
         "users_created": created_users,
         "admins_created": created_admins,
         "posts_created": created_posts,
         "comments_created": created_comments,
+        "communities_created": created_communities,
         "seed_file": str(user_seed_file),
         "admins_file": str(admin_seed_file),
-        "community_slug": community.slug,
+        "communities_file": str(communities_seed_file),
+        "community_slug": primary_slug,
     }

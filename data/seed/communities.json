@@ -1,0 +1,199 @@
+[
+  {
+    "slug": "freya-seed-lounge",
+    "name": "Freya Seed Lounge",
+    "title": "Freya Seed Lounge",
+    "description": "Curated seed community for Agora development, QA, and screenshots.",
+    "seo_description": "Seeded community for onboarding, QA flows, and UI screenshots.",
+    "sidebar_md": "A seeded Agora community with demo users, admins, challenges, and starter threads.",
+    "landing_intro_md": "Welcome to the seeded demo community used for local development, onboarding tests, and screenshots.",
+    "faq_md": "## FAQ\n\n### What is this?\nA safe demo space for local testing.\n\n### Can I post here?\nYes, this community is intended for smoke tests, UI reviews, and screenshots.",
+    "best_of_md": "- Invite flows\n- Suggested community modules\n- Challenge cards\n- Notification journeys",
+    "allow_text_posts": true,
+    "allow_link_posts": true,
+    "allow_image_posts": true,
+    "allow_polls": true,
+    "rules": [
+      {"order": 1, "title": "Stay constructive", "description": "Treat this space as a product QA sandbox."},
+      {"order": 2, "title": "Keep examples realistic", "description": "Use posts that feel like real user activity."}
+    ],
+    "flairs": [
+      {"text": "Announcement", "bg_color": "#1D4ED8"},
+      {"text": "Challenge", "bg_color": "#DC2626"},
+      {"text": "Feedback", "bg_color": "#059669"}
+    ],
+    "wiki_pages": [
+      {
+        "slug": "getting-started",
+        "title": "Getting Started",
+        "body_md": "## Getting started\n\n1. Join a community.\n2. Create your first post.\n3. Try save, vote, invite, and notifications."
+      }
+    ],
+    "challenge": {
+      "title": "Intro Week Prompt",
+      "prompt_md": "Share one thing that would make your ideal online community feel safer and more welcoming.",
+      "share_text": "I joined the Intro Week Prompt on Agora."
+    },
+    "posts": [
+      {
+        "author_email": "ops-admin@aggora.app",
+        "post_type": "text",
+        "title": "Welcome to the seeded Agora workspace",
+        "body_md": "This thread explains the seeded content and points newcomers to invites, search, and notifications.",
+        "flair": "Announcement",
+        "comments": [
+          {
+            "author_email": "ops-moderator@aggora.app",
+            "body_md": "Please use this thread as your anchor when checking the core product flows."
+          },
+          {
+            "author_email": "ariane.keller01@mailseed.test",
+            "body_md": "The onboarding + first post flow is much easier to test with a seeded thread like this."
+          }
+        ],
+        "upvoters": [
+          "ariane.keller01@mailseed.test",
+          "jonas.hartmann02@mailseed.test",
+          "mila.neumann03@mailseed.test"
+        ],
+        "saved_by": [
+          "sophie.brandt05@mailseed.test"
+        ]
+      },
+      {
+        "author_email": "jonas.hartmann02@mailseed.test",
+        "post_type": "link",
+        "title": "Best examples of community onboarding flows",
+        "url": "https://www.duolingo.com/",
+        "body_md": "Collected inspiration for simple onboarding and habit-building patterns.",
+        "flair": "Feedback",
+        "comments": [
+          {
+            "author_email": "leon.wagner04@mailseed.test",
+            "body_md": "The streak and encouragement patterns are especially relevant for our growth loops."
+          }
+        ],
+        "upvoters": [
+          "ops-admin@aggora.app",
+          "mila.neumann03@mailseed.test",
+          "sophie.brandt05@mailseed.test"
+        ]
+      },
+      {
+        "author_email": "mila.neumann03@mailseed.test",
+        "post_type": "poll",
+        "title": "Which seeded area should we polish next?",
+        "body_md": "Vote for the next area to tune in the seeded demo app.",
+        "poll": {
+          "multiple_choice": false,
+          "options": ["Search", "Notifications", "Community landing pages", "Moderation"]
+        },
+        "flair": "Challenge",
+        "upvoters": [
+          "ops-admin@aggora.app",
+          "ops-moderator@aggora.app",
+          "ariane.keller01@mailseed.test"
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "product-design",
+    "name": "Product Design Circle",
+    "title": "Product Design Circle",
+    "description": "Design systems, onboarding, UX writing, and interface polish.",
+    "seo_description": "Design-focused Agora demo community for interface ideas and onboarding experiments.",
+    "sidebar_md": "A seeded design community with warm critique, UI patterns, and product copy experiments.",
+    "landing_intro_md": "Discuss interface polish, onboarding, retention, and community-first product design.",
+    "faq_md": "## FAQ\n\n### What belongs here?\nInterface systems, onboarding, writing, and accessibility discussions.",
+    "best_of_md": "- Empty-state reviews\n- CTA experiments\n- Mobile-first polish",
+    "allow_text_posts": true,
+    "allow_link_posts": true,
+    "allow_image_posts": false,
+    "allow_polls": true,
+    "rules": [
+      {"order": 1, "title": "Be specific", "description": "Critique the UI, not the person."}
+    ],
+    "flairs": [
+      {"text": "UI Review", "bg_color": "#7C3AED"},
+      {"text": "Copy", "bg_color": "#EA580C"}
+    ],
+    "challenge": {
+      "title": "7-minute Empty State Sprint",
+      "prompt_md": "Draft a better empty state for a saved-posts screen. Make it warm, concrete, and action-oriented.",
+      "share_text": "I joined the Empty State Sprint on Agora."
+    },
+    "posts": [
+      {
+        "author_email": "ariane.keller01@mailseed.test",
+        "post_type": "text",
+        "title": "What makes an onboarding flow feel genuinely welcoming?",
+        "body_md": "I am collecting examples of onboarding that feel helpful without becoming a tutorial maze.",
+        "flair": "UI Review",
+        "comments": [
+          {
+            "author_email": "sophie.brandt05@mailseed.test",
+            "body_md": "A good first-run flow should end with one meaningful action instead of five micro-steps."
+          },
+          {
+            "author_email": "ops-admin@aggora.app",
+            "body_md": "I would also keep the language highly specific to the community people joined."
+          }
+        ],
+        "upvoters": [
+          "jonas.hartmann02@mailseed.test",
+          "mila.neumann03@mailseed.test",
+          "leon.wagner04@mailseed.test"
+        ]
+      },
+      {
+        "author_email": "sophie.brandt05@mailseed.test",
+        "post_type": "text",
+        "title": "Three empty states that should feel more alive",
+        "body_md": "- Saved posts\n- Notifications\n- Invite landing pages\n\nWhich one should we polish first?",
+        "flair": "Copy",
+        "upvoters": [
+          "ariane.keller01@mailseed.test",
+          "ops-moderator@aggora.app"
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "slow-tech-club",
+    "name": "Slow Tech Club",
+    "title": "Slow Tech Club",
+    "description": "Calmer software, healthier defaults, and sustainable online spaces.",
+    "seo_description": "Community for calmer product habits, humane technology, and sustainable defaults.",
+    "sidebar_md": "A demo community about humane software, calm interfaces, and lower-stress digital habits.",
+    "landing_intro_md": "Explore slower, calmer patterns for software and community design.",
+    "faq_md": "## FAQ\n\n### Why slow tech?\nBecause calmer defaults can improve trust and retention.",
+    "best_of_md": "- Humane defaults\n- Anti-spam patterns\n- Responsible notifications",
+    "allow_text_posts": true,
+    "allow_link_posts": true,
+    "allow_image_posts": false,
+    "allow_polls": false,
+    "rules": [
+      {"order": 1, "title": "Prefer reflection over outrage", "description": "Thoughtful threads beat reactive posting."}
+    ],
+    "posts": [
+      {
+        "author_email": "leon.wagner04@mailseed.test",
+        "post_type": "text",
+        "title": "Which product defaults reduce anxiety instead of increasing it?",
+        "body_md": "I am especially curious about notifications, invite prompts, and moderation cues.",
+        "comments": [
+          {
+            "author_email": "mila.neumann03@mailseed.test",
+            "body_md": "Soft, clear expectations help more than novelty. Good defaults can feel almost invisible."
+          }
+        ],
+        "upvoters": [
+          "ops-admin@aggora.app",
+          "ariane.keller01@mailseed.test",
+          "sophie.brandt05@mailseed.test"
+        ]
+      }
+    ]
+  }
+]

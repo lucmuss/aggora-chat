@@ -21,7 +21,8 @@ These accounts are seeded by `python manage.py seed` and by the container startu
 
 ## Notes
 
-- Seed source files live in `data/seed/users.json` and `data/seed/admins.json`.
-- The demo community is `c/freya-seed-lounge`.
+- Seed source files live in `data/seed/users.json`, `data/seed/admins.json`, and `data/seed/communities.json`.
+- The primary demo community is `c/freya-seed-lounge`.
+- Additional seeded communities include `c/product-design` and `c/slow-tech-club`.
 - The moderator account is added to the seed community as a moderator.
 - The superuser admin is added to the seed community as an owner.
