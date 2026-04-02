@@ -33,7 +33,14 @@ class CommunityCreateForm(forms.ModelForm):
         }
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4, "placeholder": "What is this community about?"}),
-            "sidebar_md": forms.Textarea(attrs={"rows": 6, "placeholder": "# Welcome to our community\n\nRules and guidelines go here..."}),
+            "sidebar_md": forms.Textarea(
+                attrs={
+                    "rows": 6,
+                    "placeholder": "# Welcome to our community\n\nRules and guidelines go here...",
+                    "data-markdown-preview-target": "community-sidebar-preview",
+                    "data-markdown-preview-label": "Sidebar preview",
+                }
+            ),
         }
 
     def clean_name(self):

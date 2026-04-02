@@ -14,6 +14,9 @@ The app currently includes:
 - public and authenticated REST API endpoints
 - invite links, onboarding, suggested communities and growth pages
 - community challenges, notifications and share-card pages
+- Google and GitHub social sign-in
+- PWA manifest/service worker shell
+- live Markdown preview for post and community creation
 
 ## Setup
 
@@ -95,6 +98,7 @@ Commonly relevant variables:
 - `REDIS_CACHE_URL`, `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND`
 - `SEARCH_BACKEND`, `SEARCH_INDEX_ENABLED`, `ELASTICSEARCH_URL`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
 - `EMAIL_DELIVERY_MODE`, `DJANGO_DEFAULT_FROM_EMAIL`
 
 Use [`.env.example`](/srv/projects/web/aggora-chat/.env.example) as the canonical starting point.
@@ -234,11 +238,20 @@ curl -X POST http://127.0.0.1:8000/api/v1/mod/agora-builders/action/ \
 
 ## Known Gaps
 
-- Search currently indexes posts only; communities and user profiles are discovered through dedicated pages
+- API search currently indexes posts only; the web search page also surfaces quick community and profile matches
 - Screenshot artifacts are not committed automatically and should be regenerated after UI changes
 - Full test execution still depends on installing local Python dependencies first
 - Some growth and notification flows are app-level only; mail/push delivery is not yet a complete production notification system
 - Moderation actions are now symmetric for lock/sticky, but moderator UX can still be expanded further
+
+## PWA
+
+The app now ships with a lightweight installable shell:
+
+- `/manifest.webmanifest`
+- `/service-worker.js`
+
+It covers install metadata and basic shell caching for the main feed surfaces. This is intentionally minimal and can be extended later with push delivery or deeper offline support.
 
 ## Screenshots
 

@@ -25,7 +25,13 @@ class PostCreateForm(forms.ModelForm):
             "is_nsfw",
         ]
         widgets = {
-            "body_md": forms.Textarea(attrs={"rows": 8}),
+            "body_md": forms.Textarea(
+                attrs={
+                    "rows": 8,
+                    "data-markdown-preview-target": "post-markdown-preview",
+                    "data-markdown-preview-label": "Post preview",
+                }
+            ),
         }
 
     def __init__(self, *args, community: Community, **kwargs):

@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
+from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
 
@@ -172,6 +173,19 @@ class HandleSetupTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "replied to your post")
         self.assertFalse(Notification.objects.filter(user=author, is_read=False).exists())
+
+    @override_settings(
+        SOCIALACCOUNT_PROVIDERS={
+            "google": {"APP": {"client_id": "", "secret": ""}},
+            "github": {"APP": {"client_id": "github-client", "secret": "github-secret"}},
+            "openid_connect": {"APPS": []},
+        }
+    )
+    def test_signup_page_can_surface_github_call_to_action(self):
+        response = self.client.get(reverse("account_signup"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Continue with GitHub")
 
 
 class AccountBootstrapCommandTests(TestCase):

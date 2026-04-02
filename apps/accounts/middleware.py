@@ -11,6 +11,7 @@ class HandleRequiredMiddleware:
             "/accounts/handle-setup/",
             "/accounts/logout/",
             "/accounts/google/",
+            "/accounts/github/",
             "/accounts/social/",
             "/admin/",
             "/static/",

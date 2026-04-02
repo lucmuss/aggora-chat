@@ -6,7 +6,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{% block meta_description %}{{ APP_TAGLINE }}{% endblock %}">
+  <meta name="theme-color" content="#0D9488">
   <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+  <link rel="manifest" href="{% url 'web_manifest' %}">
+  <link rel="icon" href="{% static 'icons/agora-icon.svg' %}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link
     href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500&family=Roboto+Mono:wght@400&display=swap"

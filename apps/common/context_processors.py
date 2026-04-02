@@ -14,5 +14,6 @@ def branding(request):
         "COMPANY_SUPPORT_EMAIL": settings.COMPANY_SUPPORT_EMAIL,
         "COMPANY_SUPPORT_URL": settings.COMPANY_SUPPORT_URL,
         "GOOGLE_AUTH_ENABLED": bool(getattr(settings, "SOCIALACCOUNT_PROVIDERS", {}).get("google", {}).get("APP", {}).get("client_id")),
+        "GITHUB_AUTH_ENABLED": bool(getattr(settings, "SOCIALACCOUNT_PROVIDERS", {}).get("github", {}).get("APP", {}).get("client_id")),
         "unread_notifications_count": unread_count,
     }

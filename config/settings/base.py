@@ -26,7 +26,7 @@ PROJECT_SLUG = env_str("PROJECT_SLUG", "aggora_chat")
 APP_NAME = env_str("APP_NAME", "Agora")
 APP_TAGLINE = env_str("APP_TAGLINE", "communities first")
 APP_PUBLIC_URL = env_str("APP_PUBLIC_URL", "").rstrip("/")
-APP_VERSION = env_str("APP_VERSION", "0.1.0")
+APP_VERSION = env_str("APP_VERSION", "0.2.0")
 SEED_USERS_FILE = env_str("SEED_USERS_FILE", "data/seed/users.json")
 SEED_ADMINS_FILE = env_str("SEED_ADMINS_FILE", "data/seed/admins.json")
 TEST_USER_EMAIL = env_str("TEST_USER_EMAIL", "").strip().lower()
@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.github",
     "allauth.socialaccount.providers.openid_connect",
     "django_htmx",
     "rest_framework",
@@ -187,6 +188,13 @@ SOCIALACCOUNT_PROVIDERS = {
         },
         "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {"access_type": "online"},
+    },
+    "github": {
+        "APP": {
+            "client_id": env_str("GITHUB_CLIENT_ID", ""),
+            "secret": env_str("GITHUB_CLIENT_SECRET", ""),
+        },
+        "SCOPE": ["read:user", "user:email"],
     },
     "openid_connect": {
         "APPS": [],

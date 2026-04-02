@@ -23,6 +23,48 @@
         </div>
       </form>
     </div>
+    {% if query and communities %}
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100">
+        <h2 class="font-semibold text-sm text-gray-900">Matching communities</h2>
+      </div>
+      <div class="divide-y divide-gray-100">
+        {% for community in communities %}
+        <a href="{% url 'community_detail' slug=community.slug %}" class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50">
+          <div class="w-9 h-9 rounded-full bg-opal-muted text-opal flex items-center justify-center text-xs font-medium shrink-0">
+            {{ community.name|first|upper }}
+          </div>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-gray-900">{{ community.title|default:community.name }}</p>
+            <p class="text-xs text-gray-400">c/{{ community.slug }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ community.description|default:"Community"|truncatechars:100 }}</p>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if query and users %}
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100">
+        <h2 class="font-semibold text-sm text-gray-900">Matching people</h2>
+      </div>
+      <div class="divide-y divide-gray-100">
+        {% for person in users %}
+        <a href="{% url 'profile' handle=person.handle %}" class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50">
+          <div class="w-9 h-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-xs font-medium shrink-0">
+            {{ person.handle|first|upper }}
+          </div>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-gray-900">{{ person.display_name|default:person.handle }}</p>
+            <p class="text-xs text-gray-400">u/{{ person.handle }}</p>
+            {% if person.bio %}<p class="text-xs text-gray-500 mt-1">{{ person.bio|truncatechars:100 }}</p>{% endif %}
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
     {% if query %}
     <div id="feed-container" class="space-y-3">
       {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No search results" empty_copy="Try a broader term or use operators like author:, flair:, community:, or type:." %}
@@ -32,7 +74,7 @@
   <aside class="hidden lg:block w-80 shrink-0">
     <div class="bg-white border border-gray-200 rounded-g p-4 sticky top-[72px]">
       <h3 class="font-semibold text-sm text-opal mb-3">Search operators</h3>
-      <p class="text-xs text-gray-500 mb-3">Search currently indexes posts. Community and profile discovery happens in their own sections.</p>
+      <p class="text-xs text-gray-500 mb-3">Post search supports operators. Communities and people also surface as quick matches above the feed.</p>
       <ul class="text-xs text-gray-500 space-y-1.5 font-mono">
         <li><code class="text-gray-700">author:handle</code></li>
         <li><code class="text-gray-700">flair:name</code></li>

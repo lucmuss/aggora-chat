@@ -1,6 +1,7 @@
 (() => {
   const statusNode = document.getElementById("shortcut-status");
   let activeCardIndex = -1;
+  let markdownPreviewTimer;
 
   const cards = () => Array.from(document.querySelectorAll("[data-post-card]"));
   const focusCard = (index) => {
@@ -59,4 +60,52 @@
       }
     }
   });
+
+  const csrfToken = () => {
+    const match = document.cookie.match(new RegExp("(^| )csrftoken=([^;]+)"));
+    return match ? match[2] : "";
+  };
+
+  const requestMarkdownPreview = (textarea) => {
+    const targetId = textarea.dataset.markdownPreviewTarget;
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (!target) {
+      return;
+    }
+
+    window.clearTimeout(markdownPreviewTimer);
+    markdownPreviewTimer = window.setTimeout(async () => {
+      try {
+        const response = await fetch("/markdown/preview/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRFToken": csrfToken(),
+          },
+          body: new URLSearchParams({ markdown: textarea.value }),
+        });
+        if (!response.ok) {
+          return;
+        }
+        target.innerHTML = await response.text();
+      } catch (_error) {
+        // Preview failures should never block the editor itself.
+      }
+    }, 180);
+  };
+
+  document.querySelectorAll("textarea[data-markdown-preview-target]").forEach((textarea) => {
+    textarea.addEventListener("input", () => requestMarkdownPreview(textarea));
+    if (textarea.value.trim()) {
+      requestMarkdownPreview(textarea);
+    }
+  });
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/service-worker.js").catch(() => {
+        // Registration failures should not break the rest of the app.
+      });
+    });
+  }
 })();

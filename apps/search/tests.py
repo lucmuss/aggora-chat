@@ -57,6 +57,17 @@ class SearchTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Safety policy draft")
 
+    def test_search_view_returns_matching_community_and_user(self):
+        self.user.display_name = "Search Captain"
+        self.user.bio = "Writes policy drafts."
+        self.user.save(update_fields=["display_name", "bio"])
+
+        response = self.client.get(reverse("search"), {"q": "search"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Agora Search")
+        self.assertContains(response, "Search Captain")
+
     @override_settings(SEARCH_BACKEND="sql", SEARCH_INDEX_ENABLED=False)
     def test_sql_backend_is_default_runtime_backend(self):
         backend = get_discovery_backend()

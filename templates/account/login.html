@@ -15,7 +15,7 @@
         <p class="text-sm text-gray-500 mt-1">{% blocktrans %}Log in to your {{ APP_NAME }} account{% endblocktrans %}</p>
       </div>
 
-      {% if socialaccount_providers %}
+      {% if GOOGLE_AUTH_ENABLED or GITHUB_AUTH_ENABLED %}
         {% if GOOGLE_AUTH_ENABLED %}
         <a href="{% provider_login_url 'google' process='login' %}"
           class="w-full h-10 mb-4 rounded-g border border-gray-300 bg-white flex items-center justify-center gap-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
@@ -23,6 +23,15 @@
           Continue with Google
         </a>
         {% endif %}
+        {% if GITHUB_AUTH_ENABLED %}
+        <a href="{% provider_login_url 'github' process='login' %}"
+          class="w-full h-10 mb-4 rounded-g border border-gray-300 bg-gray-900 flex items-center justify-center gap-3 text-sm font-medium text-white hover:bg-black transition-colors">
+          <span class="w-5 h-5 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-[11px] font-bold">GH</span>
+          Continue with GitHub
+        </a>
+        {% endif %}
+      {% endif %}
+      {% if socialaccount_providers %}
         <p>{% blocktrans with site.name as site_name %}Please sign in with one
         of your existing third party accounts. Or, <a href="{{ signup_url }}">sign up</a>
         for a {{ site_name }} account and sign in below:{% endblocktrans %}</p>
