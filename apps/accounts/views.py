@@ -222,12 +222,18 @@ def account_settings_view(request):
         form = AccountSettingsForm(instance=request.user)
 
     connected_accounts = []
+    email_addresses = []
     try:
+        from allauth.account.models import EmailAddress
         from allauth.socialaccount.models import SocialAccount
 
         connected_accounts = list(SocialAccount.objects.filter(user=request.user).order_by("provider"))
+        email_addresses = list(EmailAddress.objects.filter(user=request.user).order_by("-primary", "email"))
     except Exception:
         connected_accounts = []
+        email_addresses = []
+
+    password_url_name = "account_change_password" if request.user.has_usable_password() else "account_set_password"
 
     return render(
         request,
@@ -235,6 +241,9 @@ def account_settings_view(request):
         {
             "form": form,
             "connected_accounts": connected_accounts,
+            "email_addresses": email_addresses,
+            "password_url_name": password_url_name,
+            "has_usable_password": request.user.has_usable_password(),
             "requires_mfa": user_requires_mfa(request.user),
         },
     )

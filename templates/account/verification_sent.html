@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Verify Your Email Address" %} — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-center py-16">
+  <div class="w-full max-w-xl bg-white border border-gray-200 rounded-g p-8 text-center">
+    <div class="w-12 h-12 rounded-full bg-opal-light text-opal flex items-center justify-center font-bold text-lg mx-auto mb-4">A</div>
+    <h1 class="text-2xl font-bold text-gray-900">{% trans "Check your email" %}</h1>
+    <p class="text-sm text-gray-500 mt-3">We sent a verification link to your inbox. Open it to finish account setup. If you do not see it, check spam first.</p>
+    <div class="mt-6 flex justify-center gap-2">
+      <a href="{% url 'account_login' %}" class="h-10 px-5 inline-flex items-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover">Back to sign in</a>
+      <a href="{% url 'account_email' %}" class="h-10 px-5 inline-flex items-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Manage email</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

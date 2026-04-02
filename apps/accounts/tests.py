@@ -190,6 +190,36 @@ class HandleSetupTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Continue with GitHub")
 
+    def test_login_page_links_to_reset_password_flow(self):
+        response = self.client.get(reverse("account_login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Forgot Password?")
+
+    def test_authenticated_user_can_view_custom_account_management_pages(self):
+        user = User.objects.create_user(
+            username="accountflow",
+            email="accountflow@example.com",
+            password="password123",
+            handle="accountflow",
+        )
+        self.client.force_login(user)
+
+        settings_response = self.client.get(reverse("account_settings"))
+        email_response = self.client.get(reverse("account_email"))
+        password_response = self.client.get(reverse("account_change_password"))
+        connections_response = self.client.get(reverse("socialaccount_connections"))
+
+        self.assertEqual(settings_response.status_code, 200)
+        self.assertContains(settings_response, "Manage email addresses")
+        self.assertContains(settings_response, "Connected accounts")
+        self.assertEqual(email_response.status_code, 200)
+        self.assertContains(email_response, "Email Addresses")
+        self.assertEqual(password_response.status_code, 200)
+        self.assertContains(password_response, "Change Password")
+        self.assertEqual(connections_response.status_code, 200)
+        self.assertContains(connections_response, "Third-party sign-in")
+
     def test_account_settings_updates_privacy_and_notification_preferences(self):
         user = User.objects.create_user(
             username="settingsuser",

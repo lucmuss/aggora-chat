@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -43,11 +44,32 @@ def toggle_membership(request, slug):
 
     community = get_object_or_404(Community, slug=slug)
     if not can_join_community(request.user, community):
-        return HttpResponseForbidden("This community requires an invite or moderator approval to join.")
+        return render(
+            request,
+            "403.html",
+            {
+                "access_title": "This community needs an invite",
+                "access_copy": "Joining is limited right now because this community is restricted.",
+                "access_hint": "Use an invite link from a member or ask a moderator for approval.",
+                "access_primary_href": f"/c/{community.slug}/",
+                "access_primary_label": "Back to community",
+            },
+            status=403,
+        )
     try:
         joined = toggle_user_membership(request.user, community)
     except ValueError as e:
-        return HttpResponseForbidden(str(e))
+        return render(
+            request,
+            "403.html",
+            {
+                "access_title": "You cannot join this community yet",
+                "access_copy": str(e),
+                "access_primary_href": "/c/",
+                "access_primary_label": "Browse communities",
+            },
+            status=403,
+        )
 
     return render(
         request,
@@ -86,7 +108,18 @@ def community_discovery(request):
 def community_settings(request, slug):
     community = get_object_or_404(Community, slug=slug)
     if not has_mod_permission(request.user, community, ModPermission.MANAGE_SETTINGS):
-        return HttpResponseForbidden("Moderator permissions required.")
+        return render(
+            request,
+            "403.html",
+            {
+                "access_title": "Moderator permissions required",
+                "access_copy": f"You need community settings access for c/{community.slug} to change posting rules or privacy.",
+                "access_hint": "If you should have access, ask an owner to update your moderator role.",
+                "access_primary_href": f"/c/{community.slug}/",
+                "access_primary_label": "Back to community",
+            },
+            status=403,
+        )
 
     if request.method == "POST":
         form = CommunitySettingsForm(request.POST, request.FILES, instance=community)
@@ -102,7 +135,7 @@ def community_settings(request, slug):
 def community_landing(request, slug):
     community = get_object_or_404(Community, slug=slug)
     if not can_view_community(request.user, community):
-        return HttpResponseForbidden("This private community is only visible to members.")
+        raise PermissionDenied
     invite = create_invite_for_community(community, request.user if request.user.is_authenticated else None)
     share_links = share_links_for_invite(community, invite)
     leaderboard = community_leaderboard(community)
@@ -126,7 +159,7 @@ def community_landing(request, slug):
 def community_share_card(request, slug):
     community = get_object_or_404(Community, slug=slug)
     if not can_view_community(request.user, community):
-        return HttpResponseForbidden("This private community is only visible to members.")
+        raise PermissionDenied
     invite = create_invite_for_community(community, request.user if request.user.is_authenticated else None)
     challenge = active_challenge_for_community(community)
     best_posts = best_posts_for_community(community, limit=3)
@@ -191,7 +224,17 @@ def wiki_page(request, slug, page_slug="home"):
 def wiki_edit(request, slug, page_slug="home"):
     community = get_object_or_404(Community, slug=slug)
     if not has_mod_permission(request.user, community, ModPermission.MANAGE_SETTINGS):
-        return HttpResponseForbidden("Moderator permissions required.")
+        return render(
+            request,
+            "403.html",
+            {
+                "access_title": "Moderator permissions required",
+                "access_copy": f"You need wiki access for c/{community.slug} to edit community docs.",
+                "access_primary_href": f"/c/{community.slug}/wiki/",
+                "access_primary_label": "View wiki",
+            },
+            status=403,
+        )
 
     page = CommunityWikiPage.objects.filter(community=community, slug=page_slug).first()
     if request.method == "POST":

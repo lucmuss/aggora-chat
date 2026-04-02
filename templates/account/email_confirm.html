@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load i18n account %}
+
+{% block title %}{% trans "Confirm Email Address" %} — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-center py-16">
+  <div class="w-full max-w-xl bg-white border border-gray-200 rounded-g p-8 text-center">
+    <h1 class="text-2xl font-bold text-gray-900">{% trans "Confirm Email Address" %}</h1>
+    {% if confirmation %}
+      {% user_display confirmation.email_address.user as user_display %}
+      {% if can_confirm %}
+      <p class="text-sm text-gray-500 mt-3">Confirm that <a href="mailto:{{ confirmation.email_address.email }}" class="text-opal hover:underline">{{ confirmation.email_address.email }}</a> belongs to {{ user_display }}.</p>
+      <form method="post" action="{% url 'account_confirm_email' confirmation.key %}" class="mt-6">
+        {% csrf_token %}
+        {{ redirect_field }}
+        <button type="submit" class="h-10 px-5 bg-primary text-white rounded-g text-sm font-medium hover:bg-primary-hover">{% trans "Confirm Email" %}</button>
+      </form>
+      {% else %}
+      <p class="text-sm text-gray-500 mt-3">This address is already confirmed by another account.</p>
+      {% endif %}
+    {% else %}
+      <p class="text-sm text-gray-500 mt-3">This confirmation link is invalid or expired.</p>
+      <a href="{% url 'account_email' %}" class="inline-flex mt-6 h-10 px-5 items-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Manage email addresses</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

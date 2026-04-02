@@ -5,17 +5,21 @@
     <div class="w-16 h-16 rounded-2xl bg-opal-muted text-opal flex items-center justify-center text-3xl font-bold mb-6">
         A</div>
     <h1 class="text-6xl font-bold text-gray-200 mb-4">403</h1>
-    <h2 class="text-xl font-semibold text-gray-800 mb-2">Access Denied</h2>
-    <p class="text-sm text-gray-500 max-w-md mb-8">You don't have permission to view this page. If you think this is a
-        mistake, please contact a moderator or administrator.</p>
+    <h2 class="text-xl font-semibold text-gray-800 mb-2">{{ access_title|default:"Access Denied" }}</h2>
+    <p class="text-sm text-gray-500 max-w-md mb-3">{{ access_copy|default:"You don't have permission to view this page. If you think this is a mistake, please contact a moderator or administrator." }}</p>
+    {% if access_hint %}
+    <p class="text-xs text-gray-400 max-w-md mb-8">{{ access_hint }}</p>
+    {% else %}
+    <div class="mb-8"></div>
+    {% endif %}
     <div class="flex gap-3">
-        <a href="/"
+        <a href="{{ access_primary_href|default:'/' }}"
             class="h-10 px-5 bg-primary text-white rounded-g font-medium hover:bg-primary-hover transition-colors shadow-sm text-sm flex items-center">
-            Go to Home
+            {{ access_primary_label|default:"Go to Home" }}
         </a>
         <a href="javascript:history.back()"
             class="h-10 px-5 bg-white border border-gray-200 text-gray-600 rounded-g font-medium hover:bg-gray-50 transition-colors text-sm flex items-center">
-            Go Back
+            {{ access_secondary_label|default:"Go Back" }}
         </a>
     </div>
 </div>

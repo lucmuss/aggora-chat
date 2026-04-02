@@ -8,6 +8,19 @@
     <div>
       <p class="text-xs font-semibold text-opal uppercase tracking-wider mb-1">Account settings</p>
       <h1 class="text-xl font-semibold text-gray-900">Profile, privacy, notifications, and security</h1>
+      <p class="text-sm text-gray-500 mt-1">Keep your profile polished, your notifications useful, and your sign-in options easy to trust.</p>
+    </div>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <a href="{% url 'profile' handle=user.handle|default:'me' %}" class="bg-white border border-gray-200 rounded-g p-4 hover:border-gray-300 transition-colors">
+        <p class="text-xs font-semibold text-opal uppercase tracking-wider">Public profile</p>
+        <p class="mt-1 text-sm font-medium text-gray-900">{{ user.display_name|default:user.handle|default:user.email }}</p>
+        <p class="text-xs text-gray-500 mt-1">Preview what other members can see on your profile.</p>
+      </a>
+      <a href="{% url password_url_name %}" class="bg-white border border-gray-200 rounded-g p-4 hover:border-gray-300 transition-colors">
+        <p class="text-xs font-semibold text-opal uppercase tracking-wider">Password</p>
+        <p class="mt-1 text-sm font-medium text-gray-900">{% if has_usable_password %}Change password{% else %}Set a password{% endif %}</p>
+        <p class="text-xs text-gray-500 mt-1">Useful when you want a fallback sign-in beyond social login.</p>
+      </a>
     </div>
     <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
       <form method="post" enctype="multipart/form-data" class="styled-form p-5 space-y-4">
@@ -28,16 +41,50 @@
       </form>
     </div>
   </div>
-  <aside class="hidden lg:block w-80 shrink-0 space-y-3">
+  <aside class="w-full lg:w-80 shrink-0 space-y-3 mt-4 lg:mt-0">
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <h2 class="font-semibold text-sm text-opal mb-2">Account snapshot</h2>
+      <div class="space-y-2 text-sm text-gray-600">
+        <p><span class="text-gray-400">Handle:</span> <span class="font-medium text-gray-900">{{ user.handle|default:"Pending setup" }}</span></p>
+        <p><span class="text-gray-400">Email:</span> <span class="font-medium text-gray-900">{{ user.email|default:"No email yet" }}</span></p>
+        <p><span class="text-gray-400">Visibility:</span> <span class="font-medium text-gray-900">{{ user.get_profile_visibility_display }}</span></p>
+      </div>
+      {% if email_addresses %}
+      <div class="mt-3 pt-3 border-t border-gray-100">
+        <p class="text-xs font-semibold text-opal uppercase tracking-wider mb-2">Email addresses</p>
+        <ul class="space-y-1.5">
+          {% for email_address in email_addresses %}
+          <li class="text-sm text-gray-600 flex items-center justify-between gap-2">
+            <span class="truncate">{{ email_address.email }}</span>
+            <span class="shrink-0 text-[11px] px-2 py-0.5 rounded-full {% if email_address.verified %}bg-green-50 text-green-600{% else %}bg-amber-50 text-amber-600{% endif %}">
+              {% if email_address.primary %}Primary · {% endif %}{% if email_address.verified %}Verified{% else %}Unverified{% endif %}
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
     <div class="bg-white border border-gray-200 rounded-g p-4">
       <h2 class="font-semibold text-sm text-opal mb-2">Security</h2>
       <p class="text-sm text-gray-500">Protect moderator and admin actions with a one-time authenticator code.</p>
+      <p class="text-xs mt-2 {% if user.mfa_totp_enabled %}text-green-600{% else %}text-gray-400{% endif %}">
+        {% if user.mfa_totp_enabled %}2FA is active on this account.{% else %}2FA is not enabled yet.{% endif %}
+      </p>
       <a href="{% url 'account_mfa_setup' %}" class="inline-flex mt-3 h-9 px-4 items-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
         {% if user.mfa_totp_enabled %}Manage 2FA{% else %}Enable 2FA{% endif %}
       </a>
       {% if requires_mfa %}
       <p class="text-xs text-amber-600 mt-2">Sensitive moderation and admin routes now require 2FA.</p>
       {% endif %}
+    </div>
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <h2 class="font-semibold text-sm text-opal mb-2">Sign-in & recovery</h2>
+      <div class="space-y-2 text-sm">
+        <a href="{% url 'account_email' %}" class="block text-opal hover:underline">Manage email addresses</a>
+        <a href="{% url password_url_name %}" class="block text-opal hover:underline">{% if has_usable_password %}Change password{% else %}Set a password{% endif %}</a>
+        <a href="{% url 'socialaccount_connections' %}" class="block text-opal hover:underline">Connected accounts</a>
+      </div>
     </div>
     <div class="bg-white border border-gray-200 rounded-g p-4">
       <h2 class="font-semibold text-sm text-opal mb-2">Connected accounts</h2>
@@ -53,6 +100,7 @@
       {% else %}
       <p class="text-sm text-gray-500">No social accounts connected yet. Use Google or GitHub on your next sign-in.</p>
       {% endif %}
+      <a href="{% url 'socialaccount_connections' %}" class="inline-flex mt-3 h-9 px-4 items-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Manage connections</a>
     </div>
   </aside>
 </div>

@@ -1,5 +1,4 @@
-from django.db.models import Count
-from django.http import HttpResponseForbidden
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, render
 
 from apps.communities.models import Community
@@ -12,6 +11,7 @@ from apps.communities.services import (
     share_links_for_invite,
     suggested_communities_for_user,
 )
+from apps.moderation.permissions import ModPermission, has_mod_permission
 from apps.feeds.caching import (
     community_feed_cache_key,
     get_cached_feed,
@@ -30,11 +30,15 @@ def home(request):
         scope = "all"
     posts, next_cursor = home_feed_results(request.user, sort=sort, after=after, scope=scope)
     user_votes, saved_posts = annotate_posts_with_user_state(posts, request.user)
-    communities = (
-        Community.objects.annotate(rule_count=Count("rules"))
-        .select_related("creator")
-        .order_by("-created_at")[:12]
-    )
+    communities = Community.objects.annotate(rule_count=Count("rules")).select_related("creator")
+    if not request.user.is_authenticated:
+        communities = communities.exclude(community_type=Community.CommunityType.PRIVATE)
+    else:
+        communities = communities.filter(
+            Q(community_type__in=[Community.CommunityType.PUBLIC, Community.CommunityType.RESTRICTED])
+            | Q(memberships__user=request.user)
+        ).distinct()
+    communities = communities.order_by("-created_at")[:12]
     suggested = suggested_communities_for_user(request.user)
     return render(
         request,
@@ -56,7 +60,18 @@ def home(request):
 def community_feed(request, slug):
     community = get_object_or_404(Community.objects.prefetch_related("rules"), slug=slug)
     if not can_view_community(request.user, community):
-        return HttpResponseForbidden("This private community is only visible to members.")
+        return render(
+            request,
+            "403.html",
+            {
+                "access_title": "This community is private",
+                "access_copy": "Private community feeds are only visible to members right now.",
+                "access_hint": "Ask a moderator for an invite or open a public community instead.",
+                "access_primary_href": "/c/",
+                "access_primary_label": "Browse communities",
+            },
+            status=403,
+        )
     sort = request.GET.get("sort", "hot")
     after = request.GET.get("after")
     cache_key = community_feed_cache_key(community.slug, sort)
@@ -73,6 +88,11 @@ def community_feed(request, slug):
     if request.user.is_authenticated:
         joined = community.memberships.filter(user=request.user).exists()
         followed_member_count = community.memberships.filter(user__in=request.user.followed_users.all()).count()
+    can_moderate = request.user.is_authenticated and (
+        has_mod_permission(request.user, community, ModPermission.VIEW_MOD_QUEUE)
+        or has_mod_permission(request.user, community, ModPermission.MANAGE_SETTINGS)
+        or has_mod_permission(request.user, community, ModPermission.MOD_MAIL)
+    )
     invite = create_invite_for_community(community, request.user if request.user.is_authenticated else None)
     return render(
         request,
@@ -91,6 +111,7 @@ def community_feed(request, slug):
             "leaderboard": community_leaderboard(community),
             "suggested_communities": suggested_communities_for_user(request.user),
             "followed_member_count": followed_member_count,
+            "can_moderate": can_moderate,
             "invite": invite,
             "share_links": share_links_for_invite(community, invite),
         },

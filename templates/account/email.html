@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Email Addresses" %} — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-[960px] mx-auto lg:flex lg:gap-6">
+  <div class="flex-1 min-w-0 max-w-[680px] space-y-4">
+    <div>
+      <p class="text-xs font-semibold text-opal uppercase tracking-wider mb-1">Sign-in & recovery</p>
+      <h1 class="text-xl font-semibold text-gray-900">{% trans "Email Addresses" %}</h1>
+      <p class="text-sm text-gray-500 mt-1">Choose where account notifications and recovery links should land.</p>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="p-5 space-y-4">
+        {% if emailaddresses %}
+        <form method="post" action="{% url 'account_email' %}" class="space-y-3">
+          {% csrf_token %}
+          <div class="space-y-2">
+            {% for radio in emailaddress_radios %}
+            {% with emailaddress=radio.emailaddress %}
+            <label for="{{ radio.id }}" class="flex items-start gap-3 rounded-g border border-gray-200 px-4 py-3 hover:border-gray-300 cursor-pointer">
+              <input id="{{ radio.id }}" type="radio" name="email" value="{{ emailaddress.email }}" {% if radio.checked %}checked{% endif %} class="mt-0.5">
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium text-gray-900 break-all">{{ emailaddress.email }}</p>
+                <div class="mt-1 flex flex-wrap gap-2 text-[11px]">
+                  <span class="px-2 py-0.5 rounded-full {% if emailaddress.verified %}bg-green-50 text-green-700{% else %}bg-amber-50 text-amber-700{% endif %}">
+                    {% if emailaddress.verified %}{% trans "Verified" %}{% else %}{% trans "Unverified" %}{% endif %}
+                  </span>
+                  {% if emailaddress.primary %}
+                  <span class="px-2 py-0.5 rounded-full bg-opal-light text-opal">{% trans "Primary" %}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </label>
+            {% endwith %}
+            {% endfor %}
+          </div>
+          <div class="flex flex-wrap gap-2 pt-2">
+            <button type="submit" name="action_primary" class="h-9 px-4 bg-primary text-white rounded-g text-sm font-medium hover:bg-primary-hover">{% trans "Make Primary" %}</button>
+            <button type="submit" name="action_send" class="h-9 px-4 border border-gray-200 rounded-g text-sm font-medium text-gray-700 hover:bg-gray-50">{% trans "Re-send Verification" %}</button>
+            <button type="submit" name="action_remove" class="h-9 px-4 border border-red-200 rounded-g text-sm font-medium text-red-600 hover:bg-red-50">{% trans "Remove" %}</button>
+          </div>
+        </form>
+        {% else %}
+        <div class="rounded-g border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          No email addresses are connected yet. Add one below so recovery and account alerts have somewhere to go.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if can_add_email %}
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <form method="post" action="{% url 'account_email' %}" class="styled-form p-5 space-y-4">
+        {% csrf_token %}
+        <div>
+          <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ form.email.label }}</label>
+          {{ form.email }}
+          {% if form.email.errors %}<p class="text-xs text-red-500 mt-1">{{ form.email.errors.as_text }}</p>{% endif %}
+        </div>
+        <button type="submit" name="action_add" class="h-10 px-5 bg-primary text-white rounded-g font-medium hover:bg-primary-hover border-0">{% trans "Add Email" %}</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <aside class="w-full lg:w-80 shrink-0 mt-4 lg:mt-0">
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <h2 class="font-semibold text-sm text-opal mb-2">Good defaults</h2>
+      <ul class="text-sm text-gray-600 space-y-2 list-disc pl-4 marker:text-gray-300">
+        <li>Keep one verified primary email for recovery.</li>
+        <li>Use a work or team inbox only if multiple admins manage the account.</li>
+        <li>After adding an address, confirm it before relying on it for resets.</li>
+      </ul>
+      <a href="{% url 'account_settings' %}" class="inline-flex mt-4 h-9 px-4 items-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Back to settings</a>
+    </div>
+  </aside>
+</div>
+{% endblock %}

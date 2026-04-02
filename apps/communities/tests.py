@@ -57,6 +57,20 @@ class CommunityFlowTests(TestCase):
         self.assertContains(response, "Agora Builders")
         self.assertContains(response, "Community Settings")
 
+    def test_non_moderators_do_not_see_moderation_links_on_community_page(self):
+        member = User.objects.create_user(
+            username="regularmember",
+            email="regularmember@example.com",
+            password="password123",
+            handle="regularmember",
+        )
+        self.client.force_login(member)
+
+        response = self.client.get(reverse("community_detail", kwargs={"slug": self.community.slug}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Moderation & Growth")
+
     def test_owner_can_update_community_settings(self):
         self.user.mfa_totp_enabled = True
         self.user.save(update_fields=["mfa_totp_enabled"])
@@ -202,6 +216,7 @@ class CommunityFlowTests(TestCase):
         response = self.client.post(reverse("toggle_membership", kwargs={"slug": self.community.slug}))
 
         self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "This community needs an invite", status_code=403)
 
     def test_share_card_page_renders(self):
         response = self.client.get(reverse("community_share_card", kwargs={"slug": self.community.slug}))

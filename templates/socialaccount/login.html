@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Continue with provider" %} — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-center py-16">
+  <div class="w-full max-w-lg bg-white border border-gray-200 rounded-g p-8 text-center">
+    <h1 class="text-2xl font-bold text-gray-900">
+      {% if process == "connect" %}{% blocktrans with provider.name as provider %}Connect {{ provider }}{% endblocktrans %}{% else %}{% blocktrans with provider.name as provider %}Sign in via {{ provider }}{% endblocktrans %}{% endif %}
+    </h1>
+    <p class="text-sm text-gray-500 mt-3">
+      {% if process == "connect" %}{% blocktrans with provider.name as provider %}You are about to connect a new account from {{ provider }}.{% endblocktrans %}{% else %}{% blocktrans with provider.name as provider %}You are about to continue using {{ provider }}.{% endblocktrans %}{% endif %}
+    </p>
+    <form method="post" class="mt-6 flex justify-center gap-2">
+      {% csrf_token %}
+      <button type="submit" class="h-10 px-5 bg-primary text-white rounded-g text-sm font-medium hover:bg-primary-hover">{% trans "Continue" %}</button>
+      <a href="{% url 'account_login' %}" class="h-10 px-5 inline-flex items-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
