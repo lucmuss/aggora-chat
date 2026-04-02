@@ -65,8 +65,7 @@
           </div>
           <div class="min-w-0 flex-1">
             <p class="text-sm font-medium text-gray-900 truncate">c/{{ community.slug }}</p>
-            <p class="text-xs text-gray-400">{{ community.subscriber_count }} member{{
-              community.subscriber_count|pluralize }}</p>
+            <p class="text-xs text-gray-400">{{ community.subscriber_count }} member{{ community.subscriber_count|pluralize }}</p>
           </div>
         </a>
         {% endfor %}
