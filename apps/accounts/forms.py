@@ -30,6 +30,45 @@ class SignupForm(forms.Form):
         user.save()
 
 
+class AccountSettingsForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = [
+            "display_name",
+            "bio",
+            "avatar",
+            "profile_visibility",
+            "email_notifications_enabled",
+            "push_notifications_enabled",
+            "notify_on_replies",
+            "notify_on_follows",
+            "notify_on_challenges",
+        ]
+        widgets = {
+            "bio": forms.Textarea(
+                attrs={
+                    "rows": 4,
+                    "placeholder": "Tell your communities what you care about.",
+                }
+            ),
+        }
+
+
+class TotpVerificationForm(forms.Form):
+    code = forms.CharField(
+        max_length=12,
+        label="Authenticator code",
+        widget=forms.TextInput(
+            attrs={
+                "inputmode": "numeric",
+                "autocomplete": "one-time-code",
+                "placeholder": "123456",
+            }
+        ),
+        help_text="Enter the current 6-digit code from your authenticator app.",
+    )
+
+
 class StartWithFriendsForm(forms.Form):
     communities = forms.ModelMultipleChoiceField(
         queryset=Community.objects.none(),

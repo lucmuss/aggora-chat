@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -14,8 +15,9 @@ from apps.posts.models import Comment, Post
 from apps.posts.services import annotate_posts_with_user_state
 from apps.votes.models import SavedPost
 
-from .forms import HandleSetupForm, StartWithFriendsForm
+from .forms import AccountSettingsForm, HandleSetupForm, StartWithFriendsForm, TotpVerificationForm
 from .models import User
+from .security import build_totp_uri, generate_totp_secret, user_requires_mfa, verify_totp
 
 
 @login_required
@@ -43,6 +45,12 @@ def profile_view(request, handle):
         return redirect("profile", handle=request.user.handle)
 
     profile_user = get_object_or_404(User, handle=handle)
+    visibility_restricted = False
+    if request.user != profile_user:
+        if profile_user.profile_visibility == User.ProfileVisibility.PRIVATE:
+            visibility_restricted = True
+        elif profile_user.profile_visibility == User.ProfileVisibility.MEMBERS and not request.user.is_authenticated:
+            visibility_restricted = True
     is_blocked = False
     is_following = False
     if request.user.is_authenticated and request.user != profile_user:
@@ -55,7 +63,7 @@ def profile_view(request, handle):
 
     posts = []
     comments = []
-    if is_blocked:
+    if is_blocked or visibility_restricted:
         tab = "posts"
     elif tab == "posts":
         posts = list(Post.objects.visible().for_listing().filter(author=profile_user).order_by("-created_at")[:25])
@@ -82,6 +90,7 @@ def profile_view(request, handle):
             "saved_posts": saved_posts,
             "saved_count": SavedPost.objects.filter(user=profile_user).count(),
             "is_blocked": is_blocked,
+            "visibility_restricted": visibility_restricted,
             "is_following": is_following,
             "follower_count": profile_user.followers.count(),
             "following_count": profile_user.followed_users.count(),
@@ -199,3 +208,77 @@ def notifications_view(request):
     if unread_ids:
         request.user.notifications.filter(id__in=unread_ids).update(is_read=True)
     return render(request, "accounts/notifications.html", {"notifications": notifications})
+
+
+@login_required
+def account_settings_view(request):
+    if request.method == "POST":
+        form = AccountSettingsForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Account settings updated.")
+            return redirect("account_settings")
+    else:
+        form = AccountSettingsForm(instance=request.user)
+
+    connected_accounts = []
+    try:
+        from allauth.socialaccount.models import SocialAccount
+
+        connected_accounts = list(SocialAccount.objects.filter(user=request.user).order_by("provider"))
+    except Exception:
+        connected_accounts = []
+
+    return render(
+        request,
+        "accounts/settings.html",
+        {
+            "form": form,
+            "connected_accounts": connected_accounts,
+            "requires_mfa": user_requires_mfa(request.user),
+        },
+    )
+
+
+@login_required
+def mfa_setup_view(request):
+    if not request.user.mfa_totp_secret:
+        request.user.mfa_totp_secret = generate_totp_secret()
+        request.user.save(update_fields=["mfa_totp_secret"])
+
+    form = TotpVerificationForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        if verify_totp(request.user.mfa_totp_secret, form.cleaned_data["code"]):
+            request.user.mfa_totp_enabled = True
+            request.user.mfa_enabled_at = timezone.now()
+            request.user.save(update_fields=["mfa_totp_enabled", "mfa_enabled_at"])
+            messages.success(request, "Two-factor authentication is now active.")
+            return redirect("account_settings")
+        form.add_error("code", "That code does not match the current authenticator value.")
+
+    return render(
+        request,
+        "accounts/mfa_setup.html",
+        {
+            "form": form,
+            "totp_uri": build_totp_uri(request.user),
+            "totp_secret": request.user.mfa_totp_secret,
+            "mfa_enabled": request.user.mfa_totp_enabled,
+        },
+    )
+
+
+@login_required
+def mfa_disable_view(request):
+    if request.method != "POST":
+        return HttpResponseForbidden("POST required")
+    form = TotpVerificationForm(request.POST)
+    if not form.is_valid() or not verify_totp(request.user.mfa_totp_secret, form.cleaned_data["code"]):
+        messages.error(request, "Use a valid authenticator code to disable 2FA.")
+        return redirect("account_mfa_setup")
+    request.user.mfa_totp_enabled = False
+    request.user.mfa_totp_secret = generate_totp_secret()
+    request.user.mfa_enabled_at = None
+    request.user.save(update_fields=["mfa_totp_enabled", "mfa_totp_secret", "mfa_enabled_at"])
+    messages.success(request, "Two-factor authentication has been disabled.")
+    return redirect("account_settings")

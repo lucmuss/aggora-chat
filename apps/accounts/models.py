@@ -10,6 +10,11 @@ handle_validator = RegexValidator(
 
 
 class User(AbstractUser):
+    class ProfileVisibility(models.TextChoices):
+        PUBLIC = "public", "Public"
+        MEMBERS = "members", "Signed-in members"
+        PRIVATE = "private", "Private"
+
     handle = models.CharField(
         max_length=30,
         unique=True,
@@ -27,6 +32,19 @@ class User(AbstractUser):
     agent_verified = models.BooleanField(default=False)
     agent_provider_issuer = models.URLField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    profile_visibility = models.CharField(
+        max_length=12,
+        choices=ProfileVisibility.choices,
+        default=ProfileVisibility.PUBLIC,
+    )
+    email_notifications_enabled = models.BooleanField(default=False)
+    push_notifications_enabled = models.BooleanField(default=False)
+    notify_on_replies = models.BooleanField(default=True)
+    notify_on_follows = models.BooleanField(default=True)
+    notify_on_challenges = models.BooleanField(default=True)
+    mfa_totp_secret = models.CharField(max_length=64, blank=True)
+    mfa_totp_enabled = models.BooleanField(default=False)
+    mfa_enabled_at = models.DateTimeField(null=True, blank=True)
     blocked_users = models.ManyToManyField(
         "self",
         symmetrical=False,
