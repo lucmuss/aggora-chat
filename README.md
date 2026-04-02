@@ -34,6 +34,12 @@ just sync
 cp .env.example .env
 ```
 
+The checked-in example is intentionally local-safe:
+
+- no Docker-only Postgres host defaults
+- no forced Redis broker/cache URLs
+- SQLite works out of the box for plain local `manage.py` commands
+
 3. Apply database migrations:
 
 ```bash
@@ -59,6 +65,8 @@ If you want the full stack with supporting services, there are also Docker compo
 - `docker-compose.yml`
 - `docker-compose.prod.yml`
 - `docker-compose.stack.yml`
+
+The compose files inject container-friendly defaults themselves, so local `.env` values do not need to point at `db` or `redis` unless you want that behavior outside Docker.
 
 ## Test
 

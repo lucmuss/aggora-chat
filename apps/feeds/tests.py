@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 
@@ -11,6 +12,7 @@ User = get_user_model()
 
 class DiscoveryFlowTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="discoverer",
             email="discoverer@example.com",
@@ -36,6 +38,7 @@ class DiscoveryFlowTests(TestCase):
         )
 
     def test_popular_feed_renders(self):
+        self.client.force_login(self.user)
         response = self.client.get(reverse("popular"))
 
         self.assertEqual(response.status_code, 200)

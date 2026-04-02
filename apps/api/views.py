@@ -1,4 +1,3 @@
-from django.db import models
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework import status
@@ -6,7 +5,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.common.celery import dispatch_task
 from apps.accounts.models import User
 from apps.communities.models import Community
 from apps.communities.services import can_participate_in_community, can_view_community
@@ -14,8 +12,8 @@ from apps.moderation.models import CommunityAgentSettings, ModAction, ModQueueIt
 from apps.moderation.permissions import ModPermission, has_mod_permission
 from apps.moderation.utils import is_user_banned
 from apps.posts.forms import PostCreateForm
-from apps.posts.models import Comment, Poll, PollOption, PollVote, Post
-from apps.posts.services import build_comment_tree, hot_score
+from apps.posts.models import Poll, Post
+from apps.posts.services import build_comment_tree, submit_comment, submit_poll_vote, submit_post
 from apps.search.backends import get_discovery_backend
 from apps.search.queries import community_feed_results, popular_feed_results
 from apps.search.tasks import index_post_task
@@ -179,25 +177,20 @@ class PostCreateAPIView(APIView):
         if not form.is_valid():
             return Response({"errors": form.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-        post = form.save(commit=False)
-        post.community = community
-        post.author = request.user
-        if post.post_type == Post.PostType.CROSSPOST:
-            source_id = request.data.get("crosspost_parent_id")
-            if not source_id:
-                return Response({"errors": {"crosspost_parent_id": ["Crossposts require a source post."]}}, status=status.HTTP_400_BAD_REQUEST)
-            post.crosspost_parent = get_object_or_404(Post.objects.visible(), pk=source_id)
-        post.save()
-        if post.post_type == Post.PostType.POLL:
-            poll = Poll.objects.create(post=post)
-            for index, label in enumerate(form.cleaned_data["poll_option_lines"], start=1):
-                PollOption.objects.create(poll=poll, label=label, position=index)
-        Vote.objects.create(user=request.user, post=post, value=Vote.VoteType.UPVOTE)
-        post.upvote_count = 1
-        post.score = 1
-        post.hot_score = hot_score(1, 0, post.created_at)
-        post.save(update_fields=["upvote_count", "score", "hot_score", "body_html"])
-        dispatch_task(index_post_task, post.pk)
+        crosspost_parent_id = request.data.get("crosspost_parent_id")
+        if form.cleaned_data["post_type"] == Post.PostType.CROSSPOST and not crosspost_parent_id:
+            return Response(
+                {"errors": {"crosspost_parent_id": ["Crossposts require a source post."]}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        post = submit_post(
+            user=request.user,
+            community=community,
+            post_data=form.cleaned_data,
+            poll_lines=form.cleaned_data.get("poll_option_lines"),
+            crosspost_source_id=crosspost_parent_id,
+        )
         return Response(PostDetailSerializer(post).data, status=status.HTTP_201_CREATED)
 
 
@@ -213,26 +206,15 @@ class CommentCreateAPIView(APIView):
         body_md = (request.data.get("body_md") or "").strip()
         if not body_md:
             return Response({"errors": {"body_md": ["Comment body is required."]}}, status=status.HTTP_400_BAD_REQUEST)
-        parent = None
-        parent_id = request.data.get("parent_id")
-        depth = 0
-        if parent_id:
-            parent = get_object_or_404(Comment, pk=parent_id, post=post)
-            depth = parent.depth + 1
-            if depth > 10:
-                return Response({"error": "Maximum nesting depth reached."}, status=status.HTTP_403_FORBIDDEN)
-        comment = Comment.objects.create(
-            post=post,
-            parent=parent,
-            author=request.user,
-            body_md=body_md,
-            depth=depth,
-        )
-        Vote.objects.create(user=request.user, comment=comment, value=Vote.VoteType.UPVOTE)
-        comment.upvote_count = 1
-        comment.score = 1
-        comment.save(update_fields=["upvote_count", "score", "body_html"])
-        Post.objects.filter(pk=post.pk).update(comment_count=models.F("comment_count") + 1)
+        try:
+            comment = submit_comment(
+                user=request.user,
+                post=post,
+                body_md=body_md,
+                parent_id=request.data.get("parent_id"),
+            )
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
         return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 
 
@@ -246,14 +228,10 @@ class PollVoteAPIView(APIView):
         if is_user_banned(request.user, post.community):
             return Response({"error": "Banned from this community"}, status=status.HTTP_403_FORBIDDEN)
         poll = get_object_or_404(Poll.objects.prefetch_related("options"), post=post)
-        if not poll.is_open():
-            return Response({"error": "This poll is closed."}, status=status.HTTP_403_FORBIDDEN)
-        option = get_object_or_404(PollOption, poll=poll, pk=request.data.get("option_id"))
-        PollVote.objects.update_or_create(
-            poll=poll,
-            user=request.user,
-            defaults={"option": option},
-        )
+        try:
+            submit_poll_vote(request.user, poll, request.data.get("option_id"))
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
         post.refresh_from_db()
         return Response(PostDetailSerializer(post).data)
 
