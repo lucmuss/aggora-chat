@@ -5,6 +5,16 @@
 
   <!-- Feed -->
   <div class="flex-1 min-w-0 max-w-[640px]">
+    {% if user.is_authenticated %}
+    <div class="bg-white border border-gray-200 rounded-g mb-3">
+      <div class="flex flex-wrap items-center gap-2 px-3 py-2">
+        <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Feed</span>
+        <a href="?scope=all&sort={{ sort }}" class="h-8 px-3 flex items-center rounded-g text-sm font-medium transition-colors {% if scope == 'all' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">For You</a>
+        <a href="?scope=communities&sort={{ sort }}" class="h-8 px-3 flex items-center rounded-g text-sm font-medium transition-colors {% if scope == 'communities' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">My Communities</a>
+        <a href="?scope=following&sort={{ sort }}" class="h-8 px-3 flex items-center rounded-g text-sm font-medium transition-colors {% if scope == 'following' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">Following</a>
+      </div>
+    </div>
+    {% endif %}
     {% if featured_challenges %}
     <div class="space-y-2 mb-3">
       {% for challenge in featured_challenges %}
@@ -17,10 +27,10 @@
       {% endfor %}
     </div>
     {% endif %}
-    {% include "feeds/partials/sort_tabs.html" with sort=sort %}
-    <div id="feed-container" class="space-y-3">
+    {% include "feeds/partials/sort_tabs.html" with sort=sort scope=scope %}
+    <div id="feed-container" class="space-y-3" aria-live="polite">
       <div id="feed-container-inner">
-        {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Create the first post in one of your communities to start the feed." %}
+        {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Create the first post in one of your communities to start the feed." empty_cta_url='/c/create/' empty_cta_label='Start a community' %}
       </div>
     </div>
   </div>

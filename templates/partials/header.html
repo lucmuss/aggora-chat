@@ -1,5 +1,5 @@
 <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
-  <div class="max-w-[1200px] mx-auto flex items-center gap-3 px-4 h-12">
+  <div class="max-w-[1200px] mx-auto flex flex-wrap items-center gap-3 px-4 py-2 sm:h-12 sm:flex-nowrap">
 
     <!-- Logo: OPAL = Marke -->
     <a href="/" class="flex items-center gap-2 shrink-0 hover:no-underline">
@@ -8,14 +8,14 @@
     </a>
 
     <!-- Search -->
-    <div class="flex-1 max-w-[520px]">
+    <div class="order-3 sm:order-none basis-full sm:basis-auto flex-1 max-w-[520px]">
       <form method="get" action="{% url 'search' %}" class="relative">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none"
           stroke="currentColor" viewBox="0 0 24 24">
           <circle cx="11" cy="11" r="8" stroke-width="2" />
           <path d="m21 21-4.35-4.35" stroke-width="2" />
         </svg>
-        <input type="search" id="search-input" name="q" placeholder="Search {{ APP_NAME }}" data-shortcut-search
+        <input type="search" id="search-input" name="q" placeholder="Search {{ APP_NAME }}" data-shortcut-search aria-label="Search posts, communities, and people"
           class="w-full h-9 pl-9 pr-3 rounded-g bg-gray-50 border border-transparent text-sm text-gray-900 placeholder-gray-400 hover:bg-gray-100 hover:border-gray-200 focus:bg-white focus:border-primary focus:outline-none transition-all">
       </form>
       <script>
@@ -34,7 +34,7 @@
     <!-- Right actions -->
     <div class="flex items-center gap-1 ml-auto">
       <!-- Dark mode toggle -->
-      <a href="{% url 'toggle_theme' %}?next={{ request.path }}"
+      <a href="{% url 'toggle_theme' %}?next={{ request.path }}" aria-label="Toggle dark mode"
         class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
         title="Toggle dark mode">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,16 +44,17 @@
       </a>
 
       {% if user.is_authenticated %}
-      <a href="/c/create/"
+      <a href="/c/create/" aria-label="Create community or post"
         class="h-8 px-3 flex items-center gap-1 rounded-g text-sm font-medium text-primary hover:bg-primary-light transition-colors">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M12 5v14m-7-7h14" />
         </svg>
-        Create
+        <span class="hidden sm:inline">Create</span>
       </a>
       <a href="{% url 'profile' handle=user.handle|default:'me' %}?tab=saved"
         class="h-8 px-3 flex items-center rounded-g text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
-        Saved
+        <span class="hidden sm:inline">Saved</span>
+        <span class="sm:hidden">Save</span>
       </a>
       <a href="{% url 'notifications' %}"
         class="relative h-8 w-8 flex items-center justify-center rounded-g text-gray-600 hover:bg-gray-100 transition-colors"
@@ -67,7 +68,8 @@
       </a>
       <a href="{% url 'account_settings' %}"
         class="h-8 px-3 flex items-center rounded-g text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
-        Settings
+        <span class="hidden sm:inline">Settings</span>
+        <span class="sm:hidden">Set</span>
       </a>
       <a href="{% url 'profile' handle=user.handle|default:'me' %}"
         class="h-8 w-8 flex items-center justify-center rounded-full bg-opal text-white text-xs font-medium hover:bg-opal-hover transition-colors">
@@ -106,6 +108,11 @@
         class="px-4 h-10 flex items-center text-sm border-b-2 transition-colors
                 {% if '/c/' in request.path %}text-primary border-primary font-bold{% else %}text-gray-500 border-transparent font-medium hover:text-gray-900 hover:border-gray-300{% endif %}">
         Communities
+      </a>
+      <a href="{% url 'search' %}"
+        class="px-4 h-10 flex items-center text-sm border-b-2 transition-colors
+                {% if request.path == '/search/' %}text-primary border-primary font-bold{% else %}text-gray-500 border-transparent font-medium hover:text-gray-900 hover:border-gray-300{% endif %}">
+        Search
       </a>
     </nav>
   </div>

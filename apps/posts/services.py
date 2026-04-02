@@ -144,7 +144,7 @@ def apply_post_sort(queryset, sort="hot"):
     return queryset.order_by(*POST_SORT_MAP.get(sort, POST_SORT_MAP["hot"]))
 
 
-def pg_feed_queryset(user, community=None, sort="hot"):
+def pg_feed_queryset(user, community=None, sort="hot", scope="all"):
     queryset = Post.objects.visible().for_listing()
     if user is not None and user.is_authenticated:
         blocked_ids = list(user.blocked_users.values_list("id", flat=True))
@@ -156,9 +156,9 @@ def pg_feed_queryset(user, community=None, sort="hot"):
         memberships = user.communitymembership_set.values_list("community_id", flat=True)
         followed_users = user.followed_users.values_list("id", flat=True)
         filters = Q()
-        if memberships:
+        if scope in {"all", "communities"} and memberships:
             filters |= Q(community_id__in=memberships)
-        if followed_users:
+        if scope in {"all", "following"} and followed_users:
             filters |= Q(author_id__in=followed_users)
         if filters:
             queryset = queryset.filter(filters)

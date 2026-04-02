@@ -11,5 +11,8 @@
     </svg>
     <h3 class="font-medium text-sm text-gtext-primary mb-1">{{ empty_title }}</h3>
     <p class="text-xs text-gtext-secondary">{{ empty_copy }}</p>
+    {% if empty_cta_url and empty_cta_label %}
+      <a href="{{ empty_cta_url }}" class="inline-flex mt-4 h-9 px-4 items-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">{{ empty_cta_label }}</a>
+    {% endif %}
   </div>
 {% endif %}

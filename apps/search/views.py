@@ -12,10 +12,20 @@ from .backends import get_discovery_backend, parse_search_query
 def search_view(request):
     query = (request.GET.get("q") or "").strip()
     sort = request.GET.get("sort", "relevance")
+    post_type = (request.GET.get("post_type") or "").strip()
+    media = (request.GET.get("media") or "").strip()
     after = request.GET.get("after")
     query_text, _filters = parse_search_query(query) if query else ("", {})
     directory_query = query_text or query
-    result = get_discovery_backend().search_posts(query, sort=sort, after=after) if query else None
+    if post_type not in {"", "text", "link", "image", "poll", "crosspost"}:
+        post_type = ""
+    if media not in {"", "images", "links"}:
+        media = ""
+    result = (
+        get_discovery_backend().search_posts(query, sort=sort, after=after, post_type=post_type, media=media)
+        if query
+        else None
+    )
     posts = result.posts if result else []
     user_votes, saved_posts = annotate_posts_with_user_state(posts, request.user) if posts else ({}, set())
     communities = []
@@ -43,6 +53,8 @@ def search_view(request):
         {
             "query": query,
             "sort": sort,
+            "post_type": post_type,
+            "media": media,
             "posts": posts,
             "communities": communities,
             "users": users,

@@ -68,6 +68,24 @@ class SearchTests(TestCase):
         self.assertContains(response, "Agora Search")
         self.assertContains(response, "Search Captain")
 
+    def test_search_view_supports_post_type_filter(self):
+        Post.objects.create(
+            community=self.community,
+            author=self.user,
+            post_type="link",
+            title="Link only result",
+            body_md="A link post",
+            url="https://example.com",
+            score=5,
+            hot_score=5,
+        )
+
+        response = self.client.get(reverse("search"), {"q": "result", "post_type": "link"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Link only result")
+        self.assertNotContains(response, "Safety policy draft")
+
     @override_settings(SEARCH_BACKEND="sql", SEARCH_INDEX_ENABLED=False)
     def test_sql_backend_is_default_runtime_backend(self):
         backend = get_discovery_backend()

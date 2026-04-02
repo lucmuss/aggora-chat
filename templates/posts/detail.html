@@ -29,6 +29,10 @@
         <div class="flex items-center gap-0 -ml-1.5">
           {% include "votes/partials/save_button.html" with post=post is_saved=is_saved %}
           <span class="h-7 px-2 flex items-center text-xs text-gray-500">{{ post.comment_count }} comment{{ post.comment_count|pluralize }}</span>
+          <a href="https://wa.me/?text={{ post.title|urlencode }}%20https%3A%2F%2Faggora.kolibri-kollektiv.eu%2Fc%2F{{ post.community.slug }}%2Fpost%2F{{ post.id }}%2F{{ post.slug }}%2F"
+             class="h-7 px-2 flex items-center text-xs text-gray-500 rounded hover:bg-gray-100 transition-colors">
+            Share
+          </a>
         </div>
       </div>
     </article>

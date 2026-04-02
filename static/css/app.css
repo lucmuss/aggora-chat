@@ -20,9 +20,34 @@ a:hover {
 }
 
 button:focus-visible,
-a:focus-visible {
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
     outline: 2px solid #2563EB;
     outline-offset: 2px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.focus\:not-sr-only:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
 }
 
 .button:hover,
@@ -257,6 +282,23 @@ html.dark .border-gray-200 {
 
 html.dark .border-gray-100 {
     border-color: #1F2937 !important;
+}
+
+@media (max-width: 640px) {
+    #pwa-install-prompt {
+        bottom: 0.75rem;
+        right: 0.75rem;
+        left: 0.75rem;
+        max-width: none;
+    }
+
+    [data-post-card] {
+        align-items: stretch;
+    }
+
+    [data-post-card] .vote-widget {
+        padding-top: 0.35rem;
+    }
 }
 
 html.dark .hover\:bg-gray-50:hover {

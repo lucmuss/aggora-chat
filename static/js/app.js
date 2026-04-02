@@ -1,6 +1,7 @@
 (() => {
   const statusNode = document.getElementById("shortcut-status");
   const installPromptNode = document.getElementById("pwa-install-prompt");
+  const searchForm = document.querySelector('form[action="/search/"]');
   let activeCardIndex = -1;
   let markdownPreviewTimer;
   let deferredInstallPrompt;
@@ -60,6 +61,9 @@
       if (card) {
         announce("Downvoted");
       }
+    } else if (event.key === "Enter") {
+      const card = cards()[activeCardIndex];
+      card?.querySelector('a[href*="/post/"]')?.click();
     }
   });
 
@@ -138,4 +142,10 @@
       });
     });
   }
+
+  document.querySelectorAll("[data-auto-submit]").forEach((node) => {
+    node.addEventListener("change", () => {
+      searchForm?.submit();
+    });
+  });
 })();

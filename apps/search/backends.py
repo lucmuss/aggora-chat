@@ -51,7 +51,7 @@ class FeedResult:
 class BaseDiscoveryBackend:
     name = "base"
 
-    def home_feed(self, user, sort="hot", page_size=25, after=None) -> FeedResult:
+    def home_feed(self, user, sort="hot", page_size=25, after=None, scope="all") -> FeedResult:
         raise NotImplementedError
 
     def community_feed(self, user, community, sort="hot", page_size=25, after=None) -> FeedResult:
@@ -88,8 +88,12 @@ class SQLDiscoveryBackend(BaseDiscoveryBackend):
         next_cursor = self._encode_cursor(offset + page_size) if len(posts) == page_size else None
         return FeedResult(posts, next_cursor=next_cursor)
 
-    def home_feed(self, user, sort="hot", page_size=25, after=None) -> FeedResult:
-        return self._paginate_queryset(pg_feed_queryset(user=user, community=None, sort=sort), page_size=page_size, after=after)
+    def home_feed(self, user, sort="hot", page_size=25, after=None, scope="all") -> FeedResult:
+        return self._paginate_queryset(
+            pg_feed_queryset(user=user, community=None, sort=sort, scope=scope),
+            page_size=page_size,
+            after=after,
+        )
 
     def community_feed(self, user, community, sort="hot", page_size=25, after=None) -> FeedResult:
         return self._paginate_queryset(
@@ -101,7 +105,7 @@ class SQLDiscoveryBackend(BaseDiscoveryBackend):
     def popular_feed(self, user=None, sort="hot", page_size=25, after=None) -> FeedResult:
         return self._paginate_queryset(pg_feed_queryset(user=None, community=None, sort=sort), page_size=page_size, after=after)
 
-    def search_posts(self, raw_query, sort="relevance", page_size=50, after=None):
+    def search_posts(self, raw_query, sort="relevance", page_size=50, after=None, *, post_type="", media=""):
         query_text, filters = parse_search_query(raw_query)
         queryset = Post.objects.visible().for_listing()
 
@@ -115,6 +119,13 @@ class SQLDiscoveryBackend(BaseDiscoveryBackend):
 
         for field, value in filters.items():
             queryset = queryset.filter(**{field: value})
+
+        if post_type:
+            queryset = queryset.filter(post_type__iexact=post_type)
+        if media == "images":
+            queryset = queryset.filter(image__gt="")
+        elif media == "links":
+            queryset = queryset.filter(url__gt="")
 
         if sort in {"hot", "new", "top", "rising"}:
             queryset = apply_post_sort(queryset, sort=sort)
@@ -166,7 +177,7 @@ class ElasticsearchDiscoveryBackend(BaseDiscoveryBackend):
         next_cursor = SQLDiscoveryBackend._encode_cursor(offset + page_size) if len(ids) == page_size else None
         return FeedResult(self._ordered_posts(ids), next_cursor=next_cursor)
 
-    def home_feed(self, user, sort="hot", page_size=25, after=None) -> FeedResult:
+    def home_feed(self, user, sort="hot", page_size=25, after=None, scope="all") -> FeedResult:
         from elasticsearch_dsl import Q as ElasticQ
 
         if user is None or not user.is_authenticated:
@@ -174,6 +185,10 @@ class ElasticsearchDiscoveryBackend(BaseDiscoveryBackend):
 
         community_slugs = list(user.communitymembership_set.values_list("community__slug", flat=True))
         followed_handles = list(user.followed_users.values_list("handle", flat=True))
+        if scope == "communities":
+            followed_handles = []
+        elif scope == "following":
+            community_slugs = []
         if not community_slugs and not followed_handles:
             return self.popular_feed(sort=sort, page_size=page_size)
 
@@ -206,7 +221,7 @@ class ElasticsearchDiscoveryBackend(BaseDiscoveryBackend):
         search = self._sort(search, sort)
         return self._search_to_posts(search, page_size=page_size, after=after)
 
-    def search_posts(self, raw_query, sort="relevance", page_size=50, after=None):
+    def search_posts(self, raw_query, sort="relevance", page_size=50, after=None, *, post_type="", media=""):
         query_text, filters = parse_search_query(raw_query)
         search = self.document.search().filter("term", is_removed=False)
 
@@ -216,6 +231,13 @@ class ElasticsearchDiscoveryBackend(BaseDiscoveryBackend):
         for field, value in filters.items():
             es_field = ELASTIC_OPERATOR_MAP[DJANGO_FILTER_TO_OPERATOR[field]]
             search = search.filter("term", **{es_field: value})
+
+        if post_type:
+            search = search.filter("term", post_type=post_type)
+        if media == "images":
+            search = search.filter("exists", field="image")
+        elif media == "links":
+            search = search.filter("exists", field="url")
 
         search = self._sort(search, sort)
         return self._search_to_posts(search, page_size=page_size, after=after)

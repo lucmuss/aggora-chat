@@ -8,15 +8,31 @@
     <div class="bg-white border border-gray-200 rounded-g p-4">
       <h1 class="text-xl font-semibold text-gray-900 mb-3">Search {{ APP_NAME }}</h1>
       <form method="get" action="/search/" class="styled-form space-y-3">
-        <div class="flex gap-2">
+        <div class="flex flex-col sm:flex-row gap-2">
           <input id="search_query" type="search" name="q" value="{{ query }}"
-            placeholder="Search posts…"
+            placeholder="Search posts, communities, people…"
+            aria-label="Search query"
             class="flex-1 h-9 pl-3 pr-3 rounded-g border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none transition-colors">
-          <select id="search_sort" name="sort"
+          <select id="search_sort" name="sort" data-auto-submit
+            aria-label="Search sort"
             class="h-9 px-3 rounded-g border border-gray-200 text-sm text-gray-600 focus:border-primary focus:outline-none">
             <option value="relevance" {% if sort == 'relevance' %}selected{% endif %}>Relevance</option>
             <option value="new" {% if sort == 'new' %}selected{% endif %}>New</option>
             <option value="top" {% if sort == 'top' %}selected{% endif %}>Top</option>
+          </select>
+          <select id="search_post_type" name="post_type" data-auto-submit aria-label="Post type filter"
+            class="h-9 px-3 rounded-g border border-gray-200 text-sm text-gray-600 focus:border-primary focus:outline-none">
+            <option value="" {% if not post_type %}selected{% endif %}>All types</option>
+            <option value="text" {% if post_type == 'text' %}selected{% endif %}>Text</option>
+            <option value="link" {% if post_type == 'link' %}selected{% endif %}>Links</option>
+            <option value="image" {% if post_type == 'image' %}selected{% endif %}>Images</option>
+            <option value="poll" {% if post_type == 'poll' %}selected{% endif %}>Polls</option>
+          </select>
+          <select id="search_media" name="media" data-auto-submit aria-label="Media filter"
+            class="h-9 px-3 rounded-g border border-gray-200 text-sm text-gray-600 focus:border-primary focus:outline-none">
+            <option value="" {% if not media %}selected{% endif %}>Any media</option>
+            <option value="images" {% if media == 'images' %}selected{% endif %}>Has image</option>
+            <option value="links" {% if media == 'links' %}selected{% endif %}>Has link</option>
           </select>
           <button type="submit"
             class="h-9 px-4 bg-primary text-white rounded-g text-sm font-medium hover:bg-primary-hover transition-colors border-0 cursor-pointer">Search</button>
@@ -67,7 +83,7 @@
     {% endif %}
     {% if query %}
     <div id="feed-container" class="space-y-3">
-      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No search results" empty_copy="Try a broader term or use operators like author:, flair:, community:, or type:." %}
+      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No search results" empty_copy="Try a broader term, another type filter, or operators like author:, flair:, community:, or type:." empty_cta_url='/' empty_cta_label='Browse the feed' %}
     </div>
     {% endif %}
   </div>

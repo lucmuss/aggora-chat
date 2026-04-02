@@ -25,7 +25,10 @@ from apps.search.queries import community_feed_results, home_feed_results, popul
 def home(request):
     sort = request.GET.get("sort", "hot")
     after = request.GET.get("after")
-    posts, next_cursor = home_feed_results(request.user, sort=sort, after=after)
+    scope = request.GET.get("scope", "all")
+    if scope not in {"all", "communities", "following"}:
+        scope = "all"
+    posts, next_cursor = home_feed_results(request.user, sort=sort, after=after, scope=scope)
     user_votes, saved_posts = annotate_posts_with_user_state(posts, request.user)
     communities = (
         Community.objects.annotate(rule_count=Count("rules"))
@@ -39,6 +42,7 @@ def home(request):
         {
             "posts": posts,
             "sort": sort,
+            "scope": scope,
             "next_cursor": next_cursor,
             "user_votes": user_votes,
             "saved_posts": saved_posts,

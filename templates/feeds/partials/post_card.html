@@ -1,9 +1,9 @@
 {% load post_tags common_tags %}
 <article class="bg-white border border-gray-200 rounded-g flex hover:border-gray-300 transition-colors group cursor-pointer"
-         data-post-card tabindex="0">
+         data-post-card tabindex="0" aria-label="Post {{ post.title }}">
 
   <!-- Vote column: gray bg, gray arrows -->
-  <div class="w-10 shrink-0 flex flex-col items-center bg-gray-50 rounded-l-g">
+  <div class="w-10 sm:w-10 shrink-0 flex flex-col items-center bg-gray-50 rounded-l-g">
     {% include "votes/partials/vote_widget.html" with target=post target_type="post" user_vote=user_votes|get_item:post.id %}
   </div>
 
@@ -49,7 +49,7 @@
     {% endif %}
 
     <!-- Actions: all gray -->
-    <div class="flex items-center gap-0 mt-2 -ml-1.5">
+    <div class="flex flex-wrap items-center gap-0 mt-2 -ml-1.5">
       <a href="/c/{{ post.community.slug }}/post/{{ post.id }}/{{ post.slug }}/"
          class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -58,15 +58,13 @@
         {{ post.comment_count }} Comments
       </a>
       {% include "votes/partials/save_button.html" with post=post is_saved=saved_posts|contains:post.id %}
-      {% if user.is_authenticated %}
-        <a href="/c/{{ post.community.slug }}/submit/?crosspost={{ post.id }}"
+      <a href="https://wa.me/?text={{ post.title|urlencode }}%20https%3A%2F%2Faggora.kolibri-kollektiv.eu%2Fc%2F{{ post.community.slug }}%2Fpost%2F{{ post.id }}%2F{{ post.slug }}%2F"
            class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
             <path d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"/>
           </svg>
           Share
         </a>
-      {% endif %}
     </div>
   </div>
 </article>

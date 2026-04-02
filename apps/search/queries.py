@@ -1,8 +1,8 @@
 from .backends import get_discovery_backend
 
 
-def home_feed_results(user, sort="hot", page_size=25, after=None):
-    result = get_discovery_backend().home_feed(user=user, sort=sort, page_size=page_size, after=after)
+def home_feed_results(user, sort="hot", page_size=25, after=None, scope="all"):
+    result = get_discovery_backend().home_feed(user=user, sort=sort, page_size=page_size, after=after, scope=scope)
     return result.posts, result.next_cursor
 
 

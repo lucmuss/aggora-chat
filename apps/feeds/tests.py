@@ -90,3 +90,43 @@ class DiscoveryFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, followed_post.title)
         self.assertNotContains(response, "Blocked thread")
+
+    def test_home_feed_scope_can_focus_following(self):
+        followed_author = User.objects.create_user(
+            username="followingonly",
+            email="followingonly@example.com",
+            password="password123",
+            handle="followingonly",
+        )
+        joined_author = User.objects.create_user(
+            username="communityonly",
+            email="communityonly@example.com",
+            password="password123",
+            handle="communityonly",
+        )
+        community_post = Post.objects.create(
+            community=self.community,
+            author=joined_author,
+            post_type="text",
+            title="Community only thread",
+            body_md="Community only",
+            score=4,
+            hot_score=4,
+        )
+        following_post = Post.objects.create(
+            community=self.community,
+            author=followed_author,
+            post_type="text",
+            title="Following only thread",
+            body_md="Following only",
+            score=6,
+            hot_score=6,
+        )
+        self.user.followed_users.add(followed_author)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("home"), {"scope": "following"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, following_post.title)
+        self.assertNotContains(response, community_post.title)
