@@ -1,4 +1,5 @@
 from django import forms
+from django.db import models
 
 from apps.communities.models import Community
 from .models import User
@@ -70,6 +71,30 @@ class TotpVerificationForm(forms.Form):
 
 
 class StartWithFriendsForm(forms.Form):
+    class FirstContributionType(models.TextChoices):
+        POST = "post", "Write a first post"
+        COMMENT = "comment", "Reply to a thread"
+
+    display_name = forms.CharField(
+        required=False,
+        max_length=50,
+        label="Display name",
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "How should people see you?",
+            }
+        ),
+    )
+    bio = forms.CharField(
+        required=False,
+        label="Short bio",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "placeholder": "A sentence or two about what you care about.",
+            }
+        ),
+    )
     communities = forms.ModelMultipleChoiceField(
         queryset=Community.objects.none(),
         required=False,
@@ -93,9 +118,17 @@ class StartWithFriendsForm(forms.Form):
         empty_label="Pick later",
         label="Create your first post in",
     )
+    first_contribution_type = forms.ChoiceField(
+        choices=FirstContributionType.choices,
+        initial=FirstContributionType.POST,
+        widget=forms.RadioSelect,
+        label="First contribution",
+        help_text="Choose whether we should drop you into the composer or a reply-friendly thread.",
+    )
 
-    def __init__(self, *args, suggested_communities=None, joined_communities=None, **kwargs):
+    def __init__(self, *args, suggested_communities=None, joined_communities=None, user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.user = user
         suggested_list = list(suggested_communities or [])
         joined_list = list(joined_communities or [])
         suggested_ids = [community.pk for community in suggested_list]
@@ -106,6 +139,9 @@ class StartWithFriendsForm(forms.Form):
         first_choice = joined_list[0] if joined_list else None
         if first_choice:
             self.fields["first_post_community"].initial = first_choice.pk
+        if self.user is not None and getattr(self.user, "pk", None):
+            self.fields["display_name"].initial = self.user.display_name
+            self.fields["bio"].initial = self.user.bio
 
     def clean_friend_emails(self):
         raw_value = (self.cleaned_data.get("friend_emails") or "").strip()

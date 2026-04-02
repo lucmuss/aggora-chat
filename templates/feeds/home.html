@@ -112,6 +112,19 @@
     </div>
     {% endif %}
 
+    {% if user.is_authenticated %}
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-semibold text-sm text-gray-900">Grow your circle</h2>
+        <a href="{% url 'account_referrals' %}" class="text-xs font-medium text-opal hover:underline">Open hub</a>
+      </div>
+      <div class="p-4 space-y-2">
+        <p class="text-sm text-gray-600">Share your invite links, track referrals, and unlock activation badges with a few simple actions.</p>
+        <a href="{% url 'account_referrals' %}" class="inline-flex h-9 px-4 items-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover">Referral links</a>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- How Agora Works: headings = OPAL -->
     <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
       <div class="px-4 py-3 border-b border-gray-100">

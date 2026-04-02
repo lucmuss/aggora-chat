@@ -4,6 +4,7 @@ from django.urls import reverse
 
 from django.utils import timezone
 
+from apps.accounts.models import UserBadge
 from apps.posts.models import Comment, Post
 
 from .models import Community, CommunityChallenge, CommunityInvite, CommunityMembership, CommunityWikiPage
@@ -160,6 +161,7 @@ class CommunityFlowTests(TestCase):
 
         self.assertRedirects(response, reverse("create_post", kwargs={"community_slug": self.community.slug}))
         self.assertTrue(CommunityMembership.objects.filter(user=joining_user, community=self.community).exists())
+        self.assertTrue(UserBadge.objects.filter(user=self.user, code=UserBadge.BadgeCode.FIRST_REFERRAL).exists())
 
     def test_community_detail_renders_active_challenge_and_leaderboard(self):
         CommunityMembership.objects.create(

@@ -3,7 +3,9 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from datetime import datetime, timezone
+from urllib.parse import quote_plus
 
+from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -65,7 +67,9 @@ def submit_post(user, community, post_data: dict, poll_lines: list[str] = None, 
     post.score = 1
     post.hot_score = hot_score(1, 0, post.created_at)
     post.save(update_fields=["upvote_count", "score", "hot_score", "body_html"])
-    
+    from apps.accounts.growth import award_post_badges
+
+    award_post_badges(user)
     dispatch_task(index_post_task, post.pk)
     return post
 
@@ -89,6 +93,9 @@ def submit_comment(user, post: Post, body_md: str, parent_id: str | None = None)
     Post.objects.filter(pk=post.pk).update(comment_count=models.F("comment_count") + 1)
     dispatch_task(recalculate_post_vote_totals, post.id)
     create_reengagement_notifications(comment)
+    from apps.accounts.growth import award_comment_badges
+
+    award_comment_badges(user)
     return comment
 
 
@@ -206,3 +213,20 @@ def create_reengagement_notifications(comment: Comment):
             message=message,
             url=url,
         )
+
+
+def share_links_for_post(post: Post):
+    base_url = getattr(settings, "APP_PUBLIC_URL", "").rstrip("/")
+    path = f"/c/{post.community.slug}/post/{post.id}/{post.slug}/"
+    post_url = f"{base_url}{path}" if base_url else path
+    share_message = f"{post.title} — join the conversation in c/{post.community.slug} on {settings.APP_NAME}."
+    encoded_url = quote_plus(post_url)
+    encoded_text = quote_plus(share_message)
+    return {
+        "copy_url": post_url,
+        "share_text": share_message,
+        "whatsapp": f"https://wa.me/?text={encoded_text}%20{encoded_url}",
+        "telegram": f"https://t.me/share/url?url={encoded_url}&text={encoded_text}",
+        "x": f"https://twitter.com/intent/tweet?text={encoded_text}&url={encoded_url}",
+        "email": f"mailto:?subject={quote_plus(post.title)}&body={quote_plus(f'{share_message}\\n\\n{post_url}')}",
+    }

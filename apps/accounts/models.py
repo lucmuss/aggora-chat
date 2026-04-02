@@ -142,3 +142,29 @@ class Notification(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user}: {self.message}"
+
+
+class UserBadge(models.Model):
+    class BadgeCode(models.TextChoices):
+        PROFILE_READY = "profile_ready", "Profile Ready"
+        FIRST_STEPS = "first_steps", "First Steps"
+        FIRST_POST = "first_post", "First Post"
+        FIRST_COMMENT = "first_comment", "First Comment"
+        FIRST_REFERRAL = "first_referral", "First Referral"
+        CREW_BUILDER = "crew_builder", "Crew Builder"
+
+    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="badges")
+    code = models.CharField(max_length=32, choices=BadgeCode.choices)
+    title = models.CharField(max_length=80)
+    description = models.CharField(max_length=160, blank=True)
+    icon = models.CharField(max_length=8, default="★")
+    awarded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-awarded_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "code"], name="accounts_unique_user_badge_code"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user}: {self.title}"

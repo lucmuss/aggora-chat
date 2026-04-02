@@ -16,6 +16,7 @@ from apps.posts.services import annotate_posts_with_user_state
 from apps.votes.models import SavedPost
 
 from .forms import AccountSettingsForm, HandleSetupForm, StartWithFriendsForm, TotpVerificationForm
+from .growth import award_onboarding_badges, onboarding_progress_for_user, referral_cards_for_user
 from .models import User
 from .security import build_totp_uri, generate_totp_secret, user_requires_mfa, verify_totp
 
@@ -94,6 +95,7 @@ def profile_view(request, handle):
             "is_following": is_following,
             "follower_count": profile_user.followers.count(),
             "following_count": profile_user.followed_users.count(),
+            "badges": list(profile_user.badges.all()[:8]),
         },
     )
 
@@ -146,9 +148,12 @@ def start_with_friends(request):
         request.POST or None,
         suggested_communities=suggested,
         joined_communities=joined_for_form,
+        user=request.user,
     )
 
     if request.method == "POST" and form.is_valid():
+        request.user.display_name = form.cleaned_data.get("display_name", "").strip()
+        request.user.bio = form.cleaned_data.get("bio", "").strip()
         selected = list(form.cleaned_data["communities"])
         for community in selected:
             community.memberships.get_or_create(
@@ -179,8 +184,21 @@ def start_with_friends(request):
 
         request.user.onboarding_completed = True
         request.user.onboarding_completed_at = timezone.now()
-        request.user.save(update_fields=["onboarding_completed", "onboarding_completed_at"])
+        request.user.save(update_fields=["display_name", "bio", "onboarding_completed", "onboarding_completed_at"])
+        award_onboarding_badges(request.user)
 
+        if invite_community is not None and form.cleaned_data.get("first_contribution_type") == StartWithFriendsForm.FirstContributionType.COMMENT:
+            starter_post = (
+                Post.objects.visible()
+                .for_listing()
+                .filter(community=invite_community)
+                .order_by("-comment_count", "-score", "-created_at")
+                .first()
+            )
+            if starter_post is not None:
+                return redirect(
+                    f"/c/{starter_post.community.slug}/post/{starter_post.id}/{starter_post.slug}/?reply=1&welcome=1"
+                )
         if invite_community is not None:
             return redirect("create_post", community_slug=invite_community.slug)
         return redirect("home")
@@ -197,6 +215,7 @@ def start_with_friends(request):
             "suggested_communities": suggested,
             "joined_communities": joined,
             "pending_invite_community": active_pending_community,
+            "progress": onboarding_progress_for_user(request.user),
         },
     )
 
@@ -208,6 +227,21 @@ def notifications_view(request):
     if unread_ids:
         request.user.notifications.filter(id__in=unread_ids).update(is_read=True)
     return render(request, "accounts/notifications.html", {"notifications": notifications})
+
+
+@login_required
+def referrals_view(request):
+    cards = referral_cards_for_user(request.user)
+    return render(
+        request,
+        "accounts/referrals.html",
+        {
+            "referral_cards": cards,
+            "progress": onboarding_progress_for_user(request.user),
+            "badges": list(request.user.badges.all()[:8]),
+            "total_referrals": sum(card.usage_count for card in cards),
+        },
+    )
 
 
 @login_required

@@ -8,10 +8,10 @@ from django.urls import reverse
 
 from apps.communities.models import Community
 from apps.posts.models import Comment, Post
-from apps.posts.services import submit_comment
+from apps.posts.services import submit_comment, submit_post
 from apps.votes.models import SavedPost
 
-from .models import Notification
+from .models import Notification, UserBadge
 from .security import _totp_at, generate_totp_secret
 User = get_user_model()
 
@@ -132,14 +132,60 @@ class HandleSetupTests(TestCase):
         response = self.client.post(
             reverse("start_with_friends"),
             {
+                "display_name": "New Builder",
+                "bio": "Ready to join communities.",
                 "communities": [community.pk],
                 "first_post_community": community.pk,
+                "first_contribution_type": "post",
             },
         )
 
         user.refresh_from_db()
         self.assertTrue(user.onboarding_completed)
+        self.assertEqual(user.display_name, "New Builder")
+        self.assertEqual(user.bio, "Ready to join communities.")
+        self.assertTrue(UserBadge.objects.filter(user=user, code=UserBadge.BadgeCode.FIRST_STEPS).exists())
+        self.assertTrue(UserBadge.objects.filter(user=user, code=UserBadge.BadgeCode.PROFILE_READY).exists())
         self.assertRedirects(response, reverse("create_post", kwargs={"community_slug": community.slug}))
+
+    def test_start_with_friends_can_redirect_to_comment_on_existing_thread(self):
+        user = User.objects.create_user(
+            username="commentstarter",
+            email="commentstarter@example.com",
+            password="password123",
+            handle="commentstarter",
+        )
+        community = Community.objects.create(
+            name="Agora Replies",
+            slug="agora-replies",
+            title="Agora Replies",
+            description="Reply here.",
+            creator=user,
+        )
+        post = Post.objects.create(
+            community=community,
+            author=user,
+            post_type="text",
+            title="Starter thread",
+            body_md="Kick things off.",
+            comment_count=2,
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("start_with_friends"),
+            {
+                "communities": [community.pk],
+                "first_post_community": community.pk,
+                "first_contribution_type": "comment",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            f"/c/{community.slug}/post/{post.id}/{post.slug}/?reply=1&welcome=1",
+            fetch_redirect_response=False,
+        )
 
     def test_notifications_page_marks_reply_notifications_as_read(self):
         author = User.objects.create_user(
@@ -219,6 +265,58 @@ class HandleSetupTests(TestCase):
         self.assertContains(password_response, "Change Password")
         self.assertEqual(connections_response.status_code, 200)
         self.assertContains(connections_response, "Third-party sign-in")
+
+    def test_referral_hub_renders_for_joined_communities(self):
+        user = User.objects.create_user(
+            username="grower",
+            email="grower@example.com",
+            password="password123",
+            handle="grower",
+        )
+        community = Community.objects.create(
+            name="Agora Growth",
+            slug="agora-growth",
+            title="Agora Growth",
+            description="Growth tests.",
+            creator=user,
+        )
+        community.memberships.create(user=user, role=community.memberships.model.Role.MEMBER)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("account_referrals"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Referral links and activation badges")
+        self.assertContains(response, "c/agora-growth")
+
+    def test_first_post_and_comment_badges_are_awarded(self):
+        user = User.objects.create_user(
+            username="badges",
+            email="badges@example.com",
+            password="password123",
+            handle="badges",
+        )
+        community = Community.objects.create(
+            name="Agora Badges",
+            slug="agora-badges",
+            title="Agora Badges",
+            description="Badge tests.",
+            creator=user,
+        )
+
+        post = submit_post(
+            user=user,
+            community=community,
+            post_data={
+                "title": "Existing post",
+                "body_md": "Body",
+                "post_type": "text",
+            },
+        )
+        submit_comment(user, post, "First comment")
+
+        self.assertTrue(UserBadge.objects.filter(user=user, code=UserBadge.BadgeCode.FIRST_POST).exists())
+        self.assertTrue(UserBadge.objects.filter(user=user, code=UserBadge.BadgeCode.FIRST_COMMENT).exists())
 
     def test_account_settings_updates_privacy_and_notification_preferences(self):
         user = User.objects.create_user(

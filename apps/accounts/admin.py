@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from .models import AgentIdentityProvider, Notification, User
+from .models import AgentIdentityProvider, Notification, User, UserBadge
 
 
 @admin.register(User)
@@ -52,3 +52,10 @@ class NotificationAdmin(admin.ModelAdmin):
     list_display = ("user", "notification_type", "community", "is_read", "created_at")
     list_filter = ("notification_type", "is_read")
     search_fields = ("user__email", "user__handle", "message")
+
+
+@admin.register(UserBadge)
+class UserBadgeAdmin(admin.ModelAdmin):
+    list_display = ("user", "code", "title", "awarded_at")
+    list_filter = ("code",)
+    search_fields = ("user__email", "user__handle", "title")

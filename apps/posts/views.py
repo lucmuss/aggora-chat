@@ -16,6 +16,7 @@ from .services import (
     submit_comment,
     submit_poll_vote,
     submit_post,
+    share_links_for_post,
 )
 
 
@@ -88,7 +89,6 @@ def post_detail(request, community_slug, post_id, slug=None):
     poll_vote = None
     if request.user.is_authenticated and hasattr(post, "poll"):
         poll_vote = PollVote.objects.filter(poll=post.poll, user=request.user).select_related("option").first()
-
     comment_votes = {}
     if request.user.is_authenticated and comments:
         visible_ids = []
@@ -115,6 +115,9 @@ def post_detail(request, community_slug, post_id, slug=None):
             "comment_votes": comment_votes,
             "poll_vote": poll_vote,
             "joined": request.user.is_authenticated and post.community.memberships.filter(user=request.user).exists(),
+            "share_links": share_links_for_post(post),
+            "onboarding_reply_prompt": request.GET.get("reply") == "1",
+            "welcome_prompt": request.GET.get("welcome") == "1",
         },
     )
 

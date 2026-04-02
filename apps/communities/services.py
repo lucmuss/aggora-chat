@@ -118,13 +118,19 @@ def build_invite_url(community: Community, invite: CommunityInvite) -> str:
 
 
 def redeem_invite(user: User, invite: CommunityInvite) -> Community:
+    was_member = CommunityMembership.objects.filter(user=user, community=invite.community).exists()
     CommunityMembership.objects.get_or_create(
         user=user,
         community=invite.community,
         defaults={"role": CommunityMembership.Role.MEMBER},
     )
-    invite.usage_count += 1
-    invite.save(update_fields=["usage_count"])
+    if not was_member:
+        invite.usage_count += 1
+        invite.save(update_fields=["usage_count"])
+        if invite.created_by_id and invite.created_by_id != user.id:
+            from apps.accounts.growth import award_referral_badges
+
+            award_referral_badges(invite.created_by)
     refresh_subscriber_count(invite.community)
     notify_followers_about_join(user, invite.community)
     return invite.community
@@ -294,11 +300,14 @@ def notify_followers_about_join(user: User, community: Community):
 
 def share_links_for_invite(community: Community, invite: CommunityInvite):
     invite_url = build_invite_url(community, invite)
-    share_text = quote_plus(f"Join me in c/{community.slug} on {settings.APP_NAME} and publish your first post.")
+    share_message = f"Join me in c/{community.slug} on {settings.APP_NAME} and publish your first post."
+    share_text = quote_plus(share_message)
     encoded_url = quote_plus(invite_url)
     return {
         "copy_url": invite_url,
+        "share_text": share_message,
         "whatsapp": f"https://wa.me/?text={share_text}%20{encoded_url}",
         "telegram": f"https://t.me/share/url?url={encoded_url}&text={share_text}",
         "x": f"https://twitter.com/intent/tweet?text={share_text}&url={encoded_url}",
+        "email": f"mailto:?subject={quote_plus(f'Join me on {settings.APP_NAME}')}&body={quote_plus(f'{share_message}\n\n{invite_url}')}",
     }
