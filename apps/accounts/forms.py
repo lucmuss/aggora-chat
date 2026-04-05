@@ -67,7 +67,7 @@ class TotpVerificationForm(forms.Form):
             attrs={
                 "inputmode": "numeric",
                 "autocomplete": "one-time-code",
-                "placeholder": "123456",
+                "spellcheck": "false",
             }
         ),
         help_text="Enter the current 6-digit code from your authenticator app.",

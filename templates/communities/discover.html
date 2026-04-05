@@ -5,7 +5,7 @@
   <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
     <div class="bg-white border border-gray-200 rounded-g p-4">
       <h1 class="font-semibold text-lg text-gray-900 mb-0.5">Browse Communities</h1>
-      <p class="text-xs text-gray-400 mb-3">{{ communities|length }} community{% if communities|length != 1 %}ies{% endif %} found</p>
+      <p class="text-xs text-gray-400 mb-3 whitespace-nowrap">{{ communities|length }} communit{{ communities|length|pluralize:"y,ies" }} found</p>
       <form method="get" action="{% url 'community_discovery' %}">
         <div class="relative">
           <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -40,8 +40,8 @@
       </div>
     {% endif %}
   </div>
-  <aside class="hidden lg:block w-80 shrink-0">
-    <div class="bg-white border border-gray-200 rounded-g p-4">
+  <aside class="hidden lg:block w-80 shrink-0 space-y-3">
+    <div class="bg-white border border-gray-200 rounded-g p-4 shadow-sm">
       <h2 class="font-semibold text-sm text-opal mb-2">Start a Community</h2>
       <p class="text-xs text-gray-500 mb-3">Build a space for discussions around any topic.</p>
       <a href="{% url 'create_community' %}" class="block w-full h-8 flex items-center justify-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
@@ -49,7 +49,7 @@
       </a>
     </div>
     {% if suggested_communities %}
-    <div class="bg-white border border-gray-200 rounded-g p-4 mt-3">
+    <div class="bg-white border border-gray-200 rounded-g p-4 shadow-sm">
       <h2 class="font-semibold text-sm text-opal mb-2">Suggested Communities</h2>
       <div class="space-y-2">
         {% for community in suggested_communities %}

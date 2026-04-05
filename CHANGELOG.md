@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.4] - 2026-04-05
+
+Patch release focused on UI polish and trust-building fixes across account, discovery, profile, and sharing surfaces.
+
+### Fixed
+- Hid the guest-only welcome card for authenticated users on the home feed.
+- Corrected the community discovery count copy and improved sidebar card separation.
+- Refined the 2FA setup screen with safer copy actions, clearer messaging, and cleaner code-entry fields.
+- Improved profile tab emphasis, comment vote alignment, and share button consistency on post detail pages.
+
+### Verified
+- `python3 -m compileall apps config templates static`
+- `uv run pytest -q`
+
 ## [0.3.3] - 2026-04-05
 
 Release focused on product polish, growth loops, explainable personalization, and a richer writing experience.

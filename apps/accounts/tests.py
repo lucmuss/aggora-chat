@@ -36,6 +36,20 @@ class HandleSetupTests(TestCase):
 
         self.assertRedirects(response, reverse("handle_setup"))
 
+    def test_authenticated_home_hides_anonymous_welcome_card(self):
+        user = User.objects.create_user(
+            username="memberhome",
+            email="memberhome@example.com",
+            password="password123",
+            handle="memberhome",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Welcome to Agora")
+
     def test_handle_setup_saves_lowercase_handle(self):
         user = User.objects.create_user(
             username="handleuser",

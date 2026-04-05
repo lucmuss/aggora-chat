@@ -99,6 +99,16 @@ class TestCommunityViews:
         assert public.title in response.content.decode()
         assert private.title not in response.content.decode()
 
+    def test_discovery_uses_correct_pluralized_count_copy(self, client):
+        make_community("count-one")
+        make_community("count-two")
+
+        response = client.get(reverse("community_discovery"))
+
+        assert response.status_code == 200
+        assert "communityies found" not in response.content.decode()
+        assert "communities found" in response.content.decode()
+
     def test_community_settings_requires_permission(self, client):
         owner = make_user(username="settings_owner", email="settings_owner@example.com", handle="settings_owner")
         outsider = make_user(username="settings_outsider", email="settings_outsider@example.com", handle="settings_outsider")

@@ -114,6 +114,8 @@ class TestTotpVerificationForm:
 
         assert attrs["inputmode"] == "numeric"
         assert attrs["autocomplete"] == "one-time-code"
+        assert attrs["spellcheck"] == "false"
+        assert "placeholder" not in attrs
 
 
 @pytest.mark.django_db
