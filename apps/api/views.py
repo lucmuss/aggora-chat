@@ -290,7 +290,15 @@ class SearchAPIView(generics.ListAPIView):
         query = request.query_params.get("q", "")
         sort = request.query_params.get("sort", "relevance")
         after = request.query_params.get("after")
-        result = get_discovery_backend().search_posts(query, sort=sort, after=after)
+        post_type = request.query_params.get("post_type", "")
+        media = request.query_params.get("media", "")
+        result = get_discovery_backend().search_posts(
+            query,
+            sort=sort,
+            after=after,
+            post_type=post_type,
+            media=media,
+        )
         post_serializer = self.get_serializer(result.posts, many=True)
         query_text, _filters = parse_search_query(query) if query else ("", {})
         directory_query = query_text or query
