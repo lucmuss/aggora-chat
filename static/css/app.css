@@ -28,6 +28,13 @@ select:focus-visible {
     outline-offset: 2px;
 }
 
+@media (max-width: 640px) {
+    .btn-ui {
+        min-height: 48px;
+        font-size: 0.875rem;
+    }
+}
+
 .sr-only {
     position: absolute;
     width: 1px;
@@ -54,6 +61,161 @@ select:focus-visible {
 .btn:hover {
     filter: brightness(0.9);
     transition: filter 0.15s;
+}
+
+/* UI surfaces */
+.ui-card {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.ui-card--padded {
+    padding: 1rem;
+}
+
+.ui-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.ui-section-kicker {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #0E7490;
+}
+
+.ui-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.ui-meta {
+    font-size: 0.75rem;
+    color: #6B7280;
+}
+
+/* Button system */
+.btn-ui {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.25rem;
+    padding: 0 0.875rem;
+    border-radius: 0.75rem;
+    border: 1px solid transparent;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.btn-ui:hover {
+    text-decoration: none;
+}
+
+.btn-ui:active {
+    transform: translateY(1px);
+}
+
+.btn-ui:disabled,
+.btn-ui[aria-disabled="true"] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-ui--primary {
+    background: #2563EB;
+    color: #fff;
+    border-color: #2563EB;
+}
+
+.btn-ui--primary:hover {
+    background: #1D4ED8;
+    border-color: #1D4ED8;
+}
+
+.btn-ui--secondary {
+    background: #fff;
+    color: #374151;
+    border-color: #D1D5DB;
+}
+
+.btn-ui--secondary:hover {
+    background: #F9FAFB;
+    border-color: #CBD5E1;
+}
+
+.btn-ui--ghost {
+    background: transparent;
+    color: #475569;
+    border-color: transparent;
+}
+
+.btn-ui--ghost:hover {
+    background: #F8FAFC;
+    color: #111827;
+}
+
+.btn-ui--success {
+    background: #15803D;
+    color: #fff;
+    border-color: #15803D;
+}
+
+.btn-ui--success:hover {
+    background: #166534;
+    border-color: #166534;
+}
+
+.btn-ui--whatsapp {
+    background: #DCFCE7;
+    color: #15803D;
+    border-color: #BBF7D0;
+}
+
+.btn-ui--whatsapp:hover {
+    background: #BBF7D0;
+}
+
+.btn-ui--telegram {
+    background: #E0F2FE;
+    color: #0369A1;
+    border-color: #BAE6FD;
+}
+
+.btn-ui--telegram:hover {
+    background: #BAE6FD;
+}
+
+.btn-ui--neutral {
+    background: #F3F4F6;
+    color: #374151;
+    border-color: #E5E7EB;
+}
+
+.btn-ui--neutral:hover {
+    background: #E5E7EB;
+}
+
+.btn-ui--sm {
+    min-height: 2rem;
+    padding: 0 0.75rem;
+    font-size: 0.75rem;
+}
+
+.btn-ui--full {
+    width: 100%;
 }
 
 /* Prose: rendered markdown in posts/comments */

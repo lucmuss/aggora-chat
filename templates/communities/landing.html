@@ -4,7 +4,7 @@
 {% block title %}{{ seo_title }}{% endblock %}
 
 {% block content %}
-<div class="max-w-[1160px] mx-auto space-y-4">
+<div class="max-w-[1160px] mx-auto space-y-5">
   <nav aria-label="Breadcrumb" class="sr-only">
     <ol>
       <li><a href="{% url 'home' %}">Home</a></li>
@@ -13,7 +13,7 @@
       <li>Landing</li>
     </ol>
   </nav>
-  <section class="bg-white border border-gray-200 rounded-g overflow-hidden">
+  <section class="ui-card">
     <div class="h-28 bg-gradient-to-r from-opal to-teal-700"></div>
     <div class="px-5 pb-5">
       <div class="flex items-center justify-between gap-4 -mt-7">
@@ -21,10 +21,13 @@
           {{ community.name|first|upper }}
         </div>
         <div class="flex flex-wrap gap-2 pt-6">
-          <a href="{% url 'community_detail' slug=community.slug %}" class="h-9 px-4 rounded-g bg-primary text-white text-sm font-medium flex items-center hover:bg-primary-hover transition-colors">{% if can_join_directly %}Join and explore{% else %}Open community{% endif %}</a>
-          <button type="button" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="h-9 px-4 rounded-g border border-opal-muted text-sm font-medium text-opal flex items-center hover:bg-opal-light transition-colors">Copy invite</button>
-          <button type="button" data-share-title="{{ community.title }}" data-share-text="{{ share_links.share_text }}" data-share-url="{{ share_links.copy_url }}" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center hover:bg-gray-50 transition-colors">Share</button>
-          <a href="{% url 'community_share_card' slug=community.slug %}" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center hover:bg-gray-50 transition-colors">Share card</a>
+          <a href="{% url 'community_detail' slug=community.slug %}" class="btn-ui btn-ui--primary">{% if can_join_directly %}Join and explore{% else %}Open community{% endif %}</a>
+          <button type="button" data-share-sheet-open data-share-title="{{ community.title }}" data-share-text="{{ share_links.share_text }}" data-share-url="{{ share_links.copy_url }}" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="btn-ui btn-ui--secondary sm:hidden">Invite people</button>
+          <button type="button" data-share-title="{{ community.title }}" data-share-text="{{ share_links.share_text }}" data-share-url="{{ share_links.copy_url }}" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="btn-ui btn-ui--secondary hidden sm:inline-flex">Invite people</button>
+          <a href="{{ share_links.whatsapp }}" target="_blank" rel="noopener" class="btn-ui btn-ui--whatsapp">WhatsApp</a>
+          <a href="{{ share_links.telegram }}" target="_blank" rel="noopener" class="btn-ui btn-ui--telegram">Telegram</a>
+          <button type="button" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="btn-ui btn-ui--ghost">Copy link</button>
+          <a href="{% url 'community_share_card' slug=community.slug %}" class="btn-ui btn-ui--ghost">Share card</a>
         </div>
       </div>
       <h1 class="text-2xl font-semibold text-gray-900 mt-3">{{ community.title }}</h1>
@@ -71,7 +74,7 @@
   <div class="grid gap-4 lg:grid-cols-[2fr_1fr]">
     <div class="space-y-4">
       {% if challenge %}
-      <section class="bg-gradient-to-r from-opal-light to-white border border-opal-muted rounded-g p-4">
+      <section class="bg-gradient-to-r from-opal-light to-white border border-opal-muted rounded-g p-4 shadow-sm">
         <div class="flex items-start justify-between gap-4">
           <div>
             <p class="text-[11px] uppercase tracking-wide text-opal font-semibold">Featured challenge</p>
@@ -83,20 +86,20 @@
             {% if user.is_authenticated %}
             <form method="post" action="{% url 'community_challenge_join' slug=community.slug challenge_id=challenge.id %}">
               {% csrf_token %}
-              <button type="submit" class="h-9 px-4 rounded-g text-sm font-medium flex items-center justify-center {% if challenge.is_joined %}border border-gray-200 text-gray-600 bg-white{% else %}bg-primary text-white hover:bg-primary-hover{% endif %}">
+              <button type="submit" class="btn-ui {% if challenge.is_joined %}btn-ui--secondary{% else %}btn-ui--primary{% endif %}">
                 {% if challenge.is_joined %}Joined{% else %}Join challenge{% endif %}
               </button>
             </form>
             {% endif %}
-            <a href="{% url 'create_post' community_slug=community.slug %}?challenge={{ challenge.id }}" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center justify-center hover:bg-gray-50 transition-colors">Post an entry</a>
-            <button type="button" data-share-title="{{ challenge.title }}" data-share-text="{{ challenge_share_links.share_text }}" data-share-url="{{ challenge_share_links.copy_url }}" data-copy-text="{{ challenge_share_links.copy_url }}" data-copy-label="Challenge link copied" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center justify-center hover:bg-gray-50 transition-colors">Share challenge</button>
+            <a href="{% url 'create_post' community_slug=community.slug %}?challenge={{ challenge.id }}" class="btn-ui btn-ui--secondary">Start discussion</a>
+            <button type="button" data-share-title="{{ challenge.title }}" data-share-text="{{ challenge_share_links.share_text }}" data-share-url="{{ challenge_share_links.copy_url }}" data-copy-text="{{ challenge_share_links.copy_url }}" data-copy-label="Challenge link copied" class="btn-ui btn-ui--ghost">Share challenge</button>
           </div>
         </div>
       </section>
       {% endif %}
 
       {% if challenge_entries %}
-      <section class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <section class="ui-card">
         <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
           <div>
             <h2 class="font-semibold text-sm text-gray-900">Challenge gallery</h2>
@@ -117,7 +120,7 @@
       </section>
       {% endif %}
 
-      <section class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <section class="ui-card">
         <div class="px-4 py-3 border-b border-gray-100">
           <h2 class="font-semibold text-sm text-gray-900">Best of c/{{ community.slug }}</h2>
         </div>
@@ -136,14 +139,14 @@
       </section>
 
       {% if community.best_of_html %}
-      <section class="bg-white border border-gray-200 rounded-g p-4">
+      <section class="ui-card ui-card--padded">
         <h2 class="font-semibold text-sm text-gray-900">Resources and highlights</h2>
         <div class="prose mt-3">{{ community.best_of_html|safe }}</div>
       </section>
       {% endif %}
 
       {% if community.faq_html %}
-      <section class="bg-white border border-gray-200 rounded-g p-4">
+      <section class="ui-card ui-card--padded">
         <h2 class="font-semibold text-sm text-gray-900">FAQ</h2>
         <div class="prose mt-3">{{ community.faq_html|safe }}</div>
       </section>
@@ -151,21 +154,23 @@
     </div>
 
     <aside class="space-y-4">
-      <section class="bg-white border border-gray-200 rounded-g p-4">
-        <h2 class="font-semibold text-sm text-opal mb-2">One-click invite</h2>
+      <section class="ui-card ui-card--padded">
+        <h2 class="ui-section-title mb-2">Invite people</h2>
+        <p class="text-xs text-gray-500">One-click invite actions for the people most likely to join this room.</p>
         <input type="text" readonly value="{{ share_links.copy_url }}" class="w-full h-9 px-3 rounded-g border border-gray-200 text-sm text-gray-700 bg-gray-50">
-        <div class="grid grid-cols-5 gap-2 mt-3">
-          <button type="button" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="h-8 rounded-g bg-opal-light text-opal text-xs font-medium flex items-center justify-center">Copy</button>
-          <button type="button" data-share-title="{{ community.title }}" data-share-text="{{ share_links.share_text }}" data-share-url="{{ share_links.copy_url }}" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="h-8 rounded-g bg-gray-900 text-white text-xs font-medium flex items-center justify-center">Share</button>
-          <a href="{{ share_links.whatsapp }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-green-50 text-green-700 text-xs font-medium flex items-center justify-center">WhatsApp</a>
-          <a href="{{ share_links.telegram }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-sky-50 text-sky-700 text-xs font-medium flex items-center justify-center">Telegram</a>
-          <a href="{{ share_links.x }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-gray-100 text-gray-700 text-xs font-medium flex items-center justify-center">X</a>
+        <div class="grid grid-cols-1 gap-2 mt-3 sm:grid-cols-2">
+          <button type="button" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="btn-ui btn-ui--primary btn-ui--full">Copy invite link</button>
+          <button type="button" data-share-title="{{ community.title }}" data-share-text="{{ share_links.share_text }}" data-share-url="{{ share_links.copy_url }}" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="btn-ui btn-ui--secondary btn-ui--full hidden sm:inline-flex">Share natively</button>
+          <a href="{{ share_links.whatsapp }}" target="_blank" rel="noopener" class="btn-ui btn-ui--whatsapp btn-ui--full">WhatsApp</a>
+          <a href="{{ share_links.telegram }}" target="_blank" rel="noopener" class="btn-ui btn-ui--telegram btn-ui--full">Telegram</a>
+          <a href="{{ share_links.email }}" target="_blank" rel="noopener" class="btn-ui btn-ui--ghost btn-ui--full">Email</a>
+          <a href="{{ share_links.x }}" target="_blank" rel="noopener" class="btn-ui btn-ui--ghost btn-ui--full">X</a>
         </div>
         <p class="text-xs text-gray-500 mt-3">Send people into one concrete room with one clear reason to care.</p>
       </section>
 
       {% if leaderboard %}
-      <section class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <section class="ui-card">
         <div class="px-4 py-3 border-b border-gray-100">
           <h2 class="font-semibold text-sm text-opal">Leaderboard</h2>
         </div>

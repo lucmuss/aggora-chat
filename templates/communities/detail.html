@@ -2,7 +2,7 @@
 {% block title %}{{ seo_title }}{% endblock %}
 {% block content %}
 <div class="lg:flex lg:gap-6">
-  <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
+  <div class="flex-1 min-w-0 max-w-[640px] space-y-4">
     <nav aria-label="Breadcrumb" class="sr-only">
       <ol>
         <li><a href="{% url 'home' %}">Home</a></li>
@@ -10,7 +10,7 @@
         <li>c/{{ community.slug }}</li>
       </ol>
     </nav>
-    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+    <div class="ui-card">
       <div class="h-20 bg-gradient-to-r from-opal to-teal-600"></div>
       <div class="px-4 pb-4">
         <div class="flex items-end justify-between -mt-7 mb-2">
@@ -27,37 +27,37 @@
             <p class="text-sm text-gray-500 mt-1.5 leading-relaxed">{{ community.description }}</p>
             {% endif %}
           </div>
-          <div class="shrink-0 space-y-2 mt-1">
+          <div class="shrink-0 ui-stack mt-1 w-full sm:w-auto sm:min-w-[13rem]">
             {% include "communities/partials/join_button.html" with community=community joined=joined %}
-            <a href="{% url 'community_landing' slug=community.slug %}"
-              class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-              Open landing page
-            </a>
-            <a href="{% url 'community_share_card' slug=community.slug %}"
-              class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-              Share card
-            </a>
             {% if user.is_authenticated %}
             <button type="button"
+              data-share-sheet-open
+              data-share-title="{{ community.title }}"
+              data-share-text="{{ share_links.share_text }}"
+              data-share-url="{{ share_links.copy_url }}"
               data-copy-text="{{ share_links.copy_url }}"
               data-copy-label="Community invite copied"
-              class="block w-full h-8 rounded-g border border-opal-muted text-sm font-medium text-opal hover:bg-opal-light transition-colors">
-              Copy invite link
+              class="btn-ui btn-ui--secondary btn-ui--full sm:hidden">
+              Invite people
             </button>
             <button type="button"
               data-share-title="{{ community.title }}"
               data-share-text="{{ share_links.share_text }}"
               data-share-url="{{ share_links.copy_url }}"
               data-copy-text="{{ share_links.copy_url }}"
-              data-copy-label="Community link copied"
-              class="block w-full h-8 rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-              Share community
+              data-copy-label="Community invite copied"
+              class="btn-ui btn-ui--secondary btn-ui--full hidden sm:inline-flex">
+              Invite people
             </button>
             <a href="{% url 'create_post' community_slug=community.slug %}"
-              class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-              New post
+              class="btn-ui btn-ui--primary btn-ui--full">
+              Start discussion
             </a>
             {% endif %}
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <a href="{% url 'community_landing' slug=community.slug %}" class="text-opal hover:underline">Open landing page</a>
+              <a href="{% url 'community_share_card' slug=community.slug %}" class="text-gray-500 hover:text-gray-900 hover:underline">Share card</a>
+            </div>
           </div>
         </div>
         <div class="flex items-center gap-6 mt-3 pt-3 border-t border-gray-100">
@@ -78,7 +78,7 @@
       </div>
     </div>
     {% if active_challenge %}
-    <div class="bg-gradient-to-r from-opal-light to-white border border-opal-muted rounded-g p-4">
+    <div class="bg-gradient-to-r from-opal-light to-white border border-opal-muted rounded-g p-4 shadow-sm">
       <div class="flex items-start justify-between gap-4">
         <div>
           <p class="text-[11px] uppercase tracking-wide text-opal font-semibold">Challenge of the week</p>
@@ -90,19 +90,19 @@
           {% if user.is_authenticated %}
           <form method="post" action="{% url 'community_challenge_join' slug=community.slug challenge_id=active_challenge.id %}">
             {% csrf_token %}
-            <button type="submit" class="h-8 px-3 rounded-g text-sm font-medium flex items-center justify-center {% if active_challenge.is_joined %}border border-gray-200 text-gray-600 bg-white{% else %}bg-primary text-white hover:bg-primary-hover{% endif %}">
+            <button type="submit" class="btn-ui btn-ui--sm {% if active_challenge.is_joined %}btn-ui--secondary{% else %}btn-ui--primary{% endif %}">
               {% if active_challenge.is_joined %}Joined{% else %}Join challenge{% endif %}
             </button>
           </form>
           {% endif %}
           <a href="{% url 'create_post' community_slug=community.slug %}?challenge={{ active_challenge.id }}"
-            class="h-8 px-3 rounded-g border border-gray-200 text-sm font-medium text-gray-600 flex items-center justify-center hover:bg-gray-50">Post for it</a>
+            class="btn-ui btn-ui--secondary btn-ui--sm">Start discussion</a>
         </div>
       </div>
     </div>
     {% endif %}
     {% if challenge_entries %}
-    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+    <div class="ui-card">
       <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
         <div>
           <p class="text-xs font-semibold uppercase tracking-wide text-opal">Challenge gallery</p>
@@ -131,15 +131,15 @@
     </section>
   </div>
 
-  <aside class="hidden lg:block w-80 shrink-0 space-y-3">
+  <aside class="hidden lg:block w-80 shrink-0 space-y-4">
     {% if community.sidebar_html %}
-    <div class="bg-white border border-gray-200 rounded-g p-4">
-      <h2 class="font-semibold text-sm text-opal mb-2">About</h2>
+    <div class="ui-card ui-card--padded">
+      <h2 class="ui-section-title mb-2">About</h2>
       <div class="prose text-xs">{{ community.sidebar_html|safe }}</div>
     </div>
     {% endif %}
-    <div class="bg-white border border-gray-200 rounded-g p-4">
-      <h2 class="font-semibold text-sm text-opal mb-2">Community Settings</h2>
+    <div class="ui-card ui-card--padded">
+      <h2 class="ui-section-title mb-2">Community Settings</h2>
       <div class="space-y-1 text-xs text-gray-500">
         <p>Text posts: {{ community.allow_text_posts|yesno:"✓,✗" }}</p>
         <p>Link posts: {{ community.allow_link_posts|yesno:"✓,✗" }}</p>
@@ -147,7 +147,7 @@
       </div>
     </div>
     {% if leaderboard %}
-    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+    <div class="ui-card">
       <div class="px-4 py-3 border-b border-gray-100">
         <h2 class="font-semibold text-sm text-opal">Top Contributors This Week</h2>
       </div>
@@ -165,7 +165,7 @@
     </div>
     {% endif %}
     {% if suggested_communities %}
-    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+    <div class="ui-card">
       <div class="px-4 py-3 border-b border-gray-100">
         <h2 class="font-semibold text-sm text-opal">You May Also Like</h2>
       </div>
@@ -180,7 +180,7 @@
     </div>
     {% endif %}
     {% if community.rules.all %}
-    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+    <div class="ui-card">
       <div class="px-4 py-3 border-b border-gray-100">
         <h2 class="font-semibold text-sm text-opal">Rules</h2>
       </div>
@@ -195,8 +195,8 @@
     </div>
     {% endif %}
     {% if can_moderate %}
-    <div class="bg-white border border-gray-200 rounded-g p-4">
-      <h2 class="font-semibold text-sm text-opal mb-2">Moderation & Growth</h2>
+    <div class="ui-card ui-card--padded">
+      <h2 class="ui-section-title mb-2">Moderation & Growth</h2>
       <div class="space-y-1">
         <a href="{% url 'mod_queue' community_slug=community.slug %}" class="block text-xs text-opal hover:underline">Mod queue</a>
         <a href="{% url 'mod_log' community_slug=community.slug %}" class="block text-xs text-opal hover:underline">Mod log</a>
@@ -209,8 +209,8 @@
     </div>
     {% endif %}
     {% if owner_dashboard %}
-    <div class="bg-white border border-gray-200 rounded-g p-4">
-      <h2 class="font-semibold text-sm text-opal mb-2">Owner snapshot</h2>
+    <div class="ui-card ui-card--padded">
+      <h2 class="ui-section-title mb-2">Owner snapshot</h2>
       <div class="grid grid-cols-2 gap-2 text-center">
         <div class="rounded-g bg-gray-50 px-3 py-2">
           <p class="text-sm font-semibold text-gray-900">{{ owner_dashboard.recent_member_joins }}</p>
@@ -221,7 +221,7 @@
           <p class="text-[11px] text-gray-500">Needs review</p>
         </div>
       </div>
-      <a href="{% url 'community_owner_dashboard' slug=community.slug %}" class="inline-flex mt-3 h-9 px-4 items-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Open full dashboard</a>
+      <a href="{% url 'community_owner_dashboard' slug=community.slug %}" class="btn-ui btn-ui--secondary mt-3">Open full dashboard</a>
     </div>
     {% endif %}
   </aside>

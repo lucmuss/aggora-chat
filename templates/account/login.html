@@ -1,18 +1,20 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% load account socialaccount %}
+{% load static %}
 
 {% block title %}{% trans "Sign In" %} — {{ APP_NAME }}{% endblock %}
 
 {% block content %}
 <div class="flex justify-center items-center py-10">
-  <div class="w-full max-w-md bg-white border border-gray-200 rounded-g overflow-hidden shadow-sm">
+  <div class="w-full max-w-md ui-card shadow-sm">
     <div class="bg-gradient-to-r from-opal to-teal-600 h-2"></div>
     <div class="p-8">
       <div class="mb-8 text-center">
-        <div class="w-12 h-12 rounded-lg bg-opal flex items-center justify-center text-white font-bold text-xl mx-auto mb-4">A</div>
+        <img src="{% static 'icons/agora-logo.svg' %}" alt="{{ APP_NAME }}" class="h-12 mx-auto mb-4">
         <h1 class="text-2xl font-bold text-gray-900">{% trans "Welcome back" %}</h1>
         <p class="text-sm text-gray-500 mt-1">{% blocktrans %}Log in to your {{ APP_NAME }} account{% endblocktrans %}</p>
+        <p class="text-xs text-gray-400 mt-2">{% blocktrans %}Jump back into communities, replies, and threads worth sharing.{% endblocktrans %}</p>
       </div>
 
       {% if GOOGLE_AUTH_ENABLED or GITHUB_AUTH_ENABLED %}

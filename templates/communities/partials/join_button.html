@@ -5,13 +5,12 @@
     {% csrf_token %}
     <button type="submit"
             {% if joined %}onclick="return confirm('Leave this community? You can join again later.')" aria-label="Leave community c/{{ community.slug }}"{% else %}aria-label="Join community c/{{ community.slug }}"{% endif %}
-            class="w-full h-8 rounded-g text-sm font-medium transition-all
-                   {% if joined %}bg-green-600 text-white border border-green-600 hover:bg-green-700{% else %}bg-primary text-white hover:bg-primary-hover{% endif %}">
+            class="btn-ui btn-ui--full {% if joined %}btn-ui--success{% else %}btn-ui--primary{% endif %}">
       {% if joined %}Joined{% else %}Join Community{% endif %}
     </button>
   </form>
 {% else %}
-  <a href="{% url 'account_login' %}" class="block w-full h-8 flex items-center justify-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
+  <a href="{% url 'account_login' %}" class="btn-ui btn-ui--primary btn-ui--full">
     Log in to join
   </a>
 {% endif %}

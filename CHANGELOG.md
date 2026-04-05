@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.7] - 2026-04-05
+
+Patch release focused on mobile navigation, mobile sharing, and more thumb-friendly feed interactions.
+
+### Added
+- A dedicated mobile bottom navigation bar for `Home`, `Popular`, `Communities`, and `Search`.
+- A mobile-first share sheet with large actions for copy, native share, WhatsApp, Telegram, email, and X.
+- Fresh Playwright screenshot coverage for public and authenticated flows in `output/gui-screenshots/`.
+
+### Changed
+- Mobile headers now hide lower-priority actions so the top bar stays readable and collision-free.
+- Feed cards now reduce metadata on small screens and surface one clearer primary discussion action.
+- Community and thread sharing surfaces now route mobile users through a clearer invite/share flow.
+- Login and signup keep the stronger branded treatment introduced in the earlier UI polish pass.
+
+### Fixed
+- Improved mobile tap targets by promoting the shared button system to 48px-high actions on small screens.
+- Prevented the install prompt from colliding with the new bottom navigation on mobile.
+
+### Verified
+- `python3 -m compileall templates static apps`
+- `uv run pytest -q`
+
 ## [0.3.6] - 2026-04-05
 
 Patch release focused on search-friendly HTML, structured data, and crawlable community and thread surfaces.

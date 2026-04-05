@@ -15,13 +15,13 @@
          class="font-medium text-opal hover:text-opal-hover hover:underline">
         c/{{ post.community.slug }}
       </a>
-      <span class="text-gray-300">·</span>
-      <span class="text-gray-500">u/<a href="{% if post.author and post.author.handle %}{% url 'profile' handle=post.author.handle %}{% else %}#{% endif %}" class="hover:underline hover:text-gray-700">{{ post.author.handle|default:"[deleted]" }}</a></span>
-      <span class="text-gray-300">·</span>
-      <time class="text-gray-400">{{ post.created_at|timesince_compact }} ago</time>
+      <span class="hidden sm:inline text-gray-300">·</span>
+      <span class="hidden sm:inline text-gray-500">u/<a href="{% if post.author and post.author.handle %}{% url 'profile' handle=post.author.handle %}{% else %}#{% endif %}" class="hover:underline hover:text-gray-700">{{ post.author.handle|default:"[deleted]" }}</a></span>
+      <span class="hidden sm:inline text-gray-300">·</span>
+      <time class="hidden sm:inline text-gray-400">{{ post.created_at|timesince_compact }} ago</time>
       {% if post.is_from_followed_user %}
-      <span class="text-gray-300">·</span>
-      <span class="text-[11px] font-semibold uppercase tracking-wide text-opal">From someone you follow</span>
+      <span class="hidden sm:inline text-gray-300">·</span>
+      <span class="hidden sm:inline text-[11px] font-semibold uppercase tracking-wide text-opal">From someone you follow</span>
       {% endif %}
     </div>
 
@@ -45,7 +45,7 @@
       {% endif %}
       <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">{{ post.discussion_label }}</span>
       {% if post.last_comment_at %}
-      <span class="text-[11px] text-gray-400">Last reply {{ post.last_comment_at|timesince_compact }} ago</span>
+      <span class="hidden sm:inline text-[11px] text-gray-400">Last reply {{ post.last_comment_at|timesince_compact }} ago</span>
       {% endif %}
     </div>
 
@@ -69,7 +69,27 @@
     {% endif %}
 
     <!-- Actions: all gray -->
-    <div class="flex flex-wrap items-center gap-0 mt-2 -ml-1.5">
+    <div class="sm:hidden mt-2">
+      <div class="flex items-center gap-2">
+        <a href="{% url 'post_detail' community_slug=post.community.slug post_id=post.id slug=post.slug %}"
+           class="btn-ui btn-ui--primary btn-ui--sm">Start discussion</a>
+        {% include "votes/partials/save_button.html" with post=post is_saved=saved_posts|contains:post.id %}
+        <button type="button"
+           data-share-sheet-open
+           data-share-title="{{ post.title }}"
+           data-share-text="{{ share_links.share_text }}"
+           data-share-url="{{ share_links.copy_url }}"
+           {% if user.is_authenticated %}data-share-record-url="{% url 'record_post_share' post_id=post.id %}"{% endif %}
+           class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"/>
+          </svg>
+          Share
+        </button>
+      </div>
+    </div>
+
+    <div class="hidden sm:flex flex-wrap items-center gap-0 mt-2 -ml-1.5">
       <a href="{% url 'post_detail' community_slug=post.community.slug post_id=post.id slug=post.slug %}"
          class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">

@@ -409,6 +409,9 @@
 
   document.querySelectorAll("[data-share-title]").forEach((button) => {
     button.addEventListener("click", async () => {
+      if (button.hasAttribute("data-share-sheet-open")) {
+        return;
+      }
       const title = button.dataset.shareTitle || document.title;
       const text = button.dataset.shareText || "";
       const url = button.dataset.shareUrl || window.location.href;
@@ -433,6 +436,80 @@
         }
       }
     });
+  });
+
+  const shareSheet = document.getElementById("share-sheet");
+  const shareSheetTitle = document.getElementById("share-sheet-title");
+  const shareSheetCopy = document.getElementById("share-sheet-copy");
+  const shareSheetNative = document.getElementById("share-sheet-native");
+  const shareSheetWhatsapp = document.getElementById("share-sheet-whatsapp");
+  const shareSheetTelegram = document.getElementById("share-sheet-telegram");
+  const shareSheetEmail = document.getElementById("share-sheet-email");
+  const shareSheetX = document.getElementById("share-sheet-x");
+
+  const openShareSheet = (payload) => {
+    if (!shareSheet) {
+      return;
+    }
+    const title = payload.title || document.title;
+    const text = payload.text || "";
+    const url = payload.url || window.location.href;
+    const recordUrl = payload.recordUrl || "";
+    if (shareSheetTitle) {
+      shareSheetTitle.textContent = title;
+    }
+    if (shareSheetCopy) {
+      shareSheetCopy.dataset.copyText = url;
+      shareSheetCopy.dataset.copyLabel = "Invite link copied";
+      shareSheetCopy.dataset.shareRecordUrl = recordUrl;
+    }
+    if (shareSheetNative) {
+      shareSheetNative.dataset.shareTitle = title;
+      shareSheetNative.dataset.shareText = text;
+      shareSheetNative.dataset.shareUrl = url;
+      shareSheetNative.dataset.shareRecordUrl = recordUrl;
+    }
+    if (shareSheetWhatsapp) {
+      shareSheetWhatsapp.href = `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`.trim())}`;
+      shareSheetWhatsapp.dataset.shareRecordUrl = recordUrl;
+    }
+    if (shareSheetTelegram) {
+      shareSheetTelegram.href = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+      shareSheetTelegram.dataset.shareRecordUrl = recordUrl;
+    }
+    if (shareSheetEmail) {
+      shareSheetEmail.href = `mailto:?subject=${encodeURIComponent("Join me on Agora")}&body=${encodeURIComponent(`${text}\n\n${url}`)}`;
+      shareSheetEmail.dataset.shareRecordUrl = recordUrl;
+    }
+    if (shareSheetX) {
+      shareSheetX.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+      shareSheetX.dataset.shareRecordUrl = recordUrl;
+    }
+    shareSheet.classList.remove("hidden");
+    shareSheet.setAttribute("aria-hidden", "false");
+  };
+
+  const closeShareSheet = () => {
+    if (!shareSheet) {
+      return;
+    }
+    shareSheet.classList.add("hidden");
+    shareSheet.setAttribute("aria-hidden", "true");
+  };
+
+  document.querySelectorAll("[data-share-sheet-open]").forEach((button) => {
+    button.addEventListener("click", () => {
+      openShareSheet({
+        title: button.dataset.shareTitle,
+        text: button.dataset.shareText,
+        url: button.dataset.shareUrl,
+        recordUrl: button.dataset.shareRecordUrl,
+      });
+    });
+  });
+
+  document.querySelectorAll("[data-share-sheet-close]").forEach((button) => {
+    button.addEventListener("click", closeShareSheet);
   });
 
   document.querySelectorAll("[data-command-open]").forEach((button) => {
