@@ -13,8 +13,6 @@ services:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       PORT: ${PORT:-8000}
       DATABASE_URL: ${DATABASE_URL}
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
-      REDIS_CACHE_URL: ${REDIS_CACHE_URL:-redis://redis:6379/1}
       SEARCH_BACKEND: ${SEARCH_BACKEND:-sql}
       SEARCH_INDEX_ENABLED: ${SEARCH_INDEX_ENABLED:-0}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL}
@@ -41,8 +39,6 @@ services:
       - "${APP_HOST_PORT:-18080}:${PORT:-8000}"
     volumes:
       - media:/app/media
-    depends_on:
-      - redis
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:${PORT:-8000}/healthz/', timeout=5).read()\""]
       interval: 10s
@@ -52,11 +48,6 @@ services:
     networks:
       - default
       - apps-shared
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-
 volumes:
   media:
 

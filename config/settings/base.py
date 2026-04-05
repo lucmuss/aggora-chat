@@ -182,6 +182,10 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL = env_str(
     "https" if IS_PRODUCTION else "http",
 )
 ACCOUNT_SIGNUP_FORM_CLASS = "apps.accounts.forms.SignupForm"
+ACCOUNT_FORMS = {
+    "reset_password": "apps.accounts.allauth_forms.StyledResetPasswordForm",
+    "reset_password_from_key": "apps.accounts.allauth_forms.StyledResetPasswordKeyForm",
+}
 SOCIALACCOUNT_AUTO_SIGNUP = False
 
 SOCIALACCOUNT_PROVIDERS = {
@@ -214,22 +218,17 @@ ELASTICSEARCH_DSL = {
     "default": {"hosts": env_str("ELASTICSEARCH_URL", "http://elasticsearch:9200")},
 }
 
-CELERY_BROKER_URL = env_str("CELERY_BROKER_URL", "redis://redis:6379/0")
-CELERY_RESULT_BACKEND = env_str("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
-CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", DEBUG)
+CELERY_BROKER_URL = env_str("CELERY_BROKER_URL", "memory://")
+CELERY_RESULT_BACKEND = env_str("CELERY_RESULT_BACKEND", "cache+memory://")
+CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", True)
 CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_TASK_IGNORE_RESULT = True
 CELERY_TASK_STORE_EAGER_RESULT = False
 
-REDIS_CACHE_URL = env_str("REDIS_CACHE_URL", "")
-SESSION_CACHE_ALIAS = env_str("SESSION_CACHE_ALIAS", "default")
-
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache"
-        if not REDIS_CACHE_URL
-        else "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_CACHE_URL or "agora-local-cache",
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "agora-local-cache",
     }
 }
 

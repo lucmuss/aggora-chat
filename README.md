@@ -37,7 +37,7 @@ cp .env.example .env
 The checked-in example is intentionally local-safe:
 
 - no Docker-only Postgres host defaults
-- no forced Redis broker/cache URLs
+- no Redis requirement for cache or background jobs
 - SQLite works out of the box for plain local `manage.py` commands
 
 3. Apply database migrations:
@@ -66,7 +66,8 @@ If you want the full stack with supporting services, there are also Docker compo
 - `docker-compose.prod.yml`
 - `docker-compose.stack.yml`
 
-The compose files inject container-friendly defaults themselves, so local `.env` values do not need to point at `db` or `redis` unless you want that behavior outside Docker.
+The compose files inject container-friendly defaults themselves, so local `.env` values do not need to point at a Docker-only database host unless you want that behavior outside Docker.
+The default stack is now SQL-first and runs without Redis.
 
 ## Test
 
@@ -103,7 +104,7 @@ Commonly relevant variables:
 - `SEED_USERS_FILE`, `SEED_ADMINS_FILE`
 - `AUTO_MIGRATE_ON_START`, `AUTO_SEED_ON_START`, `SEED_SKIP_DEMO_CONTENT`
 - `DATABASE_URL` or the `POSTGRES_*` fallback variables
-- `REDIS_CACHE_URL`, `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND`
+- `CELERY_TASK_ALWAYS_EAGER`
 - `SEARCH_BACKEND`, `SEARCH_INDEX_ENABLED`, `ELASTICSEARCH_URL`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
@@ -163,7 +164,7 @@ Technical direction:
 - HTMX for lightweight interactive updates
 - Tailwind-driven UI styling
 - optional Elasticsearch for search
-- Celery/Redis hooks for async recalculation and indexing
+- SQL-first local/dev runtime with eager task execution by default
 
 ## API
 

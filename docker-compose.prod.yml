@@ -12,8 +12,6 @@ services:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       PORT: ${PORT:-8000}
       DATABASE_URL: ${DATABASE_URL}
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
-      REDIS_CACHE_URL: ${REDIS_CACHE_URL:-redis://redis:6379/1}
       SEARCH_BACKEND: ${SEARCH_BACKEND:-sql}
       SEARCH_INDEX_ENABLED: ${SEARCH_INDEX_ENABLED:-0}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL}
@@ -36,8 +34,6 @@ services:
       SEED_USERS_FILE: ${SEED_USERS_FILE:-data/seed/users.json}
       SEED_ADMINS_FILE: ${SEED_ADMINS_FILE:-data/seed/admins.json}
       SEED_COMMUNITIES_FILE: ${SEED_COMMUNITIES_FILE:-data/seed/communities.json}
-    depends_on:
-      - redis
     ports:
       - "${APP_HOST_PORT:-18080}:${PORT:-8000}"
     volumes:
@@ -51,11 +47,6 @@ services:
       timeout: 10s
       retries: 10
       start_period: 60s
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-
   elasticsearch:
     image: elasticsearch:8.15.0
     profiles: ["search"]
