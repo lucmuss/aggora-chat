@@ -1,11 +1,18 @@
 {% extends "base.html" %}
 {% load post_tags %}
 
-{% block meta_description %}{{ community.seo_description|default:community.description|default:APP_TAGLINE }}{% endblock %}
-{% block title %}c/{{ community.slug }} — Explore {{ APP_NAME }}{% endblock %}
+{% block title %}{{ seo_title }}{% endblock %}
 
 {% block content %}
 <div class="max-w-[1160px] mx-auto space-y-4">
+  <nav aria-label="Breadcrumb" class="sr-only">
+    <ol>
+      <li><a href="{% url 'home' %}">Home</a></li>
+      <li><a href="{% url 'community_discovery' %}">Communities</a></li>
+      <li><a href="{% url 'community_detail' slug=community.slug %}">c/{{ community.slug }}</a></li>
+      <li>Landing</li>
+    </ol>
+  </nav>
   <section class="bg-white border border-gray-200 rounded-g overflow-hidden">
     <div class="h-28 bg-gradient-to-r from-opal to-teal-700"></div>
     <div class="px-5 pb-5">

@@ -5,9 +5,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="{% block meta_description %}{{ APP_TAGLINE }}{% endblock %}">
+  <title>{% block title %}{{ seo_title|default:APP_NAME }}{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}{{ seo_description|default:APP_TAGLINE }}{% endblock %}">
+  <meta name="robots" content="{% block meta_robots %}{{ meta_robots|default:'index,follow' }}{% endblock %}">
   <meta name="theme-color" content="#0D9488">
-  <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+  <link rel="canonical" href="{% block canonical_url %}{{ canonical_url|default:APP_PUBLIC_URL|add:request.path }}{% endblock %}">
+  <meta property="og:site_name" content="{{ APP_NAME }}">
+  <meta property="og:type" content="{% block og_type %}{{ og_type|default:'website' }}{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{{ og_title|default:seo_title|default:APP_NAME }}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}{{ og_description|default:seo_description|default:APP_TAGLINE }}{% endblock %}">
+  <meta property="og:url" content="{% block og_url %}{{ canonical_url|default:APP_PUBLIC_URL|add:request.path }}{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}{{ og_image_url|default:APP_OG_IMAGE_URL }}{% endblock %}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ og_title|default:seo_title|default:APP_NAME }}">
+  <meta name="twitter:description" content="{{ og_description|default:seo_description|default:APP_TAGLINE }}">
+  <meta name="twitter:image" content="{{ og_image_url|default:APP_OG_IMAGE_URL }}">
   <link rel="manifest" href="{% url 'web_manifest' %}">
   <link rel="icon" href="{% static 'icons/agora-icon.svg' %}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,6 +51,11 @@
   </script>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="{% static 'js/app.js' %}" defer></script>
+  {% block structured_data %}
+  {% if structured_data %}
+  <script type="application/ld+json">{{ structured_data|safe }}</script>
+  {% endif %}
+  {% endblock %}
 </head>
 
 <body class="bg-gray-50 text-gray-900 font-sans text-sm antialiased min-h-screen">

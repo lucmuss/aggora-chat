@@ -86,6 +86,8 @@ class CommunityFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Agora Builders")
         self.assertContains(response, "Community Settings")
+        self.assertContains(response, '"CollectionPage"')
+        self.assertContains(response, '?sort=hot')
 
     def test_non_moderators_do_not_see_moderation_links_on_community_page(self):
         member = User.objects.create_user(
@@ -177,6 +179,7 @@ class CommunityFlowTests(TestCase):
         self.assertContains(response, "Best thread")
         self.assertContains(response, "Typical topics")
         self.assertContains(response, "Posts this week")
+        self.assertContains(response, '"BreadcrumbList"')
 
     def test_invite_link_joins_user_and_redirects_to_post_create(self):
         joining_user = User.objects.create_user(

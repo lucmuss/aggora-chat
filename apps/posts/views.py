@@ -6,6 +6,14 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
+from apps.common.seo import (
+    absolute_url,
+    breadcrumb_schema,
+    canonical_url_for_request,
+    clean_description,
+    discussion_forum_posting_schema,
+    serialize_structured_data,
+)
 from apps.communities.models import Community
 from apps.communities.services import active_challenge_for_community, can_participate_in_community, can_view_community
 from apps.moderation.utils import is_user_banned
@@ -47,6 +55,10 @@ def _build_post_detail_context(request, post, *, sort=None, comment_body_md="", 
         comment_votes = dict(
             Vote.objects.filter(user=request.user, comment_id__in=visible_ids).values_list("comment_id", "value")
         )
+    seo_description = clean_description(
+        post.body_html or post.body_md or post.community.seo_description or post.community.description or post.title
+    )
+    canonical_url = canonical_url_for_request(request)
 
     return {
         "post": post,
@@ -63,6 +75,22 @@ def _build_post_detail_context(request, post, *, sort=None, comment_body_md="", 
         "comment_body_md": comment_body_md,
         "comment_error": comment_error,
         "status_code": status_code,
+        "seo_title": f"{post.title} — c/{post.community.slug} — Agora",
+        "seo_description": seo_description,
+        "og_type": "article",
+        "og_image_url": absolute_url(post.image.url) if post.image else None,
+        "canonical_url": canonical_url,
+        "structured_data": serialize_structured_data(
+            breadcrumb_schema(
+                [
+                    ("Home", reverse("home")),
+                    ("Communities", reverse("community_discovery")),
+                    (f"c/{post.community.slug}", reverse("community_detail", kwargs={"slug": post.community.slug})),
+                    (post.title, reverse("post_detail", kwargs={"community_slug": post.community.slug, "post_id": post.id, "slug": post.slug})),
+                ]
+            ),
+            discussion_forum_posting_schema(post, comments=comments),
+        ),
     }
 
 

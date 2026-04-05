@@ -6,6 +6,15 @@ from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
+from apps.common.seo import (
+    absolute_url,
+    breadcrumb_schema,
+    canonical_url_for_request,
+    clean_description,
+    collection_page_schema,
+    item_list_schema,
+    serialize_structured_data,
+)
 from apps.moderation.permissions import ModPermission, has_mod_permission
 
 from .forms import CommunityCreateForm, CommunitySettingsForm, CommunityWikiPageForm
@@ -51,6 +60,19 @@ def _render_private_community_denied(request, community, *, primary_href=None, p
 
 def _community_detail_url(community):
     return reverse("community_detail", kwargs={"slug": community.slug})
+
+
+def _post_item_list(posts):
+    return [
+        {
+            "name": post.title,
+            "url": reverse(
+                "post_detail",
+                kwargs={"community_slug": post.community.slug, "post_id": post.id, "slug": post.slug},
+            ),
+        }
+        for post in posts
+    ]
 
 
 @login_required
@@ -149,6 +171,21 @@ def community_discovery(request):
             "query": query,
             "communities": communities[:50],
             "suggested_communities": suggested_communities_for_user(request.user),
+            "seo_title": "Communities — Agora",
+            "seo_description": clean_description(
+                "Browse public and invite-friendly Agora communities by topic, momentum, and recent activity."
+            ),
+            "canonical_url": canonical_url_for_request(request, allowed_query_params=("q",)),
+            "structured_data": serialize_structured_data(
+                breadcrumb_schema([("Home", reverse("home")), ("Communities", reverse("community_discovery"))]),
+                collection_page_schema(
+                    name="Communities",
+                    description=clean_description(
+                        "Browse public and invite-friendly Agora communities by topic, momentum, and recent activity."
+                    ),
+                    url=canonical_url_for_request(request, allowed_query_params=("q",)),
+                ),
+            ),
         },
     )
 
@@ -207,6 +244,30 @@ def community_landing(request, slug):
             "can_join_directly": request.user.is_authenticated and can_join_community(request.user, community),
             "challenge_entries": top_challenge_entries(challenge, limit=6) if challenge else [],
             "challenge_share_links": share_links_for_challenge(challenge) if challenge else None,
+            "seo_title": f"{community.title} — Join c/{community.slug} on Agora",
+            "seo_description": clean_description(
+                community.seo_description or community.description or f"Join c/{community.slug} and explore its best threads, challenge entries, and contributors."
+            ),
+            "canonical_url": canonical_url_for_request(request),
+            "og_image_url": absolute_url(community.banner.url) if community.banner else None,
+            "structured_data": serialize_structured_data(
+                breadcrumb_schema(
+                    [
+                        ("Home", reverse("home")),
+                        ("Communities", reverse("community_discovery")),
+                        (f"c/{community.slug}", reverse("community_detail", kwargs={"slug": community.slug})),
+                        ("Landing", reverse("community_landing", kwargs={"slug": community.slug})),
+                    ]
+                ),
+                collection_page_schema(
+                    name=community.title,
+                    description=clean_description(
+                        community.seo_description or community.description or f"Join c/{community.slug} on Agora."
+                    ),
+                    url=canonical_url_for_request(request),
+                ),
+                item_list_schema(f"Best posts in c/{community.slug}", _post_item_list(best_posts[:10])),
+            ),
         },
     )
 

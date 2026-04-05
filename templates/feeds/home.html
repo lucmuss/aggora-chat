@@ -1,10 +1,11 @@
 {% extends "base.html" %}
-{% block title %}{{ APP_NAME }} — Home{% endblock %}
+{% block title %}{{ seo_title }}{% endblock %}
 {% block content %}
 <div class="lg:flex lg:gap-6">
 
   <!-- Feed -->
   <div class="flex-1 min-w-0 max-w-[640px]">
+    <h1 class="sr-only">{{ seo_title }}</h1>
     {% if user.is_authenticated %}
     {% if first_week_missions %}
     <div class="bg-white border border-gray-200 rounded-g mb-3 overflow-hidden">

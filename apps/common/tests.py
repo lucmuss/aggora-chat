@@ -76,6 +76,13 @@ class CommonFeatureTests(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, text)
 
+    def test_home_includes_canonical_open_graph_and_search_schema(self):
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, 'rel="canonical"')
+        self.assertContains(response, 'property="og:title"')
+        self.assertContains(response, '"SearchAction"')
+
     def test_authenticated_creation_surfaces_render(self):
         self.client.force_login(self.user)
 

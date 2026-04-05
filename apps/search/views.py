@@ -2,6 +2,14 @@ from django.db.models import Q
 from django.shortcuts import render
 from django.urls import reverse
 
+from apps.common.seo import (
+    breadcrumb_schema,
+    canonical_url_for_request,
+    clean_description,
+    collection_page_schema,
+    item_list_schema,
+    serialize_structured_data,
+)
 from apps.accounts.models import User
 from apps.communities.models import Community
 from apps.communities.services import can_view_community
@@ -210,6 +218,41 @@ def search_view(request):
             "post_count": len(posts),
             "community_count": community_count,
             "user_count": user_count,
+            "seo_title": f'Search results for "{query}" — Agora' if query else "Search — Agora",
+            "seo_description": clean_description(
+                f'Search Agora for "{query}" across posts, communities, and people.' if query else "Search posts, communities, and people across Agora."
+            ),
+            "meta_robots": "noindex,follow",
+            "canonical_url": canonical_url_for_request(
+                request,
+                allowed_query_params=("q", "type", "sort", "post_type", "media"),
+            ),
+            "structured_data": serialize_structured_data(
+                breadcrumb_schema([("Home", reverse("home")), ("Search", reverse("search"))]),
+                collection_page_schema(
+                    name="Search",
+                    description=clean_description(
+                        f'Search Agora for "{query}" across posts, communities, and people.' if query else "Search posts, communities, and people across Agora."
+                    ),
+                    url=canonical_url_for_request(
+                        request,
+                        allowed_query_params=("q", "type", "sort", "post_type", "media"),
+                    ),
+                ),
+                item_list_schema(
+                    "Search result posts",
+                    [
+                        {
+                            "name": post.title,
+                            "url": reverse(
+                                "post_detail",
+                                kwargs={"community_slug": post.community.slug, "post_id": post.id, "slug": post.slug},
+                            ),
+                        }
+                        for post in posts[:10]
+                    ],
+                ) if posts else None,
+            ),
         },
     )
 

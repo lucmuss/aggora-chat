@@ -7,6 +7,13 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.common.markdown import render_markdown
+from apps.common.seo import (
+    breadcrumb_schema,
+    canonical_url_for_request,
+    clean_description,
+    profile_page_schema,
+    serialize_structured_data,
+)
 from apps.communities.models import Community
 from apps.communities.services import (
     create_invite_for_community,
@@ -156,6 +163,22 @@ def profile_view(request, handle):
             "joined_communities": joined_communities,
             "recent_activity": recent_activity,
             "referral_stats": referral_summary_for_user(profile_user) if request.user == profile_user else None,
+            "seo_title": f"{profile_user.display_name or profile_user.handle} — Agora profile",
+            "seo_description": clean_description(
+                profile_user.bio or f"Explore posts, comments, and saved threads from u/{profile_user.handle} on Agora."
+            ),
+            "canonical_url": canonical_url_for_request(request, allowed_query_params=("tab",)),
+            "meta_robots": "index,follow" if not visibility_restricted and not is_blocked else "noindex,nofollow",
+            "structured_data": serialize_structured_data(
+                breadcrumb_schema([("Home", reverse("home")), (f"u/{profile_user.handle}", reverse("profile", kwargs={"handle": profile_user.handle}))]),
+                profile_page_schema(
+                    name=profile_user.display_name or profile_user.handle,
+                    description=clean_description(
+                        profile_user.bio or f"Explore posts and comments from u/{profile_user.handle} on Agora."
+                    ),
+                    url=canonical_url_for_request(request, allowed_query_params=("tab",)),
+                ),
+            ),
         },
     )
 

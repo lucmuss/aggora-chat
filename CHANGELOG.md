@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.6] - 2026-04-05
+
+Patch release focused on search-friendly HTML, structured data, and crawlable community and thread surfaces.
+
+### Added
+- Shared SEO helpers for canonical URLs, cleaned descriptions, and structured data generation.
+- JSON-LD for feeds, community pages, profile pages, and discussion threads.
+
+### Changed
+- Base templates now expose canonical, robots, Open Graph, and Twitter metadata with safe defaults.
+- Feed sort controls now use real links with HTMX enhancement so crawlers can discover `Hot`, `New`, `Top`, and `Rising` views.
+- Community, post, profile, and search pages now set page-specific SEO titles and descriptions without changing the visible UI.
+
+### Fixed
+- Search pages now explicitly use `noindex,follow` to avoid low-value search-result indexing.
+- Thread, feed, and community templates now expose clearer semantic sections and breadcrumb structure for crawlers.
+
+### Verified
+- `python3 -m compileall apps config templates static`
+- `uv run python manage.py check`
+- `uv run pytest -q`
+
 ## [0.3.5] - 2026-04-05
 
 Patch release focused on UI resilience, feedback clarity, form polish, and refreshed branding.

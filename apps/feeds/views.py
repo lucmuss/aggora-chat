@@ -2,6 +2,15 @@ from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
+from apps.common.seo import (
+    breadcrumb_schema,
+    canonical_url_for_request,
+    clean_description,
+    collection_page_schema,
+    item_list_schema,
+    organization_schema,
+    serialize_structured_data,
+)
 from apps.communities.models import Community
 from apps.communities.services import (
     active_challenge_for_community,
@@ -32,6 +41,19 @@ RECENT_COMMUNITY_LIMIT = 5
 POPULAR_COMMUNITY_LIMIT = 8
 
 
+def _post_item_list(posts):
+    return [
+        {
+            "name": post.title,
+            "url": reverse(
+                "post_detail",
+                kwargs={"community_slug": post.community.slug, "post_id": post.id, "slug": post.slug},
+            ),
+        }
+        for post in posts
+    ]
+
+
 def home(request):
     sort = request.GET.get("sort", "hot")
     after = request.GET.get("after")
@@ -54,6 +76,7 @@ def home(request):
     first_week_missions = []
     if request.user.is_authenticated:
         first_week_missions = [mission for mission in first_week_missions_for_user(request.user) if not mission.completed]
+    scope_title = "For You" if scope == "all" else ("My Communities" if scope == "communities" else "Following")
     return render(
         request,
         "feeds/home.html",
@@ -69,6 +92,22 @@ def home(request):
             "featured_challenges": featured_challenges_for_user(request.user),
             "following_activity": following_activity_for_user(request.user),
             "first_week_missions": first_week_missions,
+            "seo_title": f"{scope_title} Feed — Agora",
+            "seo_description": clean_description(
+                "Discover trending discussions, new threads, and rising conversations across Agora communities."
+            ),
+            "canonical_url": canonical_url_for_request(request, allowed_query_params=("scope", "sort")),
+            "structured_data": serialize_structured_data(
+                organization_schema(),
+                collection_page_schema(
+                    name=f"{scope_title} feed",
+                    description=clean_description(
+                        "Discover trending discussions, new threads, and rising conversations across Agora communities."
+                    ),
+                    url=canonical_url_for_request(request, allowed_query_params=("scope", "sort")),
+                ),
+                item_list_schema("Home feed threads", _post_item_list(posts[:10])),
+            ),
         },
     )
 
@@ -142,6 +181,28 @@ def community_feed(request, slug):
             "share_links": share_links_for_invite(community, invite),
             "challenge_entries": top_challenge_entries(challenge, limit=6) if challenge else [],
             "owner_dashboard": owner_dashboard,
+            "seo_title": f"{community.title} (c/{community.slug}) — {community.get_community_type_display()} community on Agora",
+            "seo_description": clean_description(
+                community.seo_description or community.description or f"Explore posts, rules, and discussions in c/{community.slug}."
+            ),
+            "canonical_url": canonical_url_for_request(request, allowed_query_params=("sort",)),
+            "structured_data": serialize_structured_data(
+                breadcrumb_schema(
+                    [
+                        ("Home", reverse("home")),
+                        ("Communities", reverse("community_discovery")),
+                        (f"c/{community.slug}", reverse("community_detail", kwargs={"slug": community.slug})),
+                    ]
+                ),
+                collection_page_schema(
+                    name=community.title,
+                    description=clean_description(
+                        community.seo_description or community.description or f"Explore posts in c/{community.slug}."
+                    ),
+                    url=canonical_url_for_request(request, allowed_query_params=("sort",)),
+                ),
+                item_list_schema(f"Posts in c/{community.slug}", _post_item_list(posts[:10])),
+            ),
         },
     )
 
@@ -170,5 +231,21 @@ def popular(request):
             "user_votes": user_votes,
             "saved_posts": saved_posts,
             "communities": communities,
+            "seo_title": "Popular Threads — Agora",
+            "seo_description": clean_description(
+                "Browse the most visible posts across public Agora communities, including hot, new, top, and rising conversations."
+            ),
+            "canonical_url": canonical_url_for_request(request, allowed_query_params=("sort",)),
+            "structured_data": serialize_structured_data(
+                breadcrumb_schema([("Home", reverse("home")), ("Popular", reverse("popular"))]),
+                collection_page_schema(
+                    name="Popular threads",
+                    description=clean_description(
+                        "Browse the most visible posts across public Agora communities."
+                    ),
+                    url=canonical_url_for_request(request, allowed_query_params=("sort",)),
+                ),
+                item_list_schema("Popular threads", _post_item_list(posts[:10])),
+            ),
         },
     )

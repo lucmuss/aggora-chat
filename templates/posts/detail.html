@@ -1,9 +1,17 @@
 {% extends "base.html" %}
 {% load post_tags common_tags %}
-{% block title %}{{ post.title }}{% endblock %}
+{% block title %}{{ seo_title }}{% endblock %}
 {% block content %}
 <div class="lg:flex lg:gap-6">
   <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
+    <nav aria-label="Breadcrumb" class="sr-only">
+      <ol>
+        <li><a href="{% url 'home' %}">Home</a></li>
+        <li><a href="{% url 'community_discovery' %}">Communities</a></li>
+        <li><a href="{% url 'community_detail' slug=post.community.slug %}">c/{{ post.community.slug }}</a></li>
+        <li>{{ post.title }}</li>
+      </ol>
+    </nav>
     <article class="bg-white border border-gray-200 rounded-g flex">
       <div class="w-10 shrink-0 flex flex-col items-center bg-gray-50 rounded-l-g">
         {% include "votes/partials/vote_widget.html" with target=post target_type="post" user_vote=post_user_vote %}
@@ -123,9 +131,9 @@
     </div>
     {% endif %}
 
-    <div class="bg-white border border-gray-200 rounded-g">
+    <section class="bg-white border border-gray-200 rounded-g" aria-labelledby="comments-heading">
       <div class="flex items-center gap-2 px-4 h-10 border-b border-gray-100">
-        <h2 class="font-semibold text-sm text-gray-900">Comments</h2>
+        <h2 id="comments-heading" class="font-semibold text-sm text-gray-900">Comments</h2>
         <div class="flex items-center gap-0.5 ml-4">
           <a href="?sort=top" class="h-7 px-2.5 flex items-center rounded text-xs font-medium transition-colors {% if sort == 'top' %}text-primary bg-primary-light{% else %}text-gray-500 hover:bg-gray-100{% endif %}">Top</a>
           <a href="?sort=new" class="h-7 px-2.5 flex items-center rounded text-xs font-medium transition-colors {% if sort == 'new' %}text-primary bg-primary-light{% else %}text-gray-500 hover:bg-gray-100{% endif %}">New</a>
@@ -138,7 +146,7 @@
           <p class="text-sm text-gray-400 text-center py-4">No comments yet. Be the first!</p>
         {% endif %}
       </div>
-    </div>
+    </section>
   </div>
 
   <aside class="hidden lg:block w-80 shrink-0 space-y-3">

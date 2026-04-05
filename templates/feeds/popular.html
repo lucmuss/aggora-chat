@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Popular — {{ APP_NAME }}{% endblock %}
+{% block title %}{{ seo_title }}{% endblock %}
 {% block content %}
 <div class="lg:flex lg:gap-6">
   <div class="flex-1 min-w-0 max-w-[640px]">
@@ -14,11 +14,12 @@
       </div>
     </div>
     {% include "feeds/partials/sort_tabs.html" with sort=sort %}
-    <div id="feed-container" class="space-y-3">
+    <section id="feed-container" class="space-y-3" aria-labelledby="popular-feed-heading">
+      <h2 id="popular-feed-heading" class="sr-only">Popular threads sorted by {{ sort }}</h2>
       <div id="feed-container-inner">
         {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No popular posts yet" empty_copy="As communities grow, this feed will surface the strongest threads globally." %}
       </div>
-    </div>
+    </section>
   </div>
   <aside class="w-full lg:w-80 shrink-0 space-y-3 mt-6 lg:mt-0">
     {% if communities %}

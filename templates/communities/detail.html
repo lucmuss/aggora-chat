@@ -1,8 +1,15 @@
 {% extends "base.html" %}
-{% block title %}c/{{ community.slug }} — {{ APP_NAME }}{% endblock %}
+{% block title %}{{ seo_title }}{% endblock %}
 {% block content %}
 <div class="lg:flex lg:gap-6">
   <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
+    <nav aria-label="Breadcrumb" class="sr-only">
+      <ol>
+        <li><a href="{% url 'home' %}">Home</a></li>
+        <li><a href="{% url 'community_discovery' %}">Communities</a></li>
+        <li>c/{{ community.slug }}</li>
+      </ol>
+    </nav>
     <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
       <div class="h-20 bg-gradient-to-r from-opal to-teal-600"></div>
       <div class="px-4 pb-4">
@@ -116,11 +123,12 @@
     </div>
     {% endif %}
     {% include "feeds/partials/sort_tabs.html" with sort=sort %}
-    <div id="feed-container" class="space-y-3">
+    <section id="feed-container" class="space-y-3" aria-labelledby="community-feed-heading">
+      <h2 id="community-feed-heading" class="sr-only">Posts in c/{{ community.slug }} sorted by {{ sort }}</h2>
       <div id="feed-container-inner">
         {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Write the first post to start this community." %}
       </div>
-    </div>
+    </section>
   </div>
 
   <aside class="hidden lg:block w-80 shrink-0 space-y-3">

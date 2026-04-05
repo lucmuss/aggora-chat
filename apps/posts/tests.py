@@ -63,6 +63,25 @@ class PostFlowTests(TestCase):
         self.assertEqual(Comment.objects.count(), 1)
         self.assertEqual(post.comment_count, 1)
 
+    def test_post_detail_includes_discussion_forum_posting_schema(self):
+        post = Post.objects.create(
+            community=self.community,
+            author=self.user,
+            post_type="text",
+            title="SEO thread",
+            body_md="Body",
+        )
+
+        response = self.client.get(
+            reverse(
+                "post_detail",
+                kwargs={"community_slug": self.community.slug, "post_id": post.id, "slug": post.slug},
+            )
+        )
+
+        self.assertContains(response, '"DiscussionForumPosting"')
+        self.assertContains(response, 'rel="canonical"')
+
     def test_home_feed_renders_post(self):
         Post.objects.create(
             community=self.community,
