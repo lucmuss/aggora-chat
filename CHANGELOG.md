@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.1] - 2026-04-05
+
+Release focused on backend quality, regression protection, and release hardening.
+
+### Added
+- Direct pytest coverage for account models, forms, middleware, security helpers, and views.
+- Direct pytest coverage for community models, forms, services, privacy flows, invite flows, and URLs.
+- Direct pytest coverage for post models, forms, services, views, vote tasks, and vote endpoints.
+- Direct pytest coverage for moderation services, moderation views, search backends, API serializers/views, feed caching, infrastructure helpers, admin surfaces, template tags, and workflow/security regressions.
+
+### Changed
+- API search now forwards `post_type` and `media` filters to the active discovery backend.
+
+### Verified
+- `uv run pytest -q`
+
 ## [0.3.0] - 2026-04-02
 
 Production-readiness pass focused on security hardening, account settings, API/web parity, richer demo seeding, and operational stability.
