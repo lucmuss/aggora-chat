@@ -26,7 +26,7 @@ PROJECT_SLUG = env_str("PROJECT_SLUG", "aggora_chat")
 APP_NAME = env_str("APP_NAME", "Agora")
 APP_TAGLINE = env_str("APP_TAGLINE", "communities first")
 APP_PUBLIC_URL = env_str("APP_PUBLIC_URL", "").rstrip("/")
-APP_VERSION = env_str("APP_VERSION", "0.3.7")
+APP_VERSION = env_str("APP_VERSION", "0.3.8")
 SEED_USERS_FILE = env_str("SEED_USERS_FILE", "data/seed/users.json")
 SEED_ADMINS_FILE = env_str("SEED_ADMINS_FILE", "data/seed/admins.json")
 SEED_COMMUNITIES_FILE = env_str("SEED_COMMUNITIES_FILE", "data/seed/communities.json")
@@ -73,6 +73,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "apps.common.middleware.CanonicalHostMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",

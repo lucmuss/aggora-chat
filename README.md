@@ -2,9 +2,18 @@
 
 `aggora-chat` is a Django-based community platform in the style of a modern, server-rendered Reddit-like product.
 
-Target domain:
+Primary production domain:
+
+- `https://aggora.org`
+
+Legacy / migration domain:
 
 - `https://aggora.kolibri-kollektiv.eu`
+
+Current production routing:
+
+- `https://www.aggora.org` is intended to redirect permanently to `https://aggora.org`
+- Cloudflare Tunnel terminates the public hostname and forwards the web app to the stack on port `18080`
 
 The app currently includes:
 
@@ -68,6 +77,8 @@ If you want the full stack with supporting services, there are also Docker compo
 
 The compose files inject container-friendly defaults themselves, so local `.env` values do not need to point at a Docker-only database host unless you want that behavior outside Docker.
 The default stack is now SQL-first and runs without Redis.
+
+For production routing with Cloudflare Tunnel, see [`docs/cloudflare-migration-aggora-org.md`](/srv/projects/web/aggora-chat/docs/cloudflare-migration-aggora-org.md).
 
 ## Test
 

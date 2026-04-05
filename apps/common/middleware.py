@@ -1,7 +1,33 @@
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 from django.core.cache import cache
+from django.http import HttpResponsePermanentRedirect
 from django.http import HttpResponse, JsonResponse
+from django.conf import settings
+
+
+class CanonicalHostMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        canonical_base = getattr(settings, "APP_PUBLIC_URL", "").strip()
+        if not canonical_base:
+            return self.get_response(request)
+
+        parsed = urlsplit(canonical_base)
+        canonical_host = parsed.netloc
+        request_host = request.get_host()
+
+        # Only normalize the common www -> apex case for the configured public host.
+        if canonical_host and request_host == f"www.{canonical_host}":
+            path = request.get_full_path()
+            redirect_url = f"{parsed.scheme or 'https'}://{canonical_host}{path}"
+            return HttpResponsePermanentRedirect(redirect_url)
+
+        return self.get_response(request)
 
 
 class SimpleRateLimitMiddleware:

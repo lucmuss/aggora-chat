@@ -18,8 +18,8 @@ services:
       APP_PUBLIC_URL: ${APP_PUBLIC_URL}
       APP_NAME: ${APP_NAME:-Agora}
       APP_TAGLINE: ${APP_TAGLINE:-communities first}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,192.168.178.46,aggora.kolibri-kollektiv.eu,hp-home-server.tail74f4f2.ts.net}
-      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://127.0.0.1:18080,http://192.168.178.46:18080,https://aggora.kolibri-kollektiv.eu}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,192.168.178.46,aggora.kolibri-kollektiv.eu,aggora.org,www.aggora.org,hp-home-server.tail74f4f2.ts.net}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://127.0.0.1:18080,http://192.168.178.46:18080,https://aggora.kolibri-kollektiv.eu,https://aggora.org,https://www.aggora.org}
       EMAIL_DELIVERY_MODE: ${EMAIL_DELIVERY_MODE:-console}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-info@kolibri-kollektiv.eu}
       AUTO_MIGRATE_ON_START: ${AUTO_MIGRATE_ON_START:-1}

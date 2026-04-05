@@ -10,7 +10,7 @@ from django.test import RequestFactory
 from apps.accounts.models import Notification
 from apps.common.celery import dispatch_task
 from apps.common.context_processors import branding
-from apps.common.middleware import SimpleRateLimitMiddleware
+from apps.common.middleware import CanonicalHostMiddleware, SimpleRateLimitMiddleware
 
 User = get_user_model()
 
@@ -28,6 +28,27 @@ def make_user(**overrides):
 
 @pytest.mark.django_db
 class TestCommonInfrastructure:
+    def test_canonical_host_middleware_redirects_www_to_apex(self, settings):
+        settings.APP_PUBLIC_URL = "https://aggora.org"
+        settings.ALLOWED_HOSTS = ["aggora.org", "www.aggora.org"]
+        middleware = CanonicalHostMiddleware(lambda request: HttpResponse("ok"))
+        request = RequestFactory().get("/c/freya-seed-lounge/?sort=top", HTTP_HOST="www.aggora.org")
+
+        response = middleware(request)
+
+        assert response.status_code == 301
+        assert response["Location"] == "https://aggora.org/c/freya-seed-lounge/?sort=top"
+
+    def test_canonical_host_middleware_allows_canonical_host(self, settings):
+        settings.APP_PUBLIC_URL = "https://aggora.org"
+        settings.ALLOWED_HOSTS = ["aggora.org", "www.aggora.org"]
+        middleware = CanonicalHostMiddleware(lambda request: HttpResponse("ok"))
+        request = RequestFactory().get("/popular/", HTTP_HOST="aggora.org")
+
+        response = middleware(request)
+
+        assert response.status_code == 200
+
     def test_rate_limit_middleware_does_not_throttle_get_requests(self):
         cache.clear()
         middleware = SimpleRateLimitMiddleware(lambda request: HttpResponse("ok"))

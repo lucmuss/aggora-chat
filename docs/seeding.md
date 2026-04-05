@@ -2,6 +2,10 @@
 
 This repository uses JSON-backed seed data for local development, screenshots, and QA.
 
+For production QA against the live site, prefer the canonical host:
+
+- `https://aggora.org`
+
 ## Canonical Seed Files
 
 - [`data/seed/users.json`](/srv/projects/web/aggora-chat/data/seed/users.json)

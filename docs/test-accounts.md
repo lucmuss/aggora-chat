@@ -2,6 +2,10 @@
 
 These accounts are seeded by `python manage.py seed` and by the container startup flow when `AUTO_SEED_ON_START=1`.
 
+Primary production sign-in URL:
+
+- `https://aggora.org/accounts/login/`
+
 ## Demo Users
 
 | Role | Email | Password | Handle |

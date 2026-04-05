@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.8] - 2026-04-05
+
+Patch release focused on the `aggora.org` production cutover, Cloudflare Tunnel routing, and documentation consistency.
+
+### Added
+- A dedicated Cloudflare migration runbook for the new canonical production domain.
+
+### Changed
+- Production documentation now treats `https://aggora.org` as the canonical public host and keeps the former `aggora.kolibri-kollektiv.eu` address as a legacy migration domain.
+- Stack defaults now include `aggora.org` and `www.aggora.org` in the host and CSRF allow-lists.
+
+### Fixed
+- Added canonical-host redirect middleware so `www.aggora.org` can collapse onto the apex domain once the new image is deployed.
+- Updated test coverage for the new host-normalization behavior.
+
+### Verified
+- `python3 -m compileall apps config templates`
+- `uv run pytest -q`
+
 ## [0.3.7] - 2026-04-05
 
 Patch release focused on mobile navigation, mobile sharing, and more thumb-friendly feed interactions.

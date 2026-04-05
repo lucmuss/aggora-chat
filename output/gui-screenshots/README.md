@@ -9,3 +9,7 @@ uv run python scripts/generate_screenshots.py
 ```
 
 The generator writes desktop and mobile captures for the configured routes into this directory.
+
+For live verification after deploys, capture the canonical production host when possible:
+
+- `https://aggora.org`
