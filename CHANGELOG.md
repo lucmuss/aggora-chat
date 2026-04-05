@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.2] - 2026-04-05
+
+Patch release focused on GitHub CI reliability and repo-wide lint cleanup.
+
+### Changed
+- GitHub Actions now installs dependencies via `uv venv` plus `uv pip install -r requirements/dev.txt`.
+- The CI test job now runs `pytest` against the dedicated test settings instead of relying on the ambient management-command environment.
+- The Bandit job now excludes repo test files and test-only settings to avoid false-positive failures in CI.
+- Ruff configuration and repo code were cleaned up so the lint job passes consistently.
+
+### Fixed
+- Resolved the broken import in the legacy search tests that blocked full pytest collection.
+
+### Verified
+- `uv run ruff check .`
+- `uv run bandit -q -r apps config scripts -x 'apps/*/test*.py,apps/*/tests.py,config/settings/test.py' -s B105`
+- `uv run pytest -q`
+
 ## [0.3.1] - 2026-04-05
 
 Release focused on backend quality, regression protection, and release hardening.
