@@ -54,7 +54,8 @@
         {% if user == comment.author and not comment.author_deleted_at %}
           <form method="post" action="{% url 'delete_comment' comment_id=comment.id %}">
             {% csrf_token %}
-            <button type="submit" class="h-6 px-2 flex items-center rounded text-xs font-medium text-red-600 hover:bg-red-50 transition-colors ml-1">Delete</button>
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" onclick="return confirm('Delete this comment? You can undo it shortly afterwards.')" class="h-6 px-2 flex items-center rounded text-xs font-medium text-red-600 hover:bg-red-50 transition-colors ml-1">Delete</button>
           </form>
         {% endif %}
       </div>

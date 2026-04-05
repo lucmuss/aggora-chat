@@ -1,7 +1,9 @@
 import re
+from urllib.parse import urlencode
 
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
+from django.urls import reverse
 
 from .security import user_requires_mfa
 
@@ -57,5 +59,5 @@ class StaffMfaEnforcementMiddleware:
             or bool(self._wiki_edit_pattern.match(request.path))
         )
         if sensitive_path and user_requires_mfa(request.user):
-            return redirect("account_mfa_setup")
+            return redirect(f"{reverse('account_mfa_setup')}?{urlencode({'next': request.path})}")
         return self.get_response(request)

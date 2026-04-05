@@ -1,10 +1,20 @@
 <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+  {% load static %}
   <div class="max-w-[1200px] mx-auto flex flex-wrap items-center gap-3 px-4 py-2 sm:h-12 sm:flex-nowrap">
 
     <!-- Logo: OPAL = Marke -->
-    <a href="/" class="flex items-center gap-2 shrink-0 hover:no-underline">
-      <div class="w-7 h-7 rounded-lg bg-opal flex items-center justify-center text-white font-bold text-sm">A</div>
-      <span class="font-sans font-medium text-base text-gray-900">{{ APP_NAME }}</span>
+    <a href="/" class="flex items-center shrink-0 hover:no-underline" aria-label="{{ APP_NAME }} home">
+      <img
+        src="{% static 'icons/agora-logo.svg' %}"
+        alt="{{ APP_NAME }}"
+        class="hidden sm:block h-9 w-auto"
+      >
+      <img
+        src="{% static 'icons/agora-icon.svg' %}"
+        alt=""
+        aria-hidden="true"
+        class="block sm:hidden h-8 w-8 rounded-lg"
+      >
     </a>
 
     <!-- Search -->

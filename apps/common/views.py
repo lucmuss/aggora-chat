@@ -116,3 +116,7 @@ def markdown_preview(request):
 @require_GET
 def offline_page(request):
     return render(request, "offline.html", status=200)
+
+
+def not_found_page(request, exception):
+    return render(request, "404.html", status=404)

@@ -218,7 +218,7 @@ def first_week_missions_for_user(user: User):
             title="Share one thread",
             detail="Pass along a thread you like so the loop grows beyond the app.",
             completed=progress["has_shared_post"],
-            action_url=reverse("home"),
+            action_url=reverse("popular"),
             action_label="Pick a thread",
         ),
         FirstWeekMission(
@@ -226,7 +226,7 @@ def first_week_missions_for_user(user: User):
             title="Join a challenge",
             detail="Challenges are the fastest way to meet people with the same taste.",
             completed=progress["has_challenge"],
-            action_url=reverse("home"),
+            action_url=f"{reverse('home')}#featured-challenges",
             action_label="View challenges",
         ),
         FirstWeekMission(

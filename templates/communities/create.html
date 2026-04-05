@@ -62,6 +62,11 @@
           <div class="w-full">
             {{ field }}
           </div>
+          {% if field.name == "name" %}
+          <div id="community-name-check" class="mt-1 min-h-[1rem]"></div>
+          {% elif field.name == "slug" %}
+          <div id="community-slug-check" class="mt-1 min-h-[1rem]"></div>
+          {% endif %}
           {% if field.help_text %}<p class="text-xs text-gray-500 mt-1.5">{{ field.help_text|safe }}</p>{% endif %}
           {% if field.errors %}<p class="text-xs text-red-500 mt-1">{{ field.errors.as_text }}</p>{% endif %}
           {% if field.name == "sidebar_md" %}

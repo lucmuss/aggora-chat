@@ -123,7 +123,9 @@ class TestPostViews:
 
         response = client.post(reverse("create_comment", kwargs={"post_id": post.id}), {"body_md": ""})
 
-        assert response.status_code == 400
+        assert response.status_code == 200
+        assert "Comment body is required." in response.content.decode()
+        assert Comment.objects.filter(post=post).count() == 0
 
     def test_create_comment_htmx_returns_partial(self, client):
         user = make_user(username="comment_htmx", email="comment_htmx@example.com", handle="comment_htmx")

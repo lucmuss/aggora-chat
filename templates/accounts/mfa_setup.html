@@ -10,6 +10,12 @@
       <h1 class="text-xl font-semibold text-gray-900">Authenticator-based two-factor authentication</h1>
       <p class="text-sm text-gray-500 mt-1">Use an authenticator app to protect moderator and admin actions with a six-digit code.</p>
     </div>
+    {% if required_for_admin %}
+    <div class="rounded-g border border-amber-200 bg-amber-50 px-4 py-3">
+      <p class="text-sm font-medium text-amber-900">Admin access needs 2FA first.</p>
+      <p class="text-xs text-amber-800 mt-1">You were redirected here because the Django admin is protected behind two-factor authentication. Finish this setup once and the admin area will open normally on your next visit.</p>
+    </div>
+    {% endif %}
     <div class="bg-white border border-gray-200 rounded-g p-5 space-y-4">
       <div class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium {% if mfa_enabled %}border-green-200 bg-green-50 text-green-700{% else %}border-amber-200 bg-amber-50 text-amber-700{% endif %}">
         <span class="w-2 h-2 rounded-full {% if mfa_enabled %}bg-green-500{% else %}bg-amber-500{% endif %}"></span>

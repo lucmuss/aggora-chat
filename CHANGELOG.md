@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.5] - 2026-04-05
+
+Patch release focused on UI resilience, feedback clarity, form polish, and refreshed branding.
+
+### Added
+- Live availability checks for community names and slugs during community creation.
+- A new Agora wordmark logo in the top-left header.
+
+### Changed
+- Global flash messages now use clearer success, warning, and error styling.
+- Account settings now group notification controls more clearly and explain avatar upload limits.
+- MFA setup now explains when two-factor authentication is required before admin access.
+
+### Fixed
+- Empty comment submissions now stay on the thread with inline validation instead of falling into a broken error flow.
+- Duplicate comment submits are now guarded when users click the submit action repeatedly.
+- Post and comment delete flows now provide confirmation and clear success feedback.
+- First-week onboarding actions now point to working destinations for thread discovery and challenges.
+- The header branding now uses the provided Agora logo instead of the placeholder mark.
+
+### Verified
+- `python3 -m compileall apps config templates static`
+- `uv run pytest -q`
+
 ## [0.3.4] - 2026-04-05
 
 Patch release focused on UI polish and trust-building fixes across account, discovery, profile, and sharing surfaces.

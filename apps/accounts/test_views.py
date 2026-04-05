@@ -238,6 +238,16 @@ class TestAccountViews:
         assert response.status_code == 200
         assert "code" in response.context["form"].errors
 
+    def test_mfa_setup_explains_admin_requirement_when_next_points_to_admin(self, client):
+        user = make_user(username="mfaadminhint", email="mfaadminhint@example.com", handle="mfaadminhint", is_staff=True)
+        client.force_login(user)
+
+        response = client.get(reverse("account_mfa_setup"), {"next": "/admin/"})
+
+        assert response.status_code == 200
+        assert response.context["required_for_admin"] is True
+        assert "Admin access needs 2FA first." in response.content.decode()
+
     def test_mfa_disable_requires_post(self, client):
         user = make_user(username="mfadisable", email="mfadisable@example.com", handle="mfadisable")
         client.force_login(user)

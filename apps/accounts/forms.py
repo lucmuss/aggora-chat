@@ -58,6 +58,17 @@ class AccountSettingsForm(forms.ModelForm):
             ),
         }
 
+    def clean_avatar(self):
+        avatar = self.cleaned_data.get("avatar")
+        if not avatar:
+            return avatar
+        content_type = getattr(avatar, "content_type", "")
+        if content_type and not content_type.startswith("image/"):
+            raise forms.ValidationError("Upload a valid image file for your avatar.")
+        if getattr(avatar, "size", 0) > 2 * 1024 * 1024:
+            raise forms.ValidationError("Avatar images must be 2 MB or smaller.")
+        return avatar
+
 
 class TotpVerificationForm(forms.Form):
     code = forms.CharField(

@@ -152,7 +152,7 @@ class TestStaffMfaEnforcementMiddleware:
         response = middleware(request)
 
         assert response.status_code == 302
-        assert response.url.endswith("/accounts/mfa/")
+        assert response.url.startswith("/accounts/mfa/?next=")
 
     @pytest.mark.parametrize(
         "path",

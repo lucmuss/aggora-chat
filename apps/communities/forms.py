@@ -1,4 +1,5 @@
 from django import forms
+from django.urls import reverse_lazy
 
 from .models import Community, CommunityWikiPage
 from .starter_kits import STARTER_KITS, STARTER_KIT_MAP
@@ -57,6 +58,25 @@ class CommunityCreateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.starter_kits = STARTER_KITS
+        field_check_url = reverse_lazy("community_validate_field")
+        self.fields["name"].widget.attrs.update(
+            {
+                "hx-get": field_check_url,
+                "hx-trigger": "keyup changed delay:300ms, blur",
+                "hx-target": "#community-name-check",
+                "hx-swap": "innerHTML",
+                "hx-vals": '{"field":"name"}',
+            }
+        )
+        self.fields["slug"].widget.attrs.update(
+            {
+                "hx-get": field_check_url,
+                "hx-trigger": "keyup changed delay:300ms, blur",
+                "hx-target": "#community-slug-check",
+                "hx-swap": "innerHTML",
+                "hx-vals": '{"field":"slug"}',
+            }
+        )
 
     def clean_name(self):
         return (self.cleaned_data.get("name") or "").strip()

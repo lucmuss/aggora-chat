@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
-from django.http import HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -63,6 +63,27 @@ def create_community(request):
     else:
         form = CommunityCreateForm()
     return render(request, "communities/create.html", {"form": form})
+
+
+@login_required
+def validate_community_field(request):
+    field = (request.GET.get("field") or "").strip()
+    value = (request.GET.get(field) or "").strip()
+
+    if field not in {"name", "slug"}:
+        return HttpResponse("", status=204)
+    if not value:
+        return HttpResponse("", status=204)
+
+    lookup = {f"{field}__iexact": value}
+    exists = Community.objects.filter(**lookup).exists()
+    if exists:
+        return HttpResponse(
+            '<span class="text-xs text-red-600">Already taken. Try another one.</span>'
+        )
+    return HttpResponse(
+        '<span class="text-xs text-green-700">Available.</span>'
+    )
 
 
 @login_required

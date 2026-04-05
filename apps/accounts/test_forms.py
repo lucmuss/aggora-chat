@@ -1,5 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.accounts.allauth_forms import StyledResetPasswordForm, StyledResetPasswordKeyForm
 from apps.accounts.forms import (
@@ -100,6 +101,27 @@ class TestAccountSettingsForm:
 
         assert attrs["data-rich-markdown"] == "true"
         assert attrs["data-markdown-preview-target"] == "account-bio-preview"
+
+    def test_account_settings_rejects_avatar_larger_than_two_mb(self):
+        oversized = SimpleUploadedFile("avatar.png", b"x" * (2 * 1024 * 1024 + 1), content_type="image/png")
+        user = make_user(username="avatar", email="avatar@example.com", handle="avatar")
+        form = AccountSettingsForm(
+            data={
+                "display_name": "Avatar User",
+                "bio": "",
+                "profile_visibility": User.ProfileVisibility.PUBLIC,
+                "email_notifications_enabled": "",
+                "push_notifications_enabled": "",
+                "notify_on_replies": "",
+                "notify_on_follows": "",
+                "notify_on_challenges": "",
+            },
+            files={"avatar": oversized},
+            instance=user,
+        )
+
+        assert form.is_valid() is False
+        assert "avatar" in form.errors
 
 
 class TestTotpVerificationForm:

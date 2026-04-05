@@ -446,7 +446,7 @@ class HandleSetupTests(TestCase):
 
         response = self.client.get("/admin/")
 
-        self.assertRedirects(response, reverse("account_mfa_setup"))
+        self.assertRedirects(response, f"{reverse('account_mfa_setup')}?next=%2Fadmin%2F")
 
     def test_mfa_setup_enables_totp_for_staff(self):
         user = User.objects.create_user(

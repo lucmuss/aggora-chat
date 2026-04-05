@@ -424,6 +424,7 @@ def mfa_setup_view(request):
             "totp_uri": build_totp_uri(request.user),
             "totp_secret": request.user.mfa_totp_secret,
             "mfa_enabled": request.user.mfa_totp_enabled,
+            "required_for_admin": (request.GET.get("next") or "").startswith("/admin/"),
         },
     )
 

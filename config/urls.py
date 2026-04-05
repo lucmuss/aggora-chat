@@ -1,4 +1,4 @@
-from apps.common.views import healthz, markdown_preview, offline_page, service_worker, web_manifest
+from apps.common.views import healthz, markdown_preview, not_found_page, offline_page, service_worker, web_manifest
 from apps.feeds.views import home, popular
 from django.conf import settings
 from django.conf.urls.static import static
@@ -26,3 +26,5 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+handler404 = not_found_page

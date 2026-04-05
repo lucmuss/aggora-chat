@@ -109,6 +109,19 @@ class TestCommunityViews:
         assert "communityies found" not in response.content.decode()
         assert "communities found" in response.content.decode()
 
+    def test_validate_community_field_reports_taken_and_available_values(self, client):
+        user = make_user(username="validate_slug_user", email="validate_slug_user@example.com", handle="validate_slug_user")
+        client.force_login(user)
+        make_community("taken-slug")
+
+        taken_response = client.get(reverse("community_validate_field"), {"field": "slug", "slug": "taken-slug"})
+        free_response = client.get(reverse("community_validate_field"), {"field": "slug", "slug": "fresh-slug"})
+
+        assert taken_response.status_code == 200
+        assert "Already taken" in taken_response.content.decode()
+        assert free_response.status_code == 200
+        assert "Available" in free_response.content.decode()
+
     def test_community_settings_requires_permission(self, client):
         owner = make_user(username="settings_owner", email="settings_owner@example.com", handle="settings_owner")
         outsider = make_user(username="settings_outsider", email="settings_outsider@example.com", handle="settings_outsider")

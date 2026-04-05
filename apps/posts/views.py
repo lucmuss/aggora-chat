@@ -1,7 +1,9 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from apps.communities.models import Community
@@ -23,6 +25,57 @@ from .services import (
     submit_poll_vote,
     submit_post,
 )
+
+
+def _build_post_detail_context(request, post, *, sort=None, comment_body_md="", comment_error=None, status_code=200):
+    sort = sort or request.GET.get("sort", "top")
+    comments = build_comment_tree(post, sort=sort, user=request.user)
+    post_votes, saved_posts = annotate_posts_with_user_state([post], request.user)
+    poll_vote = None
+    if request.user.is_authenticated and hasattr(post, "poll"):
+        poll_vote = PollVote.objects.filter(poll=post.poll, user=request.user).select_related("option").first()
+    comment_votes = {}
+    if request.user.is_authenticated and comments:
+        visible_ids = []
+
+        def flatten(items):
+            for item in items:
+                visible_ids.append(item.id)
+                flatten(getattr(item, "children", []))
+
+        flatten(comments)
+        comment_votes = dict(
+            Vote.objects.filter(user=request.user, comment_id__in=visible_ids).values_list("comment_id", "value")
+        )
+
+    return {
+        "post": post,
+        "comments": comments,
+        "sort": sort,
+        "post_user_vote": post_votes.get(post.id, 0),
+        "is_saved": post.id in saved_posts,
+        "comment_votes": comment_votes,
+        "poll_vote": poll_vote,
+        "joined": request.user.is_authenticated and post.community.memberships.filter(user=request.user).exists(),
+        "share_links": share_links_for_post(post),
+        "onboarding_reply_prompt": request.GET.get("reply") == "1",
+        "welcome_prompt": request.GET.get("welcome") == "1",
+        "comment_body_md": comment_body_md,
+        "comment_error": comment_error,
+        "status_code": status_code,
+    }
+
+
+def _render_post_detail_response(request, post, *, sort=None, comment_body_md="", comment_error=None, status_code=200):
+    context = _build_post_detail_context(
+        request,
+        post,
+        sort=sort,
+        comment_body_md=comment_body_md,
+        comment_error=comment_error,
+        status_code=status_code,
+    )
+    return render(request, "posts/detail.html", context, status=status_code)
 
 
 @login_required
@@ -55,7 +108,9 @@ def create_post(request, community_slug):
                 poll_lines=form.cleaned_data.get("poll_option_lines"),
                 crosspost_source_id=request.POST.get("crosspost_parent_id"),
             )
+            messages.success(request, "Thread published.")
             return redirect("post_detail", community_slug=community.slug, post_id=post.id, slug=post.slug)
+        messages.error(request, "Please fix the highlighted fields before publishing your thread.")
     else:
         initial = {}
         if crosspost_source is not None:
@@ -94,43 +149,7 @@ def post_detail(request, community_slug, post_id, slug=None):
         return HttpResponseForbidden("This thread has been removed by its author.")
     if not can_view_community(request.user, post.community):
         return HttpResponseForbidden("This private community is only visible to members.")
-    sort = request.GET.get("sort", "top")
-    comments = build_comment_tree(post, sort=sort, user=request.user)
-    post_votes, saved_posts = annotate_posts_with_user_state([post], request.user)
-    poll_vote = None
-    if request.user.is_authenticated and hasattr(post, "poll"):
-        poll_vote = PollVote.objects.filter(poll=post.poll, user=request.user).select_related("option").first()
-    comment_votes = {}
-    if request.user.is_authenticated and comments:
-        visible_ids = []
-
-        def flatten(items):
-            for item in items:
-                visible_ids.append(item.id)
-                flatten(getattr(item, "children", []))
-
-        flatten(comments)
-        comment_votes = dict(
-            Vote.objects.filter(user=request.user, comment_id__in=visible_ids).values_list("comment_id", "value")
-        )
-
-    return render(
-        request,
-        "posts/detail.html",
-        {
-            "post": post,
-            "comments": comments,
-            "sort": sort,
-            "post_user_vote": post_votes.get(post.id, 0),
-            "is_saved": post.id in saved_posts,
-            "comment_votes": comment_votes,
-            "poll_vote": poll_vote,
-            "joined": request.user.is_authenticated and post.community.memberships.filter(user=request.user).exists(),
-            "share_links": share_links_for_post(post),
-            "onboarding_reply_prompt": request.GET.get("reply") == "1",
-            "welcome_prompt": request.GET.get("welcome") == "1",
-        },
-    )
+    return _render_post_detail_response(request, post)
 
 
 @login_required
@@ -144,20 +163,53 @@ def create_comment(request, post_id):
 
     body = (request.POST.get("body_md") or "").strip()
     if not body:
-        return HttpResponseBadRequest("Comment body is required.")
+        messages.error(request, "Write a comment before you post it.")
+        return _render_post_detail_response(
+            request,
+            post,
+            comment_error="Comment body is required.",
+            comment_body_md=request.POST.get("body_md") or "",
+            status_code=200,
+        )
+
+    parent_id = request.POST.get("parent_id") or None
+    recent_duplicate = Comment.objects.filter(
+        post=post,
+        author=request.user,
+        body_md=body,
+        parent_id=parent_id,
+        author_deleted_at__isnull=True,
+        created_at__gte=timezone.now() - timezone.timedelta(seconds=15),
+    ).first()
+    if recent_duplicate:
+        messages.info(request, "That comment was already posted a moment ago.")
+        return redirect(
+            "post_detail",
+            community_slug=post.community.slug,
+            post_id=post.id,
+            slug=post.slug,
+        )
 
     try:
         comment = submit_comment(
             user=request.user,
             post=post,
             body_md=body,
-            parent_id=request.POST.get("parent_id"),
+            parent_id=parent_id,
         )
     except ValueError as e:
-        return HttpResponseForbidden(str(e))
+        messages.error(request, str(e))
+        return _render_post_detail_response(
+            request,
+            post,
+            comment_error=str(e),
+            comment_body_md=request.POST.get("body_md") or "",
+            status_code=200,
+        )
 
     if request.htmx:
         return render(request, "posts/partials/comment.html", {"comment": comment, "comment_votes": {comment.id: 1}})
+    messages.success(request, "Comment posted.")
     return redirect("post_detail", community_slug=post.community.slug, post_id=post.id, slug=post.slug)
 
 
@@ -186,7 +238,9 @@ def delete_post(request, post_id):
     if post.author_id != request.user.id:
         return HttpResponseForbidden("Only the author can remove this thread.")
     soft_delete_post(post)
-    return redirect("profile", handle=request.user.handle)
+    messages.success(request, "Thread deleted. You can undo it from the thread page if you change your mind.")
+    next_url = request.POST.get("next") or reverse("profile", kwargs={"handle": request.user.handle})
+    return redirect(next_url)
 
 
 @login_required
@@ -208,12 +262,16 @@ def delete_comment(request, comment_id):
     if comment.author_id != request.user.id:
         return HttpResponseForbidden("Only the author can remove this comment.")
     soft_delete_comment(comment)
-    return redirect(
+    messages.success(request, "Comment deleted. You can undo it from the thread page if you change your mind.")
+    next_url = request.POST.get("next") or reverse(
         "post_detail",
-        community_slug=comment.post.community.slug,
-        post_id=comment.post.id,
-        slug=comment.post.slug,
+        kwargs={
+            "community_slug": comment.post.community.slug,
+            "post_id": comment.post.id,
+            "slug": comment.post.slug,
+        },
     )
+    return redirect(next_url)
 
 
 @login_required
