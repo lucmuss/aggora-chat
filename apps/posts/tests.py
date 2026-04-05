@@ -1,13 +1,12 @@
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
-from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.communities.models import Community
 from apps.votes.models import Vote
 
 from .models import Comment, Post
-
 
 User = get_user_model()
 

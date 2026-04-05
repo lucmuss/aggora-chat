@@ -19,7 +19,6 @@ from apps.votes.tasks import recalculate_post_vote_totals
 
 from .models import Comment, Poll, PollOption, PollVote, Post
 
-
 EPOCH = datetime(2005, 12, 8, 7, 46, 43, tzinfo=timezone.utc)
 POST_SORT_MAP = {
     "hot": ["-hot_score", "-created_at"],
@@ -55,7 +54,7 @@ def submit_post(user, community, post_data: dict, poll_lines: list[str] = None, 
     )
     if post.post_type == Post.PostType.CROSSPOST and crosspost_source_id:
         post.crosspost_parent = get_object_or_404(Post.objects.visible(), pk=crosspost_source_id)
-    
+
     post.save()
 
     if post.post_type == Post.PostType.POLL and poll_lines:
@@ -91,7 +90,7 @@ def submit_comment(user, post: Post, body_md: str, parent_id: str | None = None)
     comment.upvote_count = 1
     comment.score = 1
     comment.save(update_fields=["upvote_count", "score", "body_html"])
-    
+
     Post.objects.filter(pk=post.pk).update(comment_count=models.F("comment_count") + 1)
     dispatch_task(recalculate_post_vote_totals, post.id)
     create_reengagement_notifications(comment)
@@ -183,15 +182,9 @@ def pg_feed_queryset(user, community=None, sort="hot", scope="all"):
     if user is not None and user.is_authenticated and community is None:
         followed_users = list(user.followed_users.values_list("id", flat=True))
         if scope == "communities":
-            if memberships:
-                queryset = queryset.filter(community_id__in=memberships)
-            else:
-                queryset = queryset.none()
+            queryset = queryset.filter(community_id__in=memberships) if memberships else queryset.none()
         elif scope == "following":
-            if followed_users:
-                queryset = queryset.filter(author_id__in=followed_users)
-            else:
-                queryset = queryset.none()
+            queryset = queryset.filter(author_id__in=followed_users) if followed_users else queryset.none()
         else:
             engaged_community_ids = set()
             engaged_community_ids.update(

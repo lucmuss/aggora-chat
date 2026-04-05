@@ -1,4 +1,3 @@
-import types
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -10,7 +9,6 @@ from apps.search.backends import FeedResult, SQLDiscoveryBackend, get_discovery_
 from apps.search.queries import community_feed_results, home_feed_results, popular_feed_results
 from apps.search.services import search_posts
 from apps.search.tasks import index_post_task
-
 
 User = get_user_model()
 

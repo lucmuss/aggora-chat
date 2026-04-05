@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.urls import resolve, reverse
 
 from apps.communities.models import Community, CommunityMembership
-from apps.moderation.models import Ban, ModAction, ModMail, ModQueueItem, RemovalReason, Report
+from apps.moderation.models import ModAction, ModMail, ModQueueItem, RemovalReason, Report
 from apps.moderation.services import (
     create_mod_mail,
     create_mod_mail_reply,
@@ -12,7 +12,6 @@ from apps.moderation.services import (
     submit_report,
 )
 from apps.posts.models import Comment, Post
-
 
 User = get_user_model()
 

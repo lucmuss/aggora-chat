@@ -1,9 +1,8 @@
 import pytest
+from django.contrib.auth import get_user_model
 
 from apps.communities.forms import CommunityCreateForm, CommunitySettingsForm, CommunityWikiPageForm
 from apps.communities.models import Community
-from django.contrib.auth import get_user_model
-
 
 User = get_user_model()
 

@@ -15,7 +15,6 @@ from apps.communities.models import (
     UserFlair,
 )
 
-
 User = get_user_model()
 
 

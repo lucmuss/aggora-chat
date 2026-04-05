@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+from config.env import env_str
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-
-from config.env import env_str
 
 from apps.accounts.seed_utils import ensure_account
 

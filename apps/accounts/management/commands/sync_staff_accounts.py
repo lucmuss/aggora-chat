@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from config.env import env_str
 from django.core.management.base import BaseCommand
 
-from config.env import env_str
-
-from apps.communities.models import Community, CommunityMembership
 from apps.accounts.seed_utils import ensure_account
+from apps.communities.models import Community, CommunityMembership
 
 
 class Command(BaseCommand):

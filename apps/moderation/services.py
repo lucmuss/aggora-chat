@@ -77,7 +77,7 @@ def execute_mod_action(
         post_id=post_id or None,
         comment_id=comment_id or None,
     ).order_by("-created_at").first()
-    
+
     if queue_item:
         queue_item.status = (
             ModQueueItem.Status.REMOVED if "remove" in action_type else ModQueueItem.Status.APPROVED
@@ -124,7 +124,7 @@ def submit_report(
         details=details,
         queue_item=queue_item,
     )
-    
+
     return report, community, post, comment
 
 
@@ -146,7 +146,7 @@ def execute_ban(
             "expires_at": timezone.now() + timedelta(days=duration_days) if duration_days else None,
         },
     )
-    
+
     ModAction.objects.create(
         community=community,
         moderator=moderator,
@@ -155,7 +155,7 @@ def execute_ban(
         reason_text=reason,
         details_json={"duration_days": duration_days, "permanent": duration_days == 0},
     )
-    
+
     return ban
 
 

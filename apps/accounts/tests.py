@@ -2,10 +2,8 @@ import time
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.test import override_settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
-
 from django.utils import timezone
 
 from apps.communities.models import Community, CommunityChallenge
@@ -15,6 +13,7 @@ from apps.votes.models import SavedPost, Vote
 
 from .models import Notification, UserBadge
 from .security import _totp_at, generate_totp_secret
+
 User = get_user_model()
 
 

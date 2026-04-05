@@ -1,10 +1,10 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.utils import timezone
 
 from apps.accounts.models import AgentIdentityProvider, Notification, UserBadge
-
 
 User = get_user_model()
 
@@ -41,7 +41,7 @@ class TestUserModel:
 
         for handle in invalid_handles:
             user = User(username=f"user_{handle}", email=f"{hash(handle)}@example.com", handle=handle)
-            with pytest.raises(Exception):
+            with pytest.raises(ValidationError):
                 user.full_clean()
 
     def test_default_account_flags_are_set(self):
@@ -69,7 +69,7 @@ class TestAgentIdentityProviderModel:
 
     def test_default_status_and_ordering(self):
         later = AgentIdentityProvider.objects.create(name="Zulu", issuer_url="https://zulu.example")
-        earlier = AgentIdentityProvider.objects.create(name="Alpha", issuer_url="https://alpha.example")
+        AgentIdentityProvider.objects.create(name="Alpha", issuer_url="https://alpha.example")
 
         assert later.status == AgentIdentityProvider.Status.PENDING
         assert list(AgentIdentityProvider.objects.values_list("name", flat=True)) == ["Alpha", "Zulu"]

@@ -21,7 +21,6 @@ from apps.posts.services import (
 )
 from apps.votes.models import SavedPost, Vote
 
-
 User = get_user_model()
 
 

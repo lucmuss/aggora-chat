@@ -1,6 +1,5 @@
 import os
 
-
 # Keep pytest independent from local docker-compose hostnames like `db`.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 os.environ["DATABASE_URL"] = os.environ.get("PYTEST_DATABASE_URL", "sqlite:////tmp/aggora_pytest.sqlite3")

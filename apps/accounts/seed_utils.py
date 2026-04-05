@@ -8,10 +8,16 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from apps.communities.models import Community, CommunityChallenge, CommunityMembership, CommunityRule, CommunityWikiPage, PostFlair
+from apps.communities.models import (
+    Community,
+    CommunityChallenge,
+    CommunityMembership,
+    CommunityRule,
+    CommunityWikiPage,
+    PostFlair,
+)
 from apps.posts.models import Comment, Poll, PollOption, Post
 from apps.votes.models import SavedPost, Vote
-
 
 User = get_user_model()
 
@@ -501,7 +507,7 @@ def seed_demo_accounts(
                     defaults={"role": community_role},
                 )
 
-        for email, user in users_by_email.items():
+        for _email, user in users_by_email.items():
             if user.is_staff:
                 continue
             CommunityMembership.objects.get_or_create(

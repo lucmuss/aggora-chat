@@ -4,10 +4,9 @@ from django.utils import timezone
 
 from apps.communities.models import Community, CommunityMembership
 from apps.moderation.forms import ModMailCreateForm, ModMailReplyForm, RemovalReasonForm
-from apps.moderation.models import Ban, CommunityAgentSettings, ModMail, ModMailMessage, RemovalReason
+from apps.moderation.models import Ban, CommunityAgentSettings, ModMail, ModMailMessage
 from apps.moderation.permissions import ModPermission, has_mod_permission
 from apps.moderation.utils import is_user_banned
-
 
 User = get_user_model()
 

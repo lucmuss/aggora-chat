@@ -1,11 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-
 from django.utils import timezone
 
 from apps.accounts.models import UserBadge
-from apps.posts.models import Comment, Post
+from apps.posts.models import Post
 
 from .models import (
     Community,
@@ -15,7 +14,6 @@ from .models import (
     CommunityMembership,
     CommunityWikiPage,
 )
-
 
 User = get_user_model()
 

@@ -1,5 +1,6 @@
-from celery import shared_task
 from django.conf import settings
+
+from celery import shared_task
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=5)
@@ -8,6 +9,7 @@ def index_post_task(self, post_id):
         return
     try:
         from apps.posts.models import Post
+
         from .documents import PostDocument
 
         post = Post.objects.for_listing().get(pk=post_id)
@@ -16,4 +18,4 @@ def index_post_task(self, post_id):
     except Exception as exc:  # pragma: no cover
         if settings.DEBUG:
             return
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc

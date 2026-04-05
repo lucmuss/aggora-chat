@@ -6,7 +6,6 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.models import User
 from apps.communities.models import Community
-from apps.posts.models import Comment, Post
 
 from .forms import ModMailCreateForm, ModMailReplyForm, RemovalReasonForm
 from .models import ModAction, ModMail, ModQueueItem
@@ -67,7 +66,7 @@ def mod_action(request, community_slug):
         raise PermissionDenied
 
     action_type = request.POST.get("action_type")
-    
+
     try:
         execute_mod_action(
             moderator=request.user,
@@ -98,7 +97,7 @@ def report_content(request):
             details=request.POST.get("details", "")
         )
     except ObjectDoesNotExist:
-        raise PermissionDenied
+        raise PermissionDenied from None
 
     if request.htmx:
         return render(request, "moderation/partials/report_success.html")
@@ -160,7 +159,7 @@ def mod_mail_thread(request, community_slug, thread_id):
     community = get_object_or_404(Community, slug=community_slug)
     thread = get_object_or_404(ModMail.objects.filter(community=community), pk=thread_id)
     is_mod = has_mod_permission(request.user, community, ModPermission.MOD_MAIL)
-    
+
     if not (is_mod or request.user == thread.created_by):
         raise PermissionDenied
 

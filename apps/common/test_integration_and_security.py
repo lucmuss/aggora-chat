@@ -8,7 +8,6 @@ from apps.moderation.models import ModAction, ModQueueItem
 from apps.posts.models import Post
 from apps.votes.models import SavedPost, Vote
 
-
 User = get_user_model()
 
 

@@ -1,4 +1,4 @@
-from .backends import get_discovery_backend, parse_search_query
+from .backends import get_discovery_backend
 
 
 def search_posts(raw_query, sort="relevance", after=None, *, post_type="", media=""):

@@ -1,5 +1,7 @@
-from django import template
+import datetime
 
+from django import template
+from django.utils import timezone
 
 register = template.Library()
 
@@ -30,10 +32,8 @@ def pairs(data):
     Example: ['a', 'b', 'c', 'd'] -> [('a', 'b'), ('c', 'd')]
     """
     it = iter(data)
-    return zip(it, it)
+    return zip(it, it, strict=False)
 
-from django.utils import timezone
-import datetime
 
 @register.filter
 def timesince_compact(dt):

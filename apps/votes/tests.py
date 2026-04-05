@@ -7,7 +7,6 @@ from apps.posts.models import Post
 
 from .models import SavedPost, Vote
 
-
 User = get_user_model()
 
 

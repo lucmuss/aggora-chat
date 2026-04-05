@@ -7,7 +7,6 @@ from apps.posts.models import Post
 
 from .models import Ban, ModAction, ModQueueItem, RemovalReason, Report
 
-
 User = get_user_model()
 
 

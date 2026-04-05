@@ -6,7 +6,6 @@ from django.utils import timezone
 from apps.communities.models import Community
 from apps.posts.models import Comment, Poll, PollOption, PollVote, Post
 
-
 User = get_user_model()
 
 

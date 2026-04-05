@@ -1,3 +1,5 @@
+from config.env import env_bool, env_int
+
 from .base import *  # noqa: F403,F401
 
 DEBUG = False

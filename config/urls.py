@@ -1,10 +1,9 @@
+from apps.common.views import healthz, markdown_preview, offline_page, service_worker, web_manifest
+from apps.feeds.views import home, popular
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-
-from apps.common.views import healthz, markdown_preview, offline_page, service_worker, web_manifest
-from apps.feeds.views import home, popular
 
 urlpatterns = [
     path("healthz/", healthz, name="healthz"),

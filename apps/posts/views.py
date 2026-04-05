@@ -9,14 +9,14 @@ from apps.moderation.utils import is_user_banned
 from apps.votes.models import Vote
 
 from .forms import PostCreateForm
-from .models import Comment, Poll, PollOption, PollVote, Post
+from .models import Poll, PollVote, Post
 from .services import (
     annotate_posts_with_user_state,
     build_comment_tree,
+    share_links_for_post,
     submit_comment,
     submit_poll_vote,
     submit_post,
-    share_links_for_post,
 )
 
 

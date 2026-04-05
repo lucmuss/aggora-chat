@@ -2,9 +2,14 @@ import pytest
 from django.contrib.auth import get_user_model
 
 from apps.accounts.allauth_forms import StyledResetPasswordForm, StyledResetPasswordKeyForm
-from apps.accounts.forms import AccountSettingsForm, HandleSetupForm, SignupForm, StartWithFriendsForm, TotpVerificationForm
+from apps.accounts.forms import (
+    AccountSettingsForm,
+    HandleSetupForm,
+    SignupForm,
+    StartWithFriendsForm,
+    TotpVerificationForm,
+)
 from apps.communities.models import Community
-
 
 User = get_user_model()
 

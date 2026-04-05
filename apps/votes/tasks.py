@@ -1,14 +1,15 @@
-from celery import shared_task
 from django.db.models import Count, Q, Sum
 
 from apps.common.celery import dispatch_task
 from apps.search.tasks import index_post_task
+from celery import shared_task
 
 
 @shared_task
 def recalculate_post_vote_totals(post_id):
     from apps.posts.models import Post
     from apps.posts.services import hot_score
+
     from .models import Vote
 
     totals = Vote.objects.filter(post_id=post_id).aggregate(
@@ -27,6 +28,7 @@ def recalculate_post_vote_totals(post_id):
 @shared_task
 def recalculate_comment_vote_totals(comment_id):
     from apps.posts.models import Comment
+
     from .models import Vote
 
     totals = Vote.objects.filter(comment_id=comment_id).aggregate(
@@ -43,6 +45,7 @@ def recalculate_comment_vote_totals(comment_id):
 @shared_task
 def recalculate_karma(user_id):
     from apps.accounts.models import User
+
     from .models import Vote
 
     post_karma = Vote.objects.filter(post__author_id=user_id, post__isnull=False).aggregate(total=Sum("value"))["total"] or 0

@@ -3,8 +3,13 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.communities.models import Community, CommunityChallenge, CommunityInvite, CommunityMembership, CommunityWikiPage
-
+from apps.communities.models import (
+    Community,
+    CommunityChallenge,
+    CommunityInvite,
+    CommunityMembership,
+    CommunityWikiPage,
+)
 
 User = get_user_model()
 

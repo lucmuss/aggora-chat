@@ -7,7 +7,6 @@ from django.utils import timezone
 from apps.communities.models import Community, CommunityMembership
 from apps.posts.models import Comment, Post
 
-
 User = get_user_model()
 
 

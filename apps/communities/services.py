@@ -30,7 +30,7 @@ def submit_community(creator: User, form) -> Community:
     community = form.save(commit=False)
     community.creator = creator
     community.save()
-    
+
     CommunityMembership.objects.create(
         user=creator,
         community=community,

@@ -1,5 +1,7 @@
-import pytest
 import json
+
+import pytest
+from config.env import _normalize_env_value, env_bool, env_float, env_int, env_list, env_str
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.http import HttpResponse
@@ -9,8 +11,6 @@ from apps.accounts.models import Notification
 from apps.common.celery import dispatch_task
 from apps.common.context_processors import branding
 from apps.common.middleware import SimpleRateLimitMiddleware
-from config.env import _normalize_env_value, env_bool, env_float, env_int, env_list, env_str
-
 
 User = get_user_model()
 

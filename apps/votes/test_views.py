@@ -6,7 +6,6 @@ from apps.communities.models import Community
 from apps.posts.models import Comment, Post
 from apps.votes.models import SavedPost, Vote
 
-
 User = get_user_model()
 
 

@@ -2,6 +2,7 @@ from django import forms
 from django.db import models
 
 from apps.communities.models import Community
+
 from .models import User
 
 

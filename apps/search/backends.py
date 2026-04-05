@@ -6,11 +6,11 @@ import re
 from dataclasses import dataclass
 
 from django.conf import settings
-from django.db.models import Case, IntegerField, Q as DjangoQ, Value, When
+from django.db.models import Case, IntegerField, Value, When
+from django.db.models import Q as DjangoQ
 
 from apps.posts.models import Post
 from apps.posts.services import apply_post_sort, pg_feed_queryset
-
 
 OPERATOR_MAP = {
     "author": "author__handle__iexact",

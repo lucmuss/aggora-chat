@@ -43,7 +43,6 @@ from apps.communities.services import (
 from apps.posts.models import Comment, Post
 from apps.votes.models import SavedPost, Vote
 
-
 User = get_user_model()
 
 

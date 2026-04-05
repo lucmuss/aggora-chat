@@ -6,7 +6,6 @@ from django.urls import reverse
 from apps.communities.models import Community
 from apps.posts.models import Post
 
-
 User = get_user_model()
 
 

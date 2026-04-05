@@ -1,7 +1,6 @@
 import bleach
 import markdown
 
-
 ALLOWED_TAGS = [
     "a",
     "blockquote",

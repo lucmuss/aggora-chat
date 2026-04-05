@@ -8,7 +8,6 @@ from apps.posts.models import Comment, Post
 
 from .models import User, UserBadge
 
-
 BADGE_META = {
     UserBadge.BadgeCode.PROFILE_READY: {
         "title": "Profile Ready",

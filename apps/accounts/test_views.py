@@ -5,8 +5,6 @@ from django.urls import reverse
 
 from apps.accounts.models import Notification
 from apps.communities.models import Community, CommunityInvite, CommunityMembership
-from apps.posts.models import Post
-
 
 User = get_user_model()
 

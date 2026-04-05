@@ -6,8 +6,7 @@ from django.utils import timezone
 
 from apps.communities.models import Community, CommunityMembership
 from apps.moderation.models import Ban
-from apps.posts.models import Comment, Poll, PollOption, Post
-
+from apps.posts.models import Poll, PollOption, Post
 
 User = get_user_model()
 

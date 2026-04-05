@@ -6,7 +6,6 @@ from apps.posts.models import Comment, Post
 from apps.votes.models import Vote
 from apps.votes.tasks import recalculate_comment_vote_totals, recalculate_karma, recalculate_post_vote_totals
 
-
 User = get_user_model()
 
 

@@ -12,7 +12,6 @@ from apps.communities.models import Community, CommunityMembership
 from apps.posts.models import Comment, Poll, PollOption, Post
 from apps.votes.models import Vote
 
-
 User = get_user_model()
 
 

@@ -4,11 +4,12 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
+from apps.common.templatetags.common_tags import contains, get_item, pairs, split
+from apps.common.templatetags.common_tags import timesince_compact as common_timesince
 from apps.communities.models import Community
-from apps.common.templatetags.common_tags import contains, get_item, pairs, split, timesince_compact as common_timesince
 from apps.posts.models import Post
-from apps.posts.templatetags.post_tags import display_score, timesince_compact as post_timesince
-
+from apps.posts.templatetags.post_tags import display_score
+from apps.posts.templatetags.post_tags import timesince_compact as post_timesince
 
 User = get_user_model()
 

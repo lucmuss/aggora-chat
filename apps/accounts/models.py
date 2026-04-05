@@ -2,7 +2,6 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.db import models
 
-
 handle_validator = RegexValidator(
     regex=r"^[a-z0-9_]{3,30}$",
     message="Use 3-30 lowercase letters, numbers, or underscores.",

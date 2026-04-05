@@ -3,14 +3,13 @@ from __future__ import annotations
 import json
 
 from django.conf import settings
-from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render
 from django.templatetags.static import static
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.common.markdown import render_markdown
-
 
 PWA_BACKGROUND_COLOR = "#F9FAFB"
 PWA_THEME_COLOR = "#0D9488"

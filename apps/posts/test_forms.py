@@ -6,7 +6,6 @@ from apps.communities.models import Community, PostFlair
 from apps.posts.forms import PostCreateForm
 from apps.posts.models import Post
 
-
 User = get_user_model()
 
 

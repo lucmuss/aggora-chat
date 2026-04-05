@@ -1,5 +1,6 @@
-from apps.feeds.views import community_feed
 from django.urls import path
+
+from apps.feeds.views import community_feed
 
 from . import views
 

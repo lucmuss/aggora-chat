@@ -23,7 +23,7 @@ select = [
     "C4",   # flake8-comprehensions
     "SIM",  # flake8-simplify
 ]
-ignore = ["E501", "W503", "E402"]
+ignore = ["E501", "E402"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]

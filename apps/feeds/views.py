@@ -14,13 +14,13 @@ from apps.communities.services import (
     share_links_for_invite,
     suggested_communities_for_user,
 )
-from apps.moderation.permissions import ModPermission, has_mod_permission
 from apps.feeds.caching import (
     community_feed_cache_key,
     get_cached_feed,
     popular_feed_cache_key,
     set_cached_feed,
 )
+from apps.moderation.permissions import ModPermission, has_mod_permission
 from apps.posts.services import annotate_posts_with_user_state
 from apps.search.queries import community_feed_results, home_feed_results, popular_feed_results
 

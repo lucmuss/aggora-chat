@@ -55,11 +55,14 @@ def profile_view(request, handle):
 
     profile_user = get_object_or_404(User, handle=handle)
     visibility_restricted = False
-    if request.user != profile_user:
-        if profile_user.profile_visibility == User.ProfileVisibility.PRIVATE:
-            visibility_restricted = True
-        elif profile_user.profile_visibility == User.ProfileVisibility.MEMBERS and not request.user.is_authenticated:
-            visibility_restricted = True
+    if request.user != profile_user and (
+        profile_user.profile_visibility == User.ProfileVisibility.PRIVATE
+        or (
+            profile_user.profile_visibility == User.ProfileVisibility.MEMBERS
+            and not request.user.is_authenticated
+        )
+    ):
+        visibility_restricted = True
     is_blocked = False
     is_following = False
     if request.user.is_authenticated and request.user != profile_user:

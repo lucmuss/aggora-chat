@@ -1,14 +1,11 @@
 from django.contrib.auth import get_user_model
-from django.test import override_settings
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .backends import get_discovery_backend
 from apps.communities.models import Community
 from apps.posts.models import Post
 
-from .services import parse_search_query
-
+from .backends import get_discovery_backend, parse_search_query
 
 User = get_user_model()
 

@@ -6,9 +6,14 @@ from django.http import HttpResponse
 from django.test import RequestFactory
 
 from apps.accounts.middleware import HandleRequiredMiddleware, StaffMfaEnforcementMiddleware
-from apps.accounts.security import build_totp_uri, generate_totp_secret, normalize_totp_code, user_requires_mfa, verify_totp
+from apps.accounts.security import (
+    build_totp_uri,
+    generate_totp_secret,
+    normalize_totp_code,
+    user_requires_mfa,
+    verify_totp,
+)
 from apps.communities.models import Community, CommunityMembership
-
 
 User = get_user_model()
 

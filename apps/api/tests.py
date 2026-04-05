@@ -1,8 +1,8 @@
-from django.contrib.auth import get_user_model
-from django.urls import reverse
-from django.core.files.uploadedfile import SimpleUploadedFile
 from io import BytesIO
 
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
 from PIL import Image
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
@@ -10,7 +10,6 @@ from rest_framework.test import APITestCase
 from apps.communities.models import Community, CommunityMembership
 from apps.moderation.models import CommunityAgentSettings, ModAction, ModQueueItem
 from apps.posts.models import PollVote, Post
-
 
 User = get_user_model()
 
