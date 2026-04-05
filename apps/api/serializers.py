@@ -81,16 +81,39 @@ class CommentSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     total_karma = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
+    badges = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["handle", "display_name", "bio", "post_karma", "comment_karma", "total_karma", "is_agent", "avatar_url"]
+        fields = [
+            "handle",
+            "display_name",
+            "bio",
+            "post_karma",
+            "comment_karma",
+            "total_karma",
+            "is_agent",
+            "avatar_url",
+            "profile_visibility",
+            "mfa_totp_enabled",
+            "badges",
+        ]
 
     def get_total_karma(self, obj):
         return obj.total_karma()
 
     def get_avatar_url(self, obj):
         return obj.avatar.url if obj.avatar else None
+
+    def get_badges(self, obj):
+        return [
+            {
+                "code": badge.code,
+                "title": badge.title,
+                "icon": badge.icon,
+            }
+            for badge in obj.badges.all()[:8]
+        ]
 
 
 class SearchCommunitySerializer(serializers.ModelSerializer):

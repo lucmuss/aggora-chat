@@ -6,10 +6,11 @@ from .models import Post
 
 
 class PostCreateForm(forms.ModelForm):
-    poll_options = forms.CharField(
+    poll_option_lines = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={"rows": 5, "placeholder": "One option per line"}),
         help_text="For poll posts, add one option per line.",
+        label="Poll options",
     )
 
     class Meta:
@@ -45,8 +46,8 @@ class PostCreateForm(forms.ModelForm):
         body_md = (cleaned_data.get("body_md") or "").strip()
         url = cleaned_data.get("url")
         image = cleaned_data.get("image")
-        poll_options = self.cleaned_data.get("poll_options") or ""
-        option_lines = [line.strip() for line in poll_options.splitlines() if line.strip()]
+        poll_option_lines = self.cleaned_data.get("poll_option_lines") or ""
+        option_lines = [line.strip() for line in poll_option_lines.splitlines() if line.strip()]
         if post_type == Post.PostType.TEXT and not body_md:
             self.add_error("body_md", "Text posts need a body.")
         if post_type == Post.PostType.TEXT and not self.community.allow_text_posts:
@@ -63,9 +64,9 @@ class PostCreateForm(forms.ModelForm):
             if not self.community.allow_polls:
                 self.add_error("post_type", "Polls are disabled in this community.")
             if len(option_lines) < 2:
-                self.add_error("poll_options", "Polls need at least two options.")
+                self.add_error("poll_option_lines", "Polls need at least two options.")
             if len(option_lines) > 6:
-                self.add_error("poll_options", "Polls support up to six options.")
+                self.add_error("poll_option_lines", "Polls support up to six options.")
         if self.community.require_post_flair and not cleaned_data.get("flair"):
             self.add_error("flair", "This community requires a post flair.")
         cleaned_data["poll_option_lines"] = option_lines

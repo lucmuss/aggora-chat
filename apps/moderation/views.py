@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -124,12 +125,18 @@ def ban_user(request, community_slug):
         raise PermissionDenied
 
     target_user = get_object_or_404(User, handle=request.POST.get("handle"))
-    
+    try:
+        duration_days = int(request.POST.get("duration", 0) or 0)
+    except (TypeError, ValueError):
+        return HttpResponseBadRequest("Duration must be a whole number of days.")
+    if duration_days < 0:
+        return HttpResponseBadRequest("Duration cannot be negative.")
+
     ban = execute_ban(
         moderator=request.user,
         community=community,
         target_user=target_user,
-        duration_days=int(request.POST.get("duration", 0) or 0),
+        duration_days=duration_days,
         reason=request.POST.get("reason", ""),
     )
 

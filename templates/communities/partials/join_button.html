@@ -1,6 +1,6 @@
 {% if user.is_authenticated %}
-  <form method="post" action="/c/{{ community.slug }}/toggle-join/"
-        hx-post="/c/{{ community.slug }}/toggle-join/"
+  <form method="post" action="{% url 'toggle_membership' slug=community.slug %}"
+        hx-post="{% url 'toggle_membership' slug=community.slug %}"
         hx-target="this" hx-swap="outerHTML">
     {% csrf_token %}
     <button type="submit"
@@ -10,7 +10,7 @@
     </button>
   </form>
 {% else %}
-  <a href="/accounts/login/" class="block w-full h-8 flex items-center justify-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
+  <a href="{% url 'account_login' %}" class="block w-full h-8 flex items-center justify-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
     Log in to join
   </a>
 {% endif %}

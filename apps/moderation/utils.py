@@ -11,7 +11,9 @@ def is_user_banned(user, community):
         return False
     if ban.is_permanent:
         return True
-    if ban.expires_at and ban.expires_at > timezone.now():
+    if ban.expires_at is None:
+        return True
+    if ban.expires_at > timezone.now():
         return True
     ban.delete()
     return False

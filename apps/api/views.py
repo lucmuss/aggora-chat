@@ -180,7 +180,9 @@ class PostCreateAPIView(APIView):
         payload = request.data.copy()
         poll_options = payload.get("poll_options")
         if isinstance(poll_options, (list, tuple)):
-            payload["poll_options"] = "\n".join(str(option).strip() for option in poll_options if str(option).strip())
+            payload["poll_option_lines"] = "\n".join(str(option).strip() for option in poll_options if str(option).strip())
+        elif poll_options is not None and "poll_option_lines" not in payload:
+            payload["poll_option_lines"] = poll_options
         form = PostCreateForm(payload, request.FILES, community=community)
         if not form.is_valid():
             return Response({"errors": form.errors}, status=status.HTTP_400_BAD_REQUEST)

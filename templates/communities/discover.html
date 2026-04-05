@@ -6,7 +6,7 @@
     <div class="bg-white border border-gray-200 rounded-g p-4">
       <h1 class="font-semibold text-lg text-gray-900 mb-0.5">Browse Communities</h1>
       <p class="text-xs text-gray-400 mb-3">{{ communities|length }} community{% if communities|length != 1 %}ies{% endif %} found</p>
-      <form method="get" action="/c/">
+      <form method="get" action="{% url 'community_discovery' %}">
         <div class="relative">
           <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2"/>
@@ -19,7 +19,7 @@
     {% if communities %}
       <div class="space-y-2">
         {% for community in communities %}
-          <a href="/c/{{ community.slug }}/" class="bg-white border border-gray-200 rounded-g p-4 flex items-start gap-3 hover:border-gray-300 transition-colors block group">
+          <a href="{% url 'community_detail' slug=community.slug %}" class="bg-white border border-gray-200 rounded-g p-4 flex items-start gap-3 hover:border-gray-300 transition-colors block group">
             <div class="w-10 h-10 rounded-full bg-opal-muted text-opal flex items-center justify-center text-sm font-medium shrink-0">
               {{ community.name|first|upper }}
             </div>
@@ -44,7 +44,7 @@
     <div class="bg-white border border-gray-200 rounded-g p-4">
       <h2 class="font-semibold text-sm text-opal mb-2">Start a Community</h2>
       <p class="text-xs text-gray-500 mb-3">Build a space for discussions around any topic.</p>
-      <a href="/c/create/" class="block w-full h-8 flex items-center justify-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
+      <a href="{% url 'create_community' %}" class="block w-full h-8 flex items-center justify-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors">
         Create Community
       </a>
     </div>

@@ -190,6 +190,19 @@ class PublicApiTests(APITestCase):
         self.assertEqual(response.data["communities"][0]["slug"], self.community.slug)
         self.assertEqual(response.data["users"][0]["handle"], self.user.handle)
 
+    def test_user_profile_api_includes_visibility_mfa_and_badges(self):
+        self.user.profile_visibility = User.ProfileVisibility.MEMBERS
+        self.user.mfa_totp_enabled = True
+        self.user.save(update_fields=["profile_visibility", "mfa_totp_enabled"])
+        self.user.badges.create(code="first_steps", title="First Steps", description="Started", icon="➜")
+
+        response = self.client.get(reverse("api_user_profile", kwargs={"handle": self.user.handle}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["profile_visibility"], User.ProfileVisibility.MEMBERS)
+        self.assertTrue(response.data["mfa_totp_enabled"])
+        self.assertEqual(response.data["badges"][0]["code"], "first_steps")
+
     def test_authenticated_post_create_api_works(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
 

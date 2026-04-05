@@ -11,7 +11,7 @@ from django.utils import timezone
 from apps.communities.models import Community, CommunityChallenge
 from apps.posts.models import Comment, Post
 from apps.posts.services import submit_comment, submit_post
-from apps.votes.models import SavedPost
+from apps.votes.models import SavedPost, Vote
 
 from .models import Notification, UserBadge
 from .security import _totp_at, generate_totp_secret
@@ -185,8 +185,51 @@ class HandleSetupTests(TestCase):
 
         self.assertRedirects(
             response,
-            f"/c/{community.slug}/post/{post.id}/{post.slug}/?reply=1&welcome=1",
+            f"{reverse('post_detail', kwargs={'community_slug': community.slug, 'post_id': post.id, 'slug': post.slug})}?reply=1&welcome=1",
             fetch_redirect_response=False,
+        )
+
+    def test_profile_comments_tab_shows_comment_vote_state(self):
+        viewer = User.objects.create_user(
+            username="commentviewer",
+            email="commentviewer@example.com",
+            password="password123",
+            handle="commentviewer",
+        )
+        author = User.objects.create_user(
+            username="commentauthor",
+            email="commentauthor@example.com",
+            password="password123",
+            handle="commentauthor",
+        )
+        community = Community.objects.create(
+            name="Agora Comment Profiles",
+            slug="agora-comment-profiles",
+            title="Agora Comment Profiles",
+            description="Comment profile tests.",
+            creator=author,
+        )
+        post = Post.objects.create(
+            community=community,
+            author=author,
+            post_type="text",
+            title="Comment target",
+            body_md="Body",
+        )
+        comment = Comment.objects.create(post=post, author=author, body_md="Profile comment", body_html="<p>Profile comment</p>")
+        Vote.objects.create(user=viewer, comment=comment, value=Vote.VoteType.UPVOTE)
+        self.client.force_login(viewer)
+
+        response = self.client.get(reverse("profile", kwargs={"handle": author.handle}), {"tab": "comments"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Profile comment")
+        self.assertContains(
+            response,
+            reverse(
+                "post_detail",
+                kwargs={"community_slug": community.slug, "post_id": post.id, "slug": post.slug},
+            ),
         )
 
     def test_notifications_page_marks_reply_notifications_as_read(self):

@@ -112,7 +112,7 @@ class PostFlowTests(TestCase):
             {
                 "post_type": "poll",
                 "title": "Choose one",
-                "poll_options": "Alpha\nBeta\nGamma",
+                "poll_option_lines": "Alpha\nBeta\nGamma",
             },
         )
 

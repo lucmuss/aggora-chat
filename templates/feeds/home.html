@@ -47,7 +47,8 @@
     {% include "feeds/partials/sort_tabs.html" with sort=sort scope=scope %}
     <div id="feed-container" class="space-y-3" aria-live="polite">
       <div id="feed-container-inner">
-        {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Create the first post in one of your communities to start the feed." empty_cta_url='/c/create/' empty_cta_label='Start a community' %}
+        {% url 'create_community' as create_community_url %}
+        {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No posts yet" empty_copy="Create the first post in one of your communities to start the feed." empty_cta_url=create_community_url empty_cta_label='Start a community' %}
       </div>
     </div>
   </div>
@@ -61,12 +62,12 @@
         <p class="font-semibold text-white">Welcome to {{ APP_NAME }}</p>
         <p class="text-white/75 text-xs mt-0.5">{{ APP_TAGLINE|default:"communities first" }}</p>
         <div class="mt-4 space-y-2">
-          <a href="/c/create/"
+          <a href="{% url 'create_community' %}"
             class="block w-full py-2 text-center rounded-g bg-white text-opal text-sm font-medium hover:bg-opal-light transition-colors">
             Create Community
           </a>
           {% if not user.is_authenticated %}
-          <a href="/accounts/login/"
+          <a href="{% url 'account_login' %}"
             class="block w-full py-2 text-center rounded-g bg-white/15 text-white text-sm font-medium border border-white/30 hover:bg-white/25 transition-colors">
             Sign In
           </a>
@@ -83,7 +84,7 @@
       </div>
       <div class="divide-y divide-gray-100">
         {% for community in communities|slice:":8" %}
-        <a href="/c/{{ community.slug }}/"
+        <a href="{% url 'community_detail' slug=community.slug %}"
           class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
           <!-- Community avatar = OPAL -->
           <div

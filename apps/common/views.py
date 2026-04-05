@@ -6,9 +6,14 @@ from django.conf import settings
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from django.templatetags.static import static
+from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.common.markdown import render_markdown
+
+
+PWA_BACKGROUND_COLOR = "#F9FAFB"
+PWA_THEME_COLOR = "#0D9488"
 
 
 @require_GET
@@ -25,16 +30,17 @@ def healthz(request):
 
 @require_GET
 def web_manifest(request):
+    home_url = reverse("home")
     payload = {
         "name": settings.APP_NAME,
         "short_name": settings.APP_NAME,
         "description": settings.APP_TAGLINE,
-        "start_url": "/",
-        "scope": "/",
+        "start_url": home_url,
+        "scope": home_url,
         "display": "standalone",
         "display_override": ["window-controls-overlay", "standalone", "browser"],
-        "background_color": "#f9fafb",
-        "theme_color": "#0D9488",
+        "background_color": PWA_BACKGROUND_COLOR,
+        "theme_color": PWA_THEME_COLOR,
         "icons": [
             {
                 "src": static("icons/agora-icon.svg"),
@@ -49,10 +55,15 @@ def web_manifest(request):
 
 @require_GET
 def service_worker(request):
+    offline_url = reverse("offline_page")
+    home_url = reverse("home")
+    popular_url = reverse("popular")
+    search_url = reverse("search")
+    manifest_url = reverse("web_manifest")
     script = f"""
 const CACHE_NAME = "{settings.PROJECT_NAME}-shell-v{settings.APP_VERSION}";
-const OFFLINE_URL = "/offline/";
-const ASSETS = ["/", "/popular/", "/search/", OFFLINE_URL, "/manifest.webmanifest", "{static('css/app.css')}", "{static('js/app.js')}", "{static('icons/agora-icon.svg')}"];
+const OFFLINE_URL = "{offline_url}";
+const ASSETS = ["{home_url}", "{popular_url}", "{search_url}", OFFLINE_URL, "{manifest_url}", "{static('css/app.css')}", "{static('js/app.js')}", "{static('icons/agora-icon.svg')}"];
 
 self.addEventListener("install", (event) => {{
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));

@@ -1,8 +1,10 @@
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
 from apps.common.celery import dispatch_task
+from apps.communities.services import can_view_community
 from apps.posts.models import Comment, Post
 
 from .models import SavedPost, Vote
@@ -57,7 +59,9 @@ def vote(request):
 @require_POST
 @login_required
 def toggle_save(request, post_id):
-    post = get_object_or_404(Post, pk=post_id)
+    post = get_object_or_404(Post.objects.select_related("community"), pk=post_id)
+    if not can_view_community(request.user, post.community):
+        return HttpResponseForbidden("This post is not available in your current community access scope.")
     saved, created = SavedPost.objects.get_or_create(user=request.user, post=post)
     if not created:
         saved.delete()

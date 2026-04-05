@@ -7,7 +7,7 @@
   <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
     <div class="bg-white border border-gray-200 rounded-g p-4">
       <h1 class="text-xl font-semibold text-gray-900 mb-3">Search {{ APP_NAME }}</h1>
-      <form method="get" action="/search/" class="styled-form space-y-3">
+      <form method="get" action="{% url 'search' %}" class="styled-form space-y-3">
         <div class="flex flex-col sm:flex-row gap-2">
           <input id="search_query" type="search" name="q" value="{{ query }}"
             placeholder="Search posts, communities, people…"

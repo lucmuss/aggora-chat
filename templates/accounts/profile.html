@@ -80,9 +80,18 @@
       {% for comment in comments %}
       <div class="bg-white border border-gray-200 rounded-g px-4 py-3">
         <p class="text-xs text-gray-400 mb-1.5">on <a
-            href="/c/{{ comment.post.community.slug }}/post/{{ comment.post.id }}/{{ comment.post.slug }}/"
+            href="{% url 'post_detail' community_slug=comment.post.community.slug post_id=comment.post.id slug=comment.post.slug %}"
             class="text-opal hover:underline">{{ comment.post.title|truncatechars:60 }}</a></p>
         <div class="prose text-sm">{{ comment.body_html|safe }}</div>
+        <div class="mt-2 flex items-center gap-2 text-xs">
+          <span class="{% if comment_votes|get_item:comment.id == 1 %}text-primary{% elif comment_votes|get_item:comment.id == -1 %}text-gray-700{% else %}text-gray-400{% endif %}">
+            ▲
+          </span>
+          <span class="font-medium text-gray-600">{{ comment.score }}</span>
+          <span class="{% if comment_votes|get_item:comment.id == -1 %}text-gray-700{% else %}text-gray-400{% endif %}">
+            ▼
+          </span>
+        </div>
       </div>
       {% endfor %}
     </div>

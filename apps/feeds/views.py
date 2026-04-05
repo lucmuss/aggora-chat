@@ -1,5 +1,6 @@
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 
 from apps.communities.models import Community
 from apps.communities.services import (
@@ -23,6 +24,10 @@ from apps.feeds.caching import (
 from apps.posts.services import annotate_posts_with_user_state
 from apps.search.queries import community_feed_results, home_feed_results, popular_feed_results
 
+HOME_COMMUNITY_LIMIT = 8
+RECENT_COMMUNITY_LIMIT = 5
+POPULAR_COMMUNITY_LIMIT = 8
+
 
 def home(request):
     sort = request.GET.get("sort", "hot")
@@ -40,7 +45,7 @@ def home(request):
             Q(community_type__in=[Community.CommunityType.PUBLIC, Community.CommunityType.RESTRICTED])
             | Q(memberships__user=request.user)
         ).distinct()
-    communities = communities.order_by("-created_at")[:12]
+    communities = communities.order_by("-created_at")[:HOME_COMMUNITY_LIMIT]
     suggested = suggested_communities_for_user(request.user)
     return render(
         request,
@@ -70,7 +75,7 @@ def community_feed(request, slug):
                 "access_title": "This community is private",
                 "access_copy": "Private community feeds are only visible to members right now.",
                 "access_hint": "Ask a moderator for an invite or open a public community instead.",
-                "access_primary_href": "/c/",
+                "access_primary_href": reverse("community_discovery"),
                 "access_primary_label": "Browse communities",
             },
             status=403,
@@ -107,7 +112,7 @@ def community_feed(request, slug):
             "community": community,
             "joined": joined,
             "member_count": community.memberships.count(),
-            "recent_communities": Community.objects.order_by("-created_at")[:5],
+            "recent_communities": Community.objects.order_by("-created_at")[:RECENT_COMMUNITY_LIMIT],
             "posts": posts,
             "sort": sort,
             "next_cursor": next_cursor,
@@ -136,7 +141,7 @@ def popular(request):
         if use_cache:
             set_cached_feed(cache_key, posts)
     user_votes, saved_posts = annotate_posts_with_user_state(posts, request.user)
-    communities = Community.objects.order_by("-subscriber_count", "-created_at")[:8]
+    communities = Community.objects.order_by("-subscriber_count", "-created_at")[:POPULAR_COMMUNITY_LIMIT]
     return render(
         request,
         "feeds/popular.html",

@@ -18,10 +18,10 @@
           </button>
         </form>
         {% else %}
-        <a href="/accounts/signup/?next=/accounts/get-started/" class="h-10 px-4 rounded-g bg-white text-opal text-sm font-medium flex items-center hover:bg-opal-light transition-colors">
+        <a href="{% url 'account_signup' %}?next={% url 'start_with_friends' %}" class="h-10 px-4 rounded-g bg-white text-opal text-sm font-medium flex items-center hover:bg-opal-light transition-colors">
           Sign up and join
         </a>
-        <a href="/accounts/login/?next=/accounts/get-started/" class="h-10 px-4 rounded-g border border-white/30 text-white text-sm font-medium flex items-center hover:bg-white/10 transition-colors">
+        <a href="{% url 'account_login' %}?next={% url 'start_with_friends' %}" class="h-10 px-4 rounded-g border border-white/30 text-white text-sm font-medium flex items-center hover:bg-white/10 transition-colors">
           Log in
         </a>
         {% endif %}

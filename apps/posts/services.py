@@ -9,6 +9,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 
 from apps.common.celery import dispatch_task
 from apps.communities.models import Community, CommunityChallenge
@@ -136,7 +137,11 @@ def build_comment_tree(post: Post, sort: str = "top", max_depth: int = 10, user=
             result.append(comment)
         return result
 
-    return nest(None)
+    tree = nest(None)
+    for comment in tree:
+        if not hasattr(comment, "children"):
+            comment.children = []
+    return tree
 
 
 def annotate_posts_with_user_state(posts, user):
@@ -254,7 +259,14 @@ def create_reengagement_notifications(comment: Comment):
             )
         )
 
-    url = f"/c/{comment.post.community.slug}/post/{comment.post.id}/{comment.post.slug}/"
+    url = reverse(
+        "post_detail",
+        kwargs={
+            "community_slug": comment.post.community.slug,
+            "post_id": comment.post.id,
+            "slug": comment.post.slug,
+        },
+    )
     for user, notification_type, message in recipients:
         if notification_type in {
             Notification.NotificationType.POST_REPLY,

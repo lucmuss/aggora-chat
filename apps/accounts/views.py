@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.communities.models import Community
@@ -19,6 +20,13 @@ from .forms import AccountSettingsForm, HandleSetupForm, StartWithFriendsForm, T
 from .growth import award_onboarding_badges, onboarding_progress_for_user, referral_cards_for_user
 from .models import User
 from .security import build_totp_uri, generate_totp_secret, user_requires_mfa, verify_totp
+
+try:
+    from allauth.account.models import EmailAddress
+    from allauth.socialaccount.models import SocialAccount
+except ImportError:  # pragma: no cover - optional dependency wiring
+    EmailAddress = None
+    SocialAccount = None
 
 
 @login_required
@@ -64,6 +72,7 @@ def profile_view(request, handle):
 
     posts = []
     comments = []
+    comment_votes = {}
     if is_blocked or visibility_restricted:
         tab = "posts"
     elif tab == "posts":
@@ -76,7 +85,19 @@ def profile_view(request, handle):
             .order_by("-savedpost__saved_at")[:25]
         )
     else:
-        comments = list(Comment.objects.filter(author=profile_user, is_removed=False).select_related("post")[:25])
+        comments = list(
+            Comment.objects.filter(author=profile_user, is_removed=False)
+            .select_related("post", "post__community")
+            .order_by("-created_at")[:25]
+        )
+        if request.user.is_authenticated and comments:
+            from apps.votes.models import Vote
+
+            comment_votes = dict(
+                Vote.objects.filter(user=request.user, comment_id__in=[comment.id for comment in comments]).values_list(
+                    "comment_id", "value"
+                )
+            )
 
     user_votes, saved_posts = annotate_posts_with_user_state(posts, request.user) if posts else ({}, set())
     return render(
@@ -90,6 +111,7 @@ def profile_view(request, handle):
             "user_votes": user_votes,
             "saved_posts": saved_posts,
             "saved_count": SavedPost.objects.filter(user=profile_user).count(),
+            "comment_votes": comment_votes,
             "is_blocked": is_blocked,
             "visibility_restricted": visibility_restricted,
             "is_following": is_following,
@@ -128,7 +150,7 @@ def toggle_block(request, handle):
 
 
 def toggle_theme(request):
-    next_url = request.GET.get("next") or request.META.get("HTTP_REFERER") or "/"
+    next_url = request.GET.get("next") or request.META.get("HTTP_REFERER") or reverse("home")
     current_theme = request.COOKIES.get("agora_theme", "light")
     next_theme = "dark" if current_theme != "dark" else "light"
     response = redirect(next_url)
@@ -197,7 +219,7 @@ def start_with_friends(request):
             )
             if starter_post is not None:
                 return redirect(
-                    f"/c/{starter_post.community.slug}/post/{starter_post.id}/{starter_post.slug}/?reply=1&welcome=1"
+                    f"{reverse('post_detail', kwargs={'community_slug': starter_post.community.slug, 'post_id': starter_post.id, 'slug': starter_post.slug})}?reply=1&welcome=1"
                 )
         if invite_community is not None:
             return redirect("create_post", community_slug=invite_community.slug)
@@ -257,15 +279,10 @@ def account_settings_view(request):
 
     connected_accounts = []
     email_addresses = []
-    try:
-        from allauth.account.models import EmailAddress
-        from allauth.socialaccount.models import SocialAccount
-
+    if SocialAccount is not None:
         connected_accounts = list(SocialAccount.objects.filter(user=request.user).order_by("provider"))
+    if EmailAddress is not None:
         email_addresses = list(EmailAddress.objects.filter(user=request.user).order_by("-primary", "email"))
-    except Exception:
-        connected_accounts = []
-        email_addresses = []
 
     password_url_name = "account_change_password" if request.user.has_usable_password() else "account_set_password"
 
