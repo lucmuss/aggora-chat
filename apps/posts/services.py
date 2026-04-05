@@ -7,9 +7,11 @@ from urllib.parse import quote_plus
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Count, Max
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils import timezone as django_timezone
 
 from apps.common.celery import dispatch_task
 from apps.communities.models import Community, CommunityChallenge
@@ -47,6 +49,7 @@ def submit_post(user, community, post_data: dict, poll_lines: list[str] = None, 
         url=post_data.get("url", ""),
         image=post_data.get("image"),
         flair=post_data.get("flair"),
+        challenge=post_data.get("challenge"),
         is_spoiler=post_data.get("is_spoiler", False),
         is_nsfw=post_data.get("is_nsfw", False),
         is_locked=post_data.get("is_locked", False),
@@ -112,6 +115,38 @@ def submit_poll_vote(user, poll: Poll, option_id: str):
     )
 
 
+def soft_delete_post(post: Post):
+    if post.author_deleted_at is None:
+        post.author_deleted_at = django_timezone.now()
+        post.save(update_fields=["author_deleted_at", "body_html"])
+        dispatch_task(index_post_task, post.pk)
+    return post
+
+
+def restore_post(post: Post):
+    if post.author_deleted_at is not None:
+        post.author_deleted_at = None
+        post.save(update_fields=["author_deleted_at", "body_html"])
+        dispatch_task(index_post_task, post.pk)
+    return post
+
+
+def soft_delete_comment(comment: Comment):
+    if comment.author_deleted_at is None:
+        comment.author_deleted_at = django_timezone.now()
+        comment.save(update_fields=["author_deleted_at", "body_html"])
+        Post.objects.filter(pk=comment.post_id, comment_count__gt=0).update(comment_count=models.F("comment_count") - 1)
+    return comment
+
+
+def restore_comment(comment: Comment):
+    if comment.author_deleted_at is not None:
+        comment.author_deleted_at = None
+        comment.save(update_fields=["author_deleted_at", "body_html"])
+        Post.objects.filter(pk=comment.post_id).update(comment_count=models.F("comment_count") + 1)
+    return comment
+
+
 def build_comment_tree(post: Post, sort: str = "top", max_depth: int = 10, user=None):
     order_map = {
         "top": ["-score", "created_at"],
@@ -119,6 +154,10 @@ def build_comment_tree(post: Post, sort: str = "top", max_depth: int = 10, user=
         "old": ["created_at"],
     }
     qs = Comment.objects.filter(post=post, is_removed=False).select_related("author")
+    if user is not None and getattr(user, "is_authenticated", False):
+        qs = qs.filter(Q(author_deleted_at__isnull=True) | Q(author=user))
+    else:
+        qs = qs.filter(author_deleted_at__isnull=True)
     if user is not None and getattr(user, "is_authenticated", False):
         blocked_ids = list(user.blocked_users.values_list("id", flat=True))
         if blocked_ids:
@@ -150,6 +189,143 @@ def annotate_posts_with_user_state(posts, user):
     votes = dict(Vote.objects.filter(user=user, post_id__in=post_ids).values_list("post_id", "value"))
     saved = set(SavedPost.objects.filter(user=user, post_id__in=post_ids).values_list("post_id", flat=True))
     return votes, saved
+
+
+def build_personalization_profile(user):
+    if user is None or not getattr(user, "is_authenticated", False):
+        return None
+    joined_community_ids = set(user.communitymembership_set.values_list("community_id", flat=True))
+    followed_user_ids = set(user.followed_users.values_list("id", flat=True))
+    saved_rows = (
+        SavedPost.objects.filter(user=user)
+        .values("post__community_id", "post__post_type", "post__flair_id")
+        .annotate(total=Count("id"))
+    )
+    saved_communities = {row["post__community_id"] for row in saved_rows if row["post__community_id"]}
+    saved_post_types = {row["post__post_type"] for row in saved_rows if row["post__post_type"]}
+    saved_flair_ids = {row["post__flair_id"] for row in saved_rows if row["post__flair_id"]}
+    commented_rows = (
+        Comment.objects.filter(author=user, author_deleted_at__isnull=True)
+        .values("post__community_id")
+        .annotate(total=Count("id"))
+    )
+    commented_community_ids = {row["post__community_id"] for row in commented_rows if row["post__community_id"]}
+    challenge_community_ids = set(
+        CommunityChallenge.objects.filter(participations__user=user).values_list("community_id", flat=True)
+    )
+    return {
+        "joined_community_ids": joined_community_ids,
+        "followed_user_ids": followed_user_ids,
+        "saved_communities": saved_communities,
+        "saved_post_types": saved_post_types,
+        "saved_flair_ids": saved_flair_ids,
+        "commented_community_ids": commented_community_ids,
+        "challenge_community_ids": challenge_community_ids,
+    }
+
+
+def explain_post_reason(post, profile):
+    if profile is None:
+        if getattr(post, "challenge_context", None):
+            return f"Live challenge: {post.challenge_context}"
+        return "Trending across Agora"
+    if post.author_id in profile["followed_user_ids"]:
+        return "Because you follow this person"
+    if post.community_id in profile["joined_community_ids"]:
+        return "Because you joined this community"
+    if post.community_id in profile["commented_community_ids"]:
+        return "Because you often comment here"
+    if post.community_id in profile["saved_communities"]:
+        return "Because you save threads from this community"
+    if post.flair_id and post.flair_id in profile["saved_flair_ids"]:
+        return "Because this matches what you save"
+    if post.post_type in profile["saved_post_types"]:
+        return f"Because you save {post.get_post_type_display().lower()} posts"
+    if post.community_id in profile["challenge_community_ids"] or getattr(post, "challenge_id", None):
+        return "Because you joined a challenge here"
+    return "Fresh in your orbit"
+
+
+def personalize_post_window(posts, user):
+    profile = build_personalization_profile(user)
+    if not posts:
+        return posts
+    seen_community_counts = defaultdict(int)
+    now = django_timezone.now()
+    for post in posts:
+        score = float(getattr(post, "personal_boost", 0) or 0)
+        if profile is not None:
+            if post.author_id in profile["followed_user_ids"]:
+                score += 18
+            if post.community_id in profile["joined_community_ids"]:
+                score += 10
+            if post.community_id in profile["saved_communities"]:
+                score += 6
+            if post.community_id in profile["commented_community_ids"]:
+                score += 7
+            if post.community_id in profile["challenge_community_ids"]:
+                score += 5
+            if post.post_type in profile["saved_post_types"]:
+                score += 2
+            if post.flair_id and post.flair_id in profile["saved_flair_ids"]:
+                score += 3
+        if getattr(post, "challenge_id", None):
+            score += 4
+        freshness_hours = max((now - post.created_at).total_seconds() / 3600, 0)
+        score += max(0, 8 - min(freshness_hours, 8))
+        score -= seen_community_counts[post.community_id] * 3
+        post.personalized_score = round(score, 2)
+        post.feed_reason = explain_post_reason(post, profile)
+        seen_community_counts[post.community_id] += 1
+    return sorted(posts, key=lambda post: (-(post.personalized_score), -post.score, -post.comment_count, -post.created_at.timestamp()))
+
+
+def enrich_posts_for_display(posts, user=None):
+    if not posts:
+        return posts
+    post_ids = [post.id for post in posts]
+    comment_meta = {
+        row["post_id"]: row
+        for row in Comment.objects.filter(post_id__in=post_ids, is_removed=False, author_deleted_at__isnull=True)
+        .values("post_id")
+        .annotate(
+            last_comment_at=Max("created_at"),
+            participant_count=Count("author_id", distinct=True),
+        )
+    }
+    active_challenges = {
+        challenge.community_id: challenge
+        for challenge in CommunityChallenge.objects.filter(
+            community_id__in=[post.community_id for post in posts],
+            starts_at__lte=models.functions.Now(),
+            ends_at__gte=models.functions.Now(),
+            is_featured=True,
+        ).order_by("-starts_at")
+    }
+    followed_ids = set()
+    profile = build_personalization_profile(user)
+    if user is not None and getattr(user, "is_authenticated", False):
+        followed_ids = set(user.followed_users.values_list("id", flat=True))
+
+    for post in posts:
+        meta = comment_meta.get(post.id, {})
+        participant_count = meta.get("participant_count") or 0
+        if post.author_id:
+            participant_count = max(participant_count, 1)
+        post.last_comment_at = meta.get("last_comment_at")
+        post.discussion_count = participant_count
+        post.discussion_label = (
+            f"{participant_count} people are discussing"
+            if participant_count > 1
+            else "Start the discussion"
+        )
+        post.is_from_followed_user = post.author_id in followed_ids
+        challenge = active_challenges.get(post.community_id)
+        post.challenge_context = None
+        if challenge and post.created_at >= challenge.starts_at:
+            post.challenge_context = challenge.title
+        post.feed_reason = getattr(post, "feed_reason", explain_post_reason(post, profile))
+    return posts
 
 
 def apply_post_sort(queryset, sort="hot"):
@@ -200,6 +376,10 @@ def pg_feed_queryset(user, community=None, sort="hot", scope="all"):
                     is_featured=True,
                 ).values_list("community_id", flat=True)
             )
+            commented_community_ids = set(
+                Comment.objects.filter(author=user, author_deleted_at__isnull=True).values_list("post__community_id", flat=True)
+            )
+            saved_post_types = set(SavedPost.objects.filter(user=user).values_list("post__post_type", flat=True))
             queryset = queryset.annotate(
                 personal_boost=(
                     Case(
@@ -218,7 +398,17 @@ def pg_feed_queryset(user, community=None, sort="hot", scope="all"):
                         output_field=IntegerField(),
                     )
                     + Case(
+                        When(community_id__in=commented_community_ids, then=Value(5)),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    )
+                    + Case(
                         When(community_id__in=challenge_community_ids, then=Value(2)),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    )
+                    + Case(
+                        When(post_type__in=saved_post_types, then=Value(1)),
                         default=Value(0),
                         output_field=IntegerField(),
                     )

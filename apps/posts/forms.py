@@ -12,6 +12,13 @@ class PostCreateForm(forms.ModelForm):
         help_text="For poll posts, add one option per line.",
         label="Poll options",
     )
+    challenge = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        empty_label="No challenge entry",
+        label="Challenge entry",
+        help_text="Attach this post to the current featured challenge when it fits.",
+    )
 
     class Meta:
         model = Post
@@ -22,6 +29,7 @@ class PostCreateForm(forms.ModelForm):
             "url",
             "image",
             "flair",
+            "challenge",
             "is_spoiler",
             "is_nsfw",
         ]
@@ -29,6 +37,7 @@ class PostCreateForm(forms.ModelForm):
             "body_md": forms.Textarea(
                 attrs={
                     "rows": 8,
+                    "data-rich-markdown": "true",
                     "data-markdown-preview-target": "post-markdown-preview",
                     "data-markdown-preview-label": "Post preview",
                 }
@@ -39,6 +48,15 @@ class PostCreateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.community = community
         self.fields["flair"].queryset = community.post_flairs.all()
+        active_challenges = [
+            challenge
+            for challenge in community.challenges.filter(is_featured=True).order_by("-starts_at")
+            if challenge.is_active()
+        ]
+        active_challenge_ids = [challenge.id for challenge in active_challenges]
+        self.fields["challenge"].queryset = community.challenges.filter(id__in=active_challenge_ids)
+        if active_challenges:
+            self.fields["challenge"].initial = active_challenges[0]
 
     def clean(self):
         cleaned_data = super().clean()
@@ -69,6 +87,11 @@ class PostCreateForm(forms.ModelForm):
                 self.add_error("poll_option_lines", "Polls support up to six options.")
         if self.community.require_post_flair and not cleaned_data.get("flair"):
             self.add_error("flair", "This community requires a post flair.")
+        challenge = cleaned_data.get("challenge")
+        if challenge and challenge.community_id != self.community.id:
+            self.add_error("challenge", "Choose a challenge from this community.")
+        if challenge and not challenge.is_active():
+            self.add_error("challenge", "This challenge is no longer active.")
         cleaned_data["poll_option_lines"] = option_lines
         return cleaned_data
 

@@ -7,12 +7,14 @@ from apps.communities.services import (
     active_challenge_for_community,
     can_view_community,
     community_leaderboard,
+    community_owner_dashboard,
     create_invite_for_community,
     enrich_challenges_for_user,
     featured_challenges_for_user,
     following_activity_for_user,
     share_links_for_invite,
     suggested_communities_for_user,
+    top_challenge_entries,
 )
 from apps.feeds.caching import (
     community_feed_cache_key,
@@ -21,7 +23,8 @@ from apps.feeds.caching import (
     set_cached_feed,
 )
 from apps.moderation.permissions import ModPermission, has_mod_permission
-from apps.posts.services import annotate_posts_with_user_state
+from apps.accounts.growth import first_week_missions_for_user
+from apps.posts.services import annotate_posts_with_user_state, enrich_posts_for_display
 from apps.search.queries import community_feed_results, home_feed_results, popular_feed_results
 
 HOME_COMMUNITY_LIMIT = 8
@@ -36,6 +39,7 @@ def home(request):
     if scope not in {"all", "communities", "following"}:
         scope = "all"
     posts, next_cursor = home_feed_results(request.user, sort=sort, after=after, scope=scope)
+    enrich_posts_for_display(posts, request.user)
     user_votes, saved_posts = annotate_posts_with_user_state(posts, request.user)
     communities = Community.objects.annotate(rule_count=Count("rules")).select_related("creator")
     if not request.user.is_authenticated:
@@ -47,6 +51,9 @@ def home(request):
         ).distinct()
     communities = communities.order_by("-created_at")[:HOME_COMMUNITY_LIMIT]
     suggested = suggested_communities_for_user(request.user)
+    first_week_missions = []
+    if request.user.is_authenticated:
+        first_week_missions = [mission for mission in first_week_missions_for_user(request.user) if not mission.completed]
     return render(
         request,
         "feeds/home.html",
@@ -61,6 +68,7 @@ def home(request):
             "suggested_communities": suggested,
             "featured_challenges": featured_challenges_for_user(request.user),
             "following_activity": following_activity_for_user(request.user),
+            "first_week_missions": first_week_missions,
         },
     )
 
@@ -90,6 +98,7 @@ def community_feed(request, slug):
         posts, next_cursor = community_feed_results(request.user, community=community, sort=sort, after=after)
         if use_cache:
             set_cached_feed(cache_key, posts)
+    enrich_posts_for_display(posts, request.user)
     user_votes, saved_posts = annotate_posts_with_user_state(posts, request.user)
     joined = False
     followed_member_count = 0
@@ -105,6 +114,12 @@ def community_feed(request, slug):
     challenge = active_challenge_for_community(community)
     if challenge:
         challenge = enrich_challenges_for_user([challenge], request.user)[0]
+    owner_dashboard = None
+    if request.user.is_authenticated and community.memberships.filter(
+        user=request.user,
+        role=community.memberships.model.Role.OWNER,
+    ).exists():
+        owner_dashboard = community_owner_dashboard(community)
     return render(
         request,
         "communities/detail.html",
@@ -125,6 +140,8 @@ def community_feed(request, slug):
             "can_moderate": can_moderate,
             "invite": invite,
             "share_links": share_links_for_invite(community, invite),
+            "challenge_entries": top_challenge_entries(challenge, limit=6) if challenge else [],
+            "owner_dashboard": owner_dashboard,
         },
     )
 
@@ -140,6 +157,7 @@ def popular(request):
         posts, next_cursor = popular_feed_results(sort=sort, user=request.user, after=after)
         if use_cache:
             set_cached_feed(cache_key, posts)
+    enrich_posts_for_display(posts, request.user)
     user_votes, saved_posts = annotate_posts_with_user_state(posts, request.user)
     communities = Community.objects.order_by("-subscriber_count", "-created_at")[:POPULAR_COMMUNITY_LIMIT]
     return render(

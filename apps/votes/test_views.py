@@ -96,3 +96,36 @@ class TestVoteViews:
 
         assert response.status_code == 403
         assert SavedPost.objects.filter(user=saver, post=post).count() == 0
+
+    def test_update_saved_post_status_moves_item_through_reader_queue(self, client):
+        owner = make_user(username="queue_owner", email="queue_owner@example.com", handle="queue_owner")
+        reader = make_user(username="queue_reader", email="queue_reader@example.com", handle="queue_reader")
+        community = make_community("queue-community", creator=owner)
+        post = Post.objects.create(community=community, author=owner, post_type="text", title="Queue me", body_md="Body")
+        saved = SavedPost.objects.create(user=reader, post=post)
+        client.force_login(reader)
+
+        response = client.post(
+            reverse("update_saved_post_status", kwargs={"post_id": post.id}),
+            {"status": SavedPost.QueueStatus.READING},
+        )
+
+        assert response.status_code == 302
+        saved.refresh_from_db()
+        assert saved.status == SavedPost.QueueStatus.READING
+
+    def test_update_saved_post_status_remove_action_deletes_queue_item(self, client):
+        owner = make_user(username="queue_remove_owner", email="queue_remove_owner@example.com", handle="queue_remove_owner")
+        reader = make_user(username="queue_remove_reader", email="queue_remove_reader@example.com", handle="queue_remove_reader")
+        community = make_community("queue-remove", creator=owner)
+        post = Post.objects.create(community=community, author=owner, post_type="text", title="Remove me", body_md="Body")
+        SavedPost.objects.create(user=reader, post=post)
+        client.force_login(reader)
+
+        response = client.post(
+            reverse("update_saved_post_status", kwargs={"post_id": post.id}),
+            {"action": "remove"},
+        )
+
+        assert response.status_code == 302
+        assert SavedPost.objects.filter(user=reader, post=post).count() == 0

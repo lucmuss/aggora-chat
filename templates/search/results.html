@@ -13,6 +13,7 @@
             placeholder="Search posts, communities, people…"
             aria-label="Search query"
             class="flex-1 h-9 pl-3 pr-3 rounded-g border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none transition-colors">
+          <input type="hidden" name="type" value="{{ result_type }}">
           <select id="search_sort" name="sort" data-auto-submit
             aria-label="Search sort"
             class="h-9 px-3 rounded-g border border-gray-200 text-sm text-gray-600 focus:border-primary focus:outline-none">
@@ -39,6 +40,38 @@
         </div>
       </form>
     </div>
+
+    {% if query %}
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center gap-2">
+        <a href="?q={{ query|urlencode }}&sort={{ sort }}&post_type={{ post_type }}&media={{ media }}"
+          class="h-8 px-3 flex items-center rounded-g text-sm font-medium {% if result_type == 'all' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">
+          All <span class="ml-1 text-xs text-gray-400">{{ post_count|add:community_count|add:user_count }}</span>
+        </a>
+        <a href="?q={{ query|urlencode }}&sort={{ sort }}&post_type={{ post_type }}&media={{ media }}&type=posts"
+          class="h-8 px-3 flex items-center rounded-g text-sm font-medium {% if result_type == 'posts' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">
+          Posts <span class="ml-1 text-xs text-gray-400">{{ post_count }}</span>
+        </a>
+        <a href="?q={{ query|urlencode }}&sort={{ sort }}&post_type={{ post_type }}&media={{ media }}&type=communities"
+          class="h-8 px-3 flex items-center rounded-g text-sm font-medium {% if result_type == 'communities' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">
+          Communities <span class="ml-1 text-xs text-gray-400">{{ community_count }}</span>
+        </a>
+        <a href="?q={{ query|urlencode }}&sort={{ sort }}&post_type={{ post_type }}&media={{ media }}&type=people"
+          class="h-8 px-3 flex items-center rounded-g text-sm font-medium {% if result_type == 'people' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">
+          People <span class="ml-1 text-xs text-gray-400">{{ user_count }}</span>
+        </a>
+      </div>
+      {% if best_match %}
+      <a href="{{ best_match.url }}" class="block px-4 py-4 hover:bg-gray-50">
+        <p class="text-xs font-semibold uppercase tracking-wide text-opal">Best match · {{ best_match.kind }}</p>
+        <p class="text-base font-semibold text-gray-900 mt-1">{{ best_match.title }}</p>
+        <p class="text-xs text-gray-400 mt-1">{{ best_match.subtitle }}</p>
+        {% if best_match.description %}<p class="text-sm text-gray-500 mt-2">{{ best_match.description }}</p>{% endif %}
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+
     {% if query and communities %}
     <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
       <div class="px-4 py-3 border-b border-gray-100">
@@ -60,6 +93,7 @@
       </div>
     </div>
     {% endif %}
+
     {% if query and users %}
     <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
       <div class="px-4 py-3 border-b border-gray-100">
@@ -81,16 +115,29 @@
       </div>
     </div>
     {% endif %}
+
     {% if query %}
     <div id="feed-container" class="space-y-3">
-      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No search results" empty_copy="Try a broader term, another type filter, or operators like author:, flair:, community:, or type:." empty_cta_url='/' empty_cta_label='Browse the feed' %}
+      {% if result_type == 'posts' or result_type == 'all' %}
+      {% include "feeds/partials/post_list.html" with posts=posts user_votes=user_votes saved_posts=saved_posts empty_title="No matching posts" empty_copy="Try a broader phrase, another post type, or operators like author:, flair:, community:, or type:." empty_cta_url='/' empty_cta_label='Browse the feed' %}
+      {% elif result_type == 'communities' and not communities %}
+      <div class="bg-white border border-gray-200 rounded-g p-6 text-center">
+        <p class="text-sm text-gray-600">No communities matched yet. Try a shorter query or browse what is already active.</p>
+        <a href="{% url 'community_discovery' %}" class="inline-flex mt-4 h-9 px-4 items-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover">Browse communities</a>
+      </div>
+      {% elif result_type == 'people' and not users %}
+      <div class="bg-white border border-gray-200 rounded-g p-6 text-center">
+        <p class="text-sm text-gray-600">No people matched that search yet. Try a handle, display name, or a wider search phrase.</p>
+        <a href="{% url 'home' %}" class="inline-flex mt-4 h-9 px-4 items-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover">Back to home</a>
+      </div>
+      {% endif %}
     </div>
     {% endif %}
   </div>
   <aside class="hidden lg:block w-80 shrink-0">
     <div class="bg-white border border-gray-200 rounded-g p-4 sticky top-[72px]">
       <h3 class="font-semibold text-sm text-opal mb-3">Search operators</h3>
-      <p class="text-xs text-gray-500 mb-3">Post search supports operators. Communities and people also surface as quick matches above the feed.</p>
+      <p class="text-xs text-gray-500 mb-3">Search now works as a lightweight global directory: posts stay below, while community and people matches get their own rails and counts.</p>
       <ul class="text-xs text-gray-500 space-y-1.5 font-mono">
         <li><code class="text-gray-700">author:handle</code></li>
         <li><code class="text-gray-700">flair:name</code></li>

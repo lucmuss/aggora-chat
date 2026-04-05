@@ -75,3 +75,11 @@ class TestSavedPostModel:
 
         with pytest.raises(IntegrityError):
             SavedPost.objects.create(user=voter, post=post)
+
+    def test_saved_post_defaults_to_unread_queue_status(self):
+        voter = make_user(username="saved_status", email="saved_status@example.com", handle="saved_status")
+        post = make_post()
+
+        saved = SavedPost.objects.create(user=voter, post=post)
+
+        assert saved.status == SavedPost.QueueStatus.UNREAD

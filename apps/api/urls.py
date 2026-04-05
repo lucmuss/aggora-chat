@@ -4,6 +4,7 @@ from .views import (
     AgentModActionView,
     CommentCreateAPIView,
     CommunityFeedAPIView,
+    CommunityOwnerDashboardAPIView,
     PollVoteAPIView,
     PopularFeedAPIView,
     PostCommentsAPIView,
@@ -18,6 +19,7 @@ from .views import (
 urlpatterns = [
     path("v1/popular/", PopularFeedAPIView.as_view(), name="api_popular_feed"),
     path("v1/c/<slug:slug>/feed/", CommunityFeedAPIView.as_view(), name="api_community_feed"),
+    path("v1/c/<slug:slug>/owner/", CommunityOwnerDashboardAPIView.as_view(), name="api_community_owner_dashboard"),
     path("v1/posts/<int:pk>/", PostDetailAPIView.as_view(), name="api_post_detail"),
     path("v1/posts/<int:pk>/comments/", PostCommentsAPIView.as_view(), name="api_post_comments"),
     path("v1/posts/<int:pk>/poll-vote/", PollVoteAPIView.as_view(), name="api_poll_vote"),

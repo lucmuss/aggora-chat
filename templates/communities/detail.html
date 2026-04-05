@@ -24,18 +24,29 @@
             {% include "communities/partials/join_button.html" with community=community joined=joined %}
             <a href="{% url 'community_landing' slug=community.slug %}"
               class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-              Share page
+              Open landing page
             </a>
             <a href="{% url 'community_share_card' slug=community.slug %}"
               class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
               Share card
             </a>
             {% if user.is_authenticated %}
-            <a href="{{ share_links.copy_url }}"
-              class="block w-full h-8 flex items-center justify-center rounded-g border border-opal-muted text-sm font-medium text-opal hover:bg-opal-light transition-colors">
-              Invite friends
-            </a>
-            <a href="/c/{{ community.slug }}/submit/"
+            <button type="button"
+              data-copy-text="{{ share_links.copy_url }}"
+              data-copy-label="Community invite copied"
+              class="block w-full h-8 rounded-g border border-opal-muted text-sm font-medium text-opal hover:bg-opal-light transition-colors">
+              Copy invite link
+            </button>
+            <button type="button"
+              data-share-title="{{ community.title }}"
+              data-share-text="{{ share_links.share_text }}"
+              data-share-url="{{ share_links.copy_url }}"
+              data-copy-text="{{ share_links.copy_url }}"
+              data-copy-label="Community link copied"
+              class="block w-full h-8 rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+              Share community
+            </button>
+            <a href="{% url 'create_post' community_slug=community.slug %}"
               class="block w-full h-8 flex items-center justify-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
               New post
             </a>
@@ -77,9 +88,30 @@
             </button>
           </form>
           {% endif %}
-          <a href="{% url 'create_post' community_slug=community.slug %}"
+          <a href="{% url 'create_post' community_slug=community.slug %}?challenge={{ active_challenge.id }}"
             class="h-8 px-3 rounded-g border border-gray-200 text-sm font-medium text-gray-600 flex items-center justify-center hover:bg-gray-50">Post for it</a>
         </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if challenge_entries %}
+    <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-opal">Challenge gallery</p>
+          <p class="text-sm text-gray-500 mt-1">The strongest entries in the current prompt, ready to reply to or share.</p>
+        </div>
+        {% if active_challenge %}
+        <a href="{% url 'create_post' community_slug=community.slug %}?challenge={{ active_challenge.id }}" class="text-xs font-medium text-opal hover:underline">Submit an entry</a>
+        {% endif %}
+      </div>
+      <div class="divide-y divide-gray-100">
+        {% for challenge_post in challenge_entries %}
+        <a href="{% url 'post_detail' community_slug=community.slug post_id=challenge_post.id slug=challenge_post.slug %}" class="block px-4 py-3 hover:bg-gray-50">
+          <p class="text-sm font-medium text-gray-900">{{ challenge_post.title }}</p>
+          <p class="text-xs text-gray-500 mt-1">{{ challenge_post.score }} points · {{ challenge_post.comment_count }} comments</p>
+        </a>
+        {% endfor %}
       </div>
     </div>
     {% endif %}
@@ -158,11 +190,30 @@
     <div class="bg-white border border-gray-200 rounded-g p-4">
       <h2 class="font-semibold text-sm text-opal mb-2">Moderation & Growth</h2>
       <div class="space-y-1">
-        <a href="/mod/{{ community.slug }}/queue/" class="block text-xs text-opal hover:underline">Mod queue</a>
-        <a href="/mod/{{ community.slug }}/log/" class="block text-xs text-opal hover:underline">Mod log</a>
-        <a href="/c/{{ community.slug }}/settings/" class="block text-xs text-opal hover:underline">Settings</a>
+        <a href="{% url 'mod_queue' community_slug=community.slug %}" class="block text-xs text-opal hover:underline">Mod queue</a>
+        <a href="{% url 'mod_log' community_slug=community.slug %}" class="block text-xs text-opal hover:underline">Mod log</a>
+        <a href="{% url 'community_settings' slug=community.slug %}" class="block text-xs text-opal hover:underline">Settings</a>
         <a href="{% url 'community_landing' slug=community.slug %}" class="block text-xs text-opal hover:underline">Invite landing page</a>
+        {% if owner_dashboard %}
+        <a href="{% url 'community_owner_dashboard' slug=community.slug %}" class="block text-xs text-opal hover:underline">Owner dashboard</a>
+        {% endif %}
       </div>
+    </div>
+    {% endif %}
+    {% if owner_dashboard %}
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <h2 class="font-semibold text-sm text-opal mb-2">Owner snapshot</h2>
+      <div class="grid grid-cols-2 gap-2 text-center">
+        <div class="rounded-g bg-gray-50 px-3 py-2">
+          <p class="text-sm font-semibold text-gray-900">{{ owner_dashboard.recent_member_joins }}</p>
+          <p class="text-[11px] text-gray-500">New members</p>
+        </div>
+        <div class="rounded-g bg-gray-50 px-3 py-2">
+          <p class="text-sm font-semibold text-gray-900">{{ owner_dashboard.queue_health.needs_review }}</p>
+          <p class="text-[11px] text-gray-500">Needs review</p>
+        </div>
+      </div>
+      <a href="{% url 'community_owner_dashboard' slug=community.slug %}" class="inline-flex mt-3 h-9 px-4 items-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Open full dashboard</a>
     </div>
     {% endif %}
   </aside>

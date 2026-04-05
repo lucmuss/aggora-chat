@@ -10,12 +10,20 @@ class RemovalReasonForm(forms.ModelForm):
         model = RemovalReason
         fields = ["code", "title", "message_md", "order"]
         widgets = {
-            "message_md": forms.Textarea(attrs={"rows": 4}),
+            "message_md": forms.Textarea(attrs={"rows": 4, "data-rich-markdown": "true"}),
         }
 
 
 class ModMailCreateForm(forms.ModelForm):
-    body_md = forms.CharField(widget=forms.Textarea(attrs={"rows": 5}))
+    body_md = forms.CharField(
+        widget=forms.Textarea(
+            attrs={
+                "rows": 5,
+                "data-rich-markdown": "true",
+                "data-markdown-preview-target": "modmail-create-preview",
+            }
+        )
+    )
 
     class Meta:
         model = ModMail
@@ -27,7 +35,13 @@ class ModMailReplyForm(forms.ModelForm):
         model = ModMailMessage
         fields = ["body_md"]
         widgets = {
-            "body_md": forms.Textarea(attrs={"rows": 4}),
+            "body_md": forms.Textarea(
+                attrs={
+                    "rows": 4,
+                    "data-rich-markdown": "true",
+                    "data-markdown-preview-target": "modmail-reply-preview",
+                }
+            ),
         }
 
     def save(self, commit=True):

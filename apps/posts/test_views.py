@@ -4,9 +4,9 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.communities.models import Community, CommunityMembership
+from apps.communities.models import Community, CommunityChallenge, CommunityMembership
 from apps.moderation.models import Ban
-from apps.posts.models import Poll, PollOption, Post
+from apps.posts.models import Comment, Poll, PollOption, Post
 
 User = get_user_model()
 
@@ -103,6 +103,18 @@ class TestPostViews:
         assert response.context["onboarding_reply_prompt"] is True
         assert response.context["welcome_prompt"] is True
 
+    def test_post_detail_renders_rich_markdown_comment_composer(self, client):
+        user = make_user(username="comment_editor", email="comment_editor@example.com", handle="comment_editor")
+        community = make_community("comment-editor", creator=user)
+        post = Post.objects.create(community=community, author=user, post_type="text", title="Thread", body_md="Body")
+        client.force_login(user)
+
+        response = client.get(reverse("post_detail", kwargs={"community_slug": community.slug, "post_id": post.id, "slug": post.slug}))
+
+        assert response.status_code == 200
+        assert 'data-rich-markdown="true"' in response.content.decode()
+        assert "Comment preview" in response.content.decode()
+
     def test_create_comment_requires_body(self, client):
         user = make_user(username="comment_empty", email="comment_empty@example.com", handle="comment_empty")
         community = make_community("comment-empty", creator=user)
@@ -186,3 +198,64 @@ class TestPostViews:
 
         assert response.status_code == 302
         assert Post.objects.filter(title="Image", post_type="image").exists()
+
+    def test_create_post_can_attach_active_challenge_entry(self, client):
+        user = make_user(username="challenge_entry_author", email="challenge_entry_author@example.com", handle="challenge_entry_author")
+        community = make_community("challenge-entry-create", creator=user)
+        challenge = CommunityChallenge.objects.create(
+            community=community,
+            title="Prompt of the week",
+            prompt_md="Show your process.",
+            starts_at=timezone.now() - timezone.timedelta(hours=1),
+            ends_at=timezone.now() + timezone.timedelta(days=2),
+            is_featured=True,
+            created_by=user,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            reverse("create_post", kwargs={"community_slug": community.slug}),
+            {
+                "post_type": "text",
+                "title": "Challenge entry",
+                "body_md": "Here is my take.",
+                "challenge": str(challenge.id),
+            },
+        )
+
+        assert response.status_code == 302
+        created = Post.objects.get(title="Challenge entry")
+        assert created.challenge_id == challenge.id
+
+    def test_author_can_soft_delete_and_restore_post(self, client):
+        user = make_user(username="delete_post_author", email="delete_post_author@example.com", handle="delete_post_author")
+        community = make_community("delete-post-community", creator=user)
+        post = Post.objects.create(community=community, author=user, post_type="text", title="Delete me", body_md="Body")
+        client.force_login(user)
+
+        delete_response = client.post(reverse("delete_post", kwargs={"post_id": post.id}))
+        assert delete_response.status_code == 302
+        post.refresh_from_db()
+        assert post.author_deleted_at is not None
+
+        restore_response = client.post(reverse("restore_deleted_post", kwargs={"post_id": post.id}))
+        post.refresh_from_db()
+        assert restore_response.status_code == 302
+        assert post.author_deleted_at is None
+
+    def test_author_can_soft_delete_and_restore_comment(self, client):
+        user = make_user(username="delete_comment_author", email="delete_comment_author@example.com", handle="delete_comment_author")
+        community = make_community("delete-comment-community", creator=user)
+        post = Post.objects.create(community=community, author=user, post_type="text", title="Thread", body_md="Body")
+        comment = Comment.objects.create(post=post, author=user, body_md="Comment", body_html="<p>Comment</p>")
+        client.force_login(user)
+
+        delete_response = client.post(reverse("delete_comment", kwargs={"comment_id": comment.id}))
+        comment.refresh_from_db()
+        assert delete_response.status_code == 302
+        assert comment.author_deleted_at is not None
+
+        restore_response = client.post(reverse("restore_deleted_comment", kwargs={"comment_id": comment.id}))
+        comment.refresh_from_db()
+        assert restore_response.status_code == 302
+        assert comment.author_deleted_at is None

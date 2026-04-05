@@ -41,7 +41,8 @@
     <div class="bg-white border border-gray-200 rounded-g p-4">
       <h2 class="font-semibold text-sm text-opal mb-2">Share this invite</h2>
       <input type="text" readonly value="{{ share_links.copy_url }}" class="w-full h-9 px-3 rounded-g border border-gray-200 text-sm text-gray-700 bg-gray-50">
-      <div class="grid grid-cols-3 gap-2 mt-3">
+      <div class="grid grid-cols-4 gap-2 mt-3">
+        <button type="button" data-share-title="{{ community.title }}" data-share-text="{{ share_links.share_text }}" data-share-url="{{ share_links.copy_url }}" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="h-8 rounded-g bg-gray-900 text-white text-xs font-medium flex items-center justify-center">Share</button>
         <a href="{{ share_links.whatsapp }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-green-50 text-green-700 text-xs font-medium flex items-center justify-center">WhatsApp</a>
         <a href="{{ share_links.telegram }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-sky-50 text-sky-700 text-xs font-medium flex items-center justify-center">Telegram</a>
         <a href="{{ share_links.x }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-gray-100 text-gray-700 text-xs font-medium flex items-center justify-center">X</a>

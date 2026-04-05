@@ -21,6 +21,15 @@
         <time class="text-gray-400">{{ comment.created_at|timesince_compact }} ago</time>
       </div>
       <div class="prose text-sm">{{ comment.body_html|safe }}</div>
+      {% if user == comment.author and comment.author_deleted_at %}
+      <div class="mt-2 rounded-g border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        This comment is hidden from everyone else.
+        <form method="post" action="{% url 'restore_deleted_comment' comment_id=comment.id %}" class="inline">
+          {% csrf_token %}
+          <button type="submit" class="font-medium underline">Undo</button>
+        </form>
+      </div>
+      {% endif %}
       <div class="flex items-center gap-0.5 mt-1.5 -ml-1.5">
         <button hx-post="{% url 'vote' %}"
                 hx-target="closest .vote-widget"
@@ -41,6 +50,12 @@
         </button>
         {% if user.is_authenticated %}
           <button class="h-6 px-2 flex items-center rounded text-xs font-medium text-gray-500 hover:bg-gray-100 transition-colors ml-1">Reply</button>
+        {% endif %}
+        {% if user == comment.author and not comment.author_deleted_at %}
+          <form method="post" action="{% url 'delete_comment' comment_id=comment.id %}">
+            {% csrf_token %}
+            <button type="submit" class="h-6 px-2 flex items-center rounded text-xs font-medium text-red-600 hover:bg-red-50 transition-colors ml-1">Delete</button>
+          </form>
         {% endif %}
       </div>
       {% if comment.children %}

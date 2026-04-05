@@ -83,6 +83,43 @@ class SearchTests(TestCase):
         self.assertContains(response, "Link only result")
         self.assertNotContains(response, "Safety policy draft")
 
+    def test_search_view_can_focus_on_communities_tab(self):
+        response = self.client.get(reverse("search"), {"q": "search", "type": "communities"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Matching communities")
+        self.assertContains(response, "Agora Search")
+        self.assertNotContains(response, "Matching people")
+
+    def test_search_view_can_focus_on_people_tab_with_helpful_empty_state(self):
+        response = self.client.get(reverse("search"), {"q": "nobody-here", "type": "people"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No people matched that search yet.")
+
+    def test_quick_search_returns_recent_searches_for_short_query(self):
+        session = self.client.session
+        session["recent_searches"] = ["design systems", "community prompts"]
+        session.save()
+
+        response = self.client.get(reverse("search_quick"), {"mode": "dropdown", "q": "d"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Recent searches")
+        self.assertContains(response, "design systems")
+
+    def test_quick_search_returns_grouped_matches_for_long_query(self):
+        self.user.display_name = "Search Captain"
+        self.user.save(update_fields=["display_name"])
+
+        response = self.client.get(reverse("search_quick"), {"mode": "palette", "q": "search"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Communities")
+        self.assertContains(response, "People")
+        self.assertContains(response, "Threads")
+        self.assertContains(response, "View all results for")
+
     @override_settings(SEARCH_BACKEND="sql", SEARCH_INDEX_ENABLED=False)
     def test_sql_backend_is_default_runtime_backend(self):
         backend = get_discovery_backend()

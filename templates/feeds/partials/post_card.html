@@ -11,23 +11,43 @@
 
     <!-- Meta: community = OPAL, rest gray -->
     <div class="flex items-center gap-1.5 text-xs flex-wrap">
-      <a href="/c/{{ post.community.slug }}/"
+      <a href="{% url 'community_detail' slug=post.community.slug %}"
          class="font-medium text-opal hover:text-opal-hover hover:underline">
         c/{{ post.community.slug }}
       </a>
       <span class="text-gray-300">·</span>
-      <span class="text-gray-500">u/<a href="/u/{{ post.author.handle|default:'deleted' }}/" class="hover:underline hover:text-gray-700">{{ post.author.handle|default:"[deleted]" }}</a></span>
+      <span class="text-gray-500">u/<a href="{% if post.author and post.author.handle %}{% url 'profile' handle=post.author.handle %}{% else %}#{% endif %}" class="hover:underline hover:text-gray-700">{{ post.author.handle|default:"[deleted]" }}</a></span>
       <span class="text-gray-300">·</span>
       <time class="text-gray-400">{{ post.created_at|timesince_compact }} ago</time>
+      {% if post.is_from_followed_user %}
+      <span class="text-gray-300">·</span>
+      <span class="text-[11px] font-semibold uppercase tracking-wide text-opal">From someone you follow</span>
+      {% endif %}
     </div>
 
     <!-- Title -->
     <h3 class="mt-1 mb-0">
-      <a href="/c/{{ post.community.slug }}/post/{{ post.id }}/{{ post.slug }}/"
+      <a href="{% url 'post_detail' community_slug=post.community.slug post_id=post.id slug=post.slug %}"
          class="font-medium text-sm text-gray-900 group-hover:text-primary transition-colors leading-snug">
         {{ post.title }}
       </a>
     </h3>
+
+    <div class="mt-1 flex flex-wrap items-center gap-2">
+      {% if post.feed_reason %}
+      <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">Why you see this: {{ post.feed_reason }}</span>
+      {% endif %}
+      {% if post.challenge_context %}
+      <span class="inline-flex items-center rounded-full bg-opal-light px-2 py-0.5 text-[11px] font-medium text-opal">Challenge live: {{ post.challenge_context }}</span>
+      {% endif %}
+      {% if post.challenge_id %}
+      <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">Challenge entry</span>
+      {% endif %}
+      <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">{{ post.discussion_label }}</span>
+      {% if post.last_comment_at %}
+      <span class="text-[11px] text-gray-400">Last reply {{ post.last_comment_at|timesince_compact }} ago</span>
+      {% endif %}
+    </div>
 
     {% if post.url %}
       <a href="{{ post.url }}" target="_blank" rel="noopener"
@@ -50,15 +70,15 @@
 
     <!-- Actions: all gray -->
     <div class="flex flex-wrap items-center gap-0 mt-2 -ml-1.5">
-      <a href="/c/{{ post.community.slug }}/post/{{ post.id }}/{{ post.slug }}/"
-         class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
+      <a href="{% url 'post_detail' community_slug=post.community.slug post_id=post.id slug=post.slug %}"
+         class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
           <path d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/>
         </svg>
-        {{ post.comment_count }} Comments
+        {{ post.discussion_label }}
       </a>
       {% include "votes/partials/save_button.html" with post=post is_saved=saved_posts|contains:post.id %}
-      <a href="/c/{{ post.community.slug }}/post/{{ post.id }}/{{ post.slug }}/"
+      <a href="{% url 'post_detail' community_slug=post.community.slug post_id=post.id slug=post.slug %}"
            class="h-7 px-2 flex items-center gap-1 rounded text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
            title="Open the thread to share it on WhatsApp, Telegram, X, or email">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">

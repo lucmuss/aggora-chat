@@ -4,8 +4,8 @@
 
 {% block content %}
 <div class="max-w-[1000px] mx-auto lg:flex lg:gap-6">
-  <div class="flex-1 min-w-0 max-w-[640px] space-y-3">
-    <div class="bg-white border border-gray-200 rounded-g p-4 flex items-center justify-between">
+  <div class="flex-1 min-w-0 max-w-[680px] space-y-3">
+    <div class="bg-white border border-gray-200 rounded-g p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <div class="flex items-center gap-2 text-xs text-gray-400 mb-1">
           <span class="font-medium text-opal">Mod Mail</span>
@@ -13,8 +13,9 @@
           <span>c/{{ community.slug }}</span>
         </div>
         <h1 class="text-xl font-semibold text-gray-900">Shared moderator inbox</h1>
+        <p class="text-sm text-gray-500 mt-1">Track what needs a moderator, what is waiting on the member, and what can be closed cleanly.</p>
       </div>
-      <a href="/mod/{{ community.slug }}/mail/new/"
+      <a href="{% url 'mod_mail_create' community_slug=community.slug %}"
         class="h-9 px-4 bg-primary text-white rounded-g text-sm font-medium hover:bg-primary-hover transition-colors flex items-center gap-1.5">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M12 5v14m-7-7h14" />
@@ -22,12 +23,28 @@
         New thread
       </a>
     </div>
+
+    <div class="bg-white border border-gray-200 rounded-g p-2">
+      <div class="flex flex-wrap gap-1">
+        <a href="{% url 'mod_mail_list' community_slug=community.slug %}?status=open" class="h-9 px-3 inline-flex items-center rounded-g text-sm font-medium {% if status_filter == 'open' %}bg-primary-light text-primary{% else %}text-gray-500 hover:bg-gray-50{% endif %}">Open</a>
+        {% for value, label in status_choices.choices %}
+          {% if value != 'open' %}
+          <a href="{% url 'mod_mail_list' community_slug=community.slug %}?status={{ value }}" class="h-9 px-3 inline-flex items-center rounded-g text-sm font-medium {% if status_filter == value %}bg-primary-light text-primary{% else %}text-gray-500 hover:bg-gray-50{% endif %}">{{ label }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
     {% if threads %}
     <div class="space-y-2">
       {% for thread in threads %}
-      <a href="/mod/{{ community.slug }}/mail/{{ thread.id }}/"
+      <a href="{% url 'mod_mail_thread' community_slug=community.slug thread_id=thread.id %}"
         class="block bg-white border border-gray-200 rounded-g p-4 hover:border-gray-300 transition-colors">
-        <div class="flex items-center gap-2 text-xs text-gray-400 mb-1">
+        <div class="flex flex-wrap items-center gap-2 text-xs text-gray-400 mb-1">
+          <span class="inline-flex rounded-full px-2 py-0.5 {% if thread.status == 'awaiting_mod' %}bg-amber-50 text-amber-700{% elif thread.status == 'awaiting_user' %}bg-sky-50 text-sky-700{% elif thread.status == 'closed' %}bg-gray-100 text-gray-600{% else %}bg-opal-light text-opal{% endif %}">
+            {{ thread.get_status_display }}
+          </span>
+          <span>·</span>
           <time>{{ thread.created_at|timesince }} ago</time>
           <span>·</span>
           <span>by {{ thread.created_by.handle|default:"unknown" }}</span>
@@ -35,12 +52,21 @@
           <span>{{ thread.messages.count }} message{{ thread.messages.count|pluralize }}</span>
         </div>
         <h3 class="text-sm font-medium text-gray-900">{{ thread.subject }}</h3>
+        {% if thread.context_json.reason_title or thread.context_json.handle %}
+        <p class="text-xs text-gray-500 mt-1">
+          {% if thread.context_json.reason_title %}Context: {{ thread.context_json.reason_title }}{% endif %}
+          {% if thread.context_json.reason_title and thread.context_json.handle %} · {% endif %}
+          {% if thread.context_json.handle %}User: {{ thread.context_json.handle }}{% endif %}
+        </p>
+        {% endif %}
       </a>
       {% endfor %}
     </div>
     {% else %}
     <div class="bg-white border border-gray-200 rounded-g p-8 text-center">
-      <p class="text-sm text-gray-400">No mod mail threads yet.</p>
+      <p class="text-sm font-medium text-gray-900">No threads in this inbox state.</p>
+      <p class="text-sm text-gray-500 mt-1">Start a thread when you need moderator coordination, a user follow-up, or a paper trail for a moderation choice.</p>
+      <a href="{% url 'mod_mail_create' community_slug=community.slug %}" class="inline-flex mt-4 h-9 px-4 items-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover">Open a thread</a>
     </div>
     {% endif %}
   </div>
@@ -48,8 +74,9 @@
     <div class="bg-white border border-gray-200 rounded-g p-4 sticky top-[72px]">
       <h3 class="font-semibold text-sm text-opal mb-3">Related tools</h3>
       <ul class="text-sm text-gray-600 space-y-2">
-        <li><a href="/mod/{{ community.slug }}/queue/" class="text-opal hover:underline">Mod queue</a></li>
-        <li><a href="/mod/{{ community.slug }}/log/" class="text-opal hover:underline">Mod log</a></li>
+        <li><a href="{% url 'mod_queue' community_slug=community.slug %}" class="text-opal hover:underline">Mod queue</a></li>
+        <li><a href="{% url 'mod_log' community_slug=community.slug %}" class="text-opal hover:underline">Mod log</a></li>
+        <li><a href="{% url 'removal_reasons_manage' community_slug=community.slug %}" class="text-opal hover:underline">Removal reasons</a></li>
       </ul>
     </div>
   </aside>

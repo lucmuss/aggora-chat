@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Owner Dashboard — c/{{ community.slug }}{% endblock %}
+
+{% block content %}
+<div class="max-w-[1100px] mx-auto space-y-4">
+  <div class="bg-white border border-gray-200 rounded-g p-5">
+    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div>
+        <p class="text-xs font-semibold text-opal uppercase tracking-wider mb-1">Owner dashboard</p>
+        <h1 class="text-xl font-semibold text-gray-900">How c/{{ community.slug }} is moving this week</h1>
+        <p class="text-sm text-gray-500 mt-1">A lightweight operating view for growth, challenge energy, unanswered threads, and moderation health.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a href="{% url 'community_detail' slug=community.slug %}" class="inline-flex h-9 px-4 items-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Back to community</a>
+        <a href="{% url 'community_settings' slug=community.slug %}" class="inline-flex h-9 px-4 items-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover">Open settings</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <p class="text-xs uppercase tracking-wide text-gray-400">Members</p>
+      <p class="mt-1 text-2xl font-semibold text-gray-900">{{ dashboard.member_count }}</p>
+      <p class="mt-1 text-xs text-gray-500">{{ dashboard.recent_member_joins }} joined in the last 7 days</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <p class="text-xs uppercase tracking-wide text-gray-400">Challenge uptake</p>
+      <p class="mt-1 text-2xl font-semibold text-gray-900">{{ dashboard.challenge_uptake.member_share }}%</p>
+      <p class="mt-1 text-xs text-gray-500">{{ dashboard.challenge_uptake.participants }} participants · {{ dashboard.challenge_uptake.entries }} entries</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <p class="text-xs uppercase tracking-wide text-gray-400">Invite conversions</p>
+      <p class="mt-1 text-2xl font-semibold text-gray-900">{{ dashboard.invite_conversions.joins }}</p>
+      <p class="mt-1 text-xs text-gray-500">{{ dashboard.invite_conversions.active_links }} active invite links</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <p class="text-xs uppercase tracking-wide text-gray-400">Queue health</p>
+      <p class="mt-1 text-2xl font-semibold text-gray-900">{{ dashboard.queue_health.needs_review }}</p>
+      <p class="mt-1 text-xs text-gray-500">Needs review · {{ dashboard.queue_health.resolved_today }} resolved today</p>
+    </div>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-[1.8fr_1fr]">
+    <div class="space-y-4">
+      <section class="bg-white border border-gray-200 rounded-g overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-100">
+          <h2 class="font-semibold text-sm text-gray-900">Active posters</h2>
+          <p class="text-xs text-gray-500 mt-1">The people currently carrying conversation in this room.</p>
+        </div>
+        {% if dashboard.active_poster_rows %}
+        <div class="divide-y divide-gray-100">
+          {% for row in dashboard.active_poster_rows %}
+          <div class="flex items-center justify-between px-4 py-3">
+            <div>
+              <p class="text-sm font-medium text-gray-900">{{ row.user.display_name|default:row.user.handle|default:"Deleted user" }}</p>
+              <p class="text-xs text-gray-500">{% if row.user and row.user.handle %}u/{{ row.user.handle }}{% else %}Account unavailable{% endif %}</p>
+            </div>
+            <span class="text-sm font-semibold text-opal">{{ row.posts }} posts</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="px-4 py-6 text-sm text-gray-500">No one has posted in the last week yet. Seed the tone with a kickoff thread or challenge prompt.</div>
+        {% endif %}
+      </section>
+
+      <section class="bg-white border border-gray-200 rounded-g overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
+          <div>
+            <h2 class="font-semibold text-sm text-gray-900">Unanswered threads</h2>
+            <p class="text-xs text-gray-500 mt-1">Good candidates for owner replies or community prompts.</p>
+          </div>
+          <a href="{% url 'create_post' community_slug=community.slug %}" class="text-xs font-medium text-opal hover:underline">Start a thread</a>
+        </div>
+        {% if dashboard.unanswered_threads %}
+        <div class="divide-y divide-gray-100">
+          {% for post in dashboard.unanswered_threads %}
+          <a href="{% url 'post_detail' community_slug=community.slug post_id=post.id slug=post.slug %}" class="block px-4 py-3 hover:bg-gray-50">
+            <p class="text-sm font-medium text-gray-900">{{ post.title }}</p>
+            <p class="text-xs text-gray-500 mt-1">Posted {{ post.created_at|timesince }} ago · {{ post.score }} score</p>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="px-4 py-6 text-sm text-gray-500">Every recent thread has at least one reply. That is a healthy sign for early momentum.</div>
+        {% endif %}
+      </section>
+
+      {% if dashboard.challenge_entries %}
+      <section class="bg-white border border-gray-200 rounded-g overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-100">
+          <h2 class="font-semibold text-sm text-gray-900">Top challenge entries</h2>
+          <p class="text-xs text-gray-500 mt-1">The posts currently defining the active prompt.</p>
+        </div>
+        <div class="divide-y divide-gray-100">
+          {% for post in dashboard.challenge_entries %}
+          <a href="{% url 'post_detail' community_slug=community.slug post_id=post.id slug=post.slug %}" class="block px-4 py-3 hover:bg-gray-50">
+            <p class="text-sm font-medium text-gray-900">{{ post.title }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ post.score }} score · {{ post.comment_count }} comments</p>
+          </a>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    </div>
+
+    <aside class="space-y-4">
+      <section class="bg-white border border-gray-200 rounded-g p-4">
+        <h2 class="font-semibold text-sm text-opal mb-2">Challenge pulse</h2>
+        {% if dashboard.active_challenge %}
+        <p class="text-sm font-medium text-gray-900">{{ dashboard.active_challenge.title }}</p>
+        <p class="text-sm text-gray-500 mt-1">{{ dashboard.challenge_uptake.participants }} participants and {{ dashboard.challenge_uptake.entries }} entries so far.</p>
+        <a href="{% url 'community_landing' slug=community.slug %}" class="inline-flex mt-3 h-9 px-4 items-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Open landing page</a>
+        {% else %}
+        <p class="text-sm text-gray-500">No active challenge right now. Starter kits and weekly prompts are a good way to kick off momentum.</p>
+      {% endif %}
+      </section>
+
+      <section class="bg-white border border-gray-200 rounded-g p-4">
+        <h2 class="font-semibold text-sm text-opal mb-2">Invite performance</h2>
+        <div class="space-y-2 text-sm text-gray-600">
+          <p><span class="text-gray-400">Active links:</span> <span class="font-medium text-gray-900">{{ dashboard.invite_conversions.active_links }}</span></p>
+          <p><span class="text-gray-400">Joined from invites:</span> <span class="font-medium text-gray-900">{{ dashboard.invite_conversions.joins }}</span></p>
+          {% if dashboard.invite_conversions.top_invite %}
+          <p><span class="text-gray-400">Top link uses:</span> <span class="font-medium text-gray-900">{{ dashboard.invite_conversions.top_invite.usage_count }}</span></p>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="bg-white border border-gray-200 rounded-g p-4">
+        <h2 class="font-semibold text-sm text-opal mb-2">Moderation health</h2>
+        <div class="space-y-2 text-sm text-gray-600">
+          <p><span class="text-gray-400">Needs review:</span> <span class="font-medium text-gray-900">{{ dashboard.queue_health.needs_review }}</span></p>
+          <p><span class="text-gray-400">Reported:</span> <span class="font-medium text-gray-900">{{ dashboard.queue_health.reported }}</span></p>
+          <p><span class="text-gray-400">Resolved today:</span> <span class="font-medium text-gray-900">{{ dashboard.queue_health.resolved_today }}</span></p>
+        </div>
+        <a href="{% url 'mod_queue' community_slug=community.slug %}" class="inline-flex mt-3 h-9 px-4 items-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Open mod queue</a>
+      </section>
+    </aside>
+  </div>
+</div>
+{% endblock %}

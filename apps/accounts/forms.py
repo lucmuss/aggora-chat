@@ -51,6 +51,9 @@ class AccountSettingsForm(forms.ModelForm):
                 attrs={
                     "rows": 4,
                     "placeholder": "Tell your communities what you care about.",
+                    "data-rich-markdown": "true",
+                    "data-markdown-preview-target": "account-bio-preview",
+                    "data-markdown-preview-label": "Bio preview",
                 }
             ),
         }
@@ -93,6 +96,9 @@ class StartWithFriendsForm(forms.Form):
             attrs={
                 "rows": 3,
                 "placeholder": "A sentence or two about what you care about.",
+                "data-rich-markdown": "true",
+                "data-markdown-preview-target": "onboarding-bio-preview",
+                "data-markdown-preview-label": "Bio preview",
             }
         ),
     )

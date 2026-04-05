@@ -10,6 +10,7 @@ from apps.moderation.services import (
     execute_ban,
     execute_mod_action,
     submit_report,
+    update_mod_mail_status,
 )
 from apps.posts.models import Comment, Post
 
@@ -155,9 +156,26 @@ class TestModerationServicesAndViews:
         )
 
         assert thread.subject == "Appeal"
+        thread.refresh_from_db()
         assert "<strong>Please review</strong>" in thread.messages.first().body_html
         assert reply.is_mod_reply is True
         assert reply.body_html.startswith("<p>")
+        thread.refresh_from_db()
+        assert thread.status == ModMail.ThreadStatus.AWAITING_USER
+
+    def test_update_mod_mail_status_closes_thread(self):
+        thread = create_mod_mail(
+            creator=self.reporter,
+            community=self.community,
+            body_md="Please review",
+            title="Appeal",
+        )
+
+        update_mod_mail_status(thread, ModMail.ThreadStatus.CLOSED)
+
+        thread.refresh_from_db()
+        assert thread.status == ModMail.ThreadStatus.CLOSED
+        assert thread.is_resolved is True
 
     def test_mod_queue_and_log_require_moderation_permissions(self, client):
         client.force_login(self.member)
@@ -229,6 +247,17 @@ class TestModerationServicesAndViews:
         assert response.status_code == 200
         assert "This field is required." in response.content.decode()
 
+    def test_mod_mail_status_update_requires_mod_permissions(self, client):
+        thread = ModMail.objects.create(community=self.community, subject="Question", created_by=self.reporter)
+        client.force_login(self.member)
+
+        response = client.post(
+            reverse("mod_mail_update_status", kwargs={"community_slug": self.community.slug, "thread_id": thread.id}),
+            {"status": ModMail.ThreadStatus.CLOSED},
+        )
+
+        assert response.status_code == 403
+
     def test_removal_reasons_manage_invalid_form_rerenders(self, client):
         client.force_login(self.owner)
 
@@ -249,6 +278,7 @@ class TestModerationServicesAndViews:
             ("mod_mail_list", {"community_slug": "slug"}),
             ("mod_mail_create", {"community_slug": "slug"}),
             ("mod_mail_thread", {"community_slug": "slug", "thread_id": 1}),
+            ("mod_mail_update_status", {"community_slug": "slug", "thread_id": 1}),
             ("removal_reasons_manage", {"community_slug": "slug"}),
             ("mod_action", {"community_slug": "slug"}),
             ("ban_user", {"community_slug": "slug"}),
@@ -258,4 +288,3 @@ class TestModerationServicesAndViews:
         path = reverse(name, kwargs=kwargs)
 
         assert resolve(path).view_name == name
-

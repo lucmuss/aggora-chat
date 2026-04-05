@@ -39,9 +39,15 @@ class Vote(models.Model):
 
 
 class SavedPost(models.Model):
+    class QueueStatus(models.TextChoices):
+        UNREAD = "unread", "Unread"
+        READING = "reading", "Reading"
+        DONE = "done", "Done"
+
     user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="saved_posts")
     post = models.ForeignKey("posts.Post", on_delete=models.CASCADE)
     saved_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=12, choices=QueueStatus.choices, default=QueueStatus.UNREAD)
 
     class Meta:
         unique_together = ("user", "post")

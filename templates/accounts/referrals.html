@@ -12,14 +12,25 @@
     </div>
 
     <div class="bg-white border border-gray-200 rounded-g p-4">
-      <div class="flex items-center justify-between gap-4">
+      <div class="flex items-start justify-between gap-4">
         <div>
           <p class="text-sm font-medium text-gray-900">Activation progress</p>
           <p class="text-xs text-gray-500 mt-1">{{ progress.completed_steps }} of {{ progress.total_steps }} steps complete.</p>
         </div>
-        <div class="text-right">
-          <p class="text-2xl font-semibold text-opal">{{ total_referrals }}</p>
-          <p class="text-xs text-gray-400">successful referrals</p>
+        <a href="{% url 'start_with_friends' %}" class="h-8 px-3 flex items-center rounded-g border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50">Revisit onboarding</a>
+      </div>
+      <div class="mt-4 grid gap-2 sm:grid-cols-3">
+        <div class="rounded-g border border-gray-200 bg-gray-50 px-3 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400">Invite links</p>
+          <p class="mt-1 text-2xl font-semibold text-gray-900">{{ referral_stats.total_invite_links }}</p>
+        </div>
+        <div class="rounded-g border border-opal-muted bg-opal-light px-3 py-3">
+          <p class="text-xs uppercase tracking-wide text-opal">Successful joins</p>
+          <p class="mt-1 text-2xl font-semibold text-opal">{{ referral_stats.total_referrals }}</p>
+        </div>
+        <div class="rounded-g border border-gray-200 bg-gray-50 px-3 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400">Badges unlocked</p>
+          <p class="mt-1 text-2xl font-semibold text-gray-900">{{ referral_stats.total_badges }}</p>
         </div>
       </div>
       <div class="mt-3 grid gap-2 sm:grid-cols-4 text-xs text-gray-600">
@@ -27,6 +38,52 @@
         <div class="rounded-g border px-3 py-2 {% if progress.community_goal_done %}border-green-200 bg-green-50 text-green-700{% else %}border-gray-200 bg-gray-50{% endif %}">3 communities</div>
         <div class="rounded-g border px-3 py-2 {% if progress.has_post or progress.has_comment %}border-green-200 bg-green-50 text-green-700{% else %}border-gray-200 bg-gray-50{% endif %}">First contribution</div>
         <div class="rounded-g border px-3 py-2 {% if progress.has_referral %}border-green-200 bg-green-50 text-green-700{% else %}border-gray-200 bg-gray-50{% endif %}">First referral</div>
+      </div>
+    </div>
+
+    {% if featured_referral_card %}
+    <div class="bg-gradient-to-r from-opal-light to-white border border-opal-muted rounded-g p-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-opal">Best community to invite into right now</p>
+      <div class="mt-2 flex items-start justify-between gap-4">
+        <div>
+          <p class="text-base font-semibold text-gray-900">c/{{ featured_referral_card.community.slug }}</p>
+          <p class="text-sm text-gray-600 mt-1">{{ featured_referral_card.community.description|default:"This community already has momentum and a clear reason to join." }}</p>
+          <p class="text-xs text-gray-500 mt-2">{{ featured_referral_card.usage_count }} joined via your invites · {{ featured_referral_card.member_count }} members total</p>
+        </div>
+        <button type="button"
+          data-copy-text="{{ featured_referral_card.share_links.copy_url }}"
+          data-copy-label="Invite link copied"
+          class="shrink-0 h-9 px-4 rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover">
+          Copy invite
+        </button>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="bg-white border border-gray-200 rounded-g p-4">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-gray-900">First-week missions</p>
+          <p class="text-xs text-gray-500 mt-1">These are the lightweight actions that make new accounts actually stick.</p>
+        </div>
+        <p class="text-xs text-opal font-medium">Reward: Momentum badge</p>
+      </div>
+      <div class="mt-3 space-y-2">
+        {% for mission in missions %}
+        <div class="flex items-start justify-between gap-3 rounded-g border px-3 py-3 {% if mission.completed %}border-green-200 bg-green-50{% else %}border-gray-200 bg-white{% endif %}">
+          <div class="min-w-0">
+            <p class="text-sm font-medium {% if mission.completed %}text-green-700{% else %}text-gray-900{% endif %}">
+              {% if mission.completed %}✓{% else %}○{% endif %} {{ mission.title }}
+            </p>
+            <p class="text-xs mt-1 {% if mission.completed %}text-green-700/80{% else %}text-gray-500{% endif %}">{{ mission.detail }}</p>
+          </div>
+          {% if not mission.completed %}
+          <a href="{{ mission.action_url }}" class="shrink-0 h-8 px-3 flex items-center rounded-g border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50">
+            {{ mission.action_label }}
+          </a>
+          {% endif %}
+        </div>
+        {% endfor %}
       </div>
     </div>
 
@@ -44,7 +101,15 @@
             <p>{{ card.usage_count }} referral{{ card.usage_count|pluralize }}</p>
           </div>
         </div>
-        <input type="text" readonly value="{{ card.share_links.copy_url }}" class="w-full h-9 mt-3 px-3 rounded-g border border-gray-200 text-sm text-gray-700 bg-gray-50">
+        <div class="mt-3 flex gap-2">
+          <input type="text" readonly value="{{ card.share_links.copy_url }}" class="flex-1 h-9 px-3 rounded-g border border-gray-200 text-sm text-gray-700 bg-gray-50">
+          <button type="button"
+            data-copy-text="{{ card.share_links.copy_url }}"
+            data-copy-label="Invite link copied"
+            class="h-9 px-4 rounded-g border border-opal-muted text-opal text-sm font-medium hover:bg-opal-light">
+            Copy
+          </button>
+        </div>
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-3">
           <a href="{{ card.share_links.whatsapp }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-green-50 text-green-700 text-xs font-medium flex items-center justify-center">WhatsApp</a>
           <a href="{{ card.share_links.telegram }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-sky-50 text-sky-700 text-xs font-medium flex items-center justify-center">Telegram</a>
@@ -82,7 +147,7 @@
 
     <div class="bg-white border border-gray-200 rounded-g p-4">
       <h2 class="font-semibold text-sm text-opal mb-2">Suggested share copy</h2>
-      <p class="text-sm text-gray-600">Invite people into a specific community instead of pitching the whole product. Concrete conversations convert better.</p>
+      <p class="text-sm text-gray-600">Invite people into a specific community instead of pitching the whole product. Concrete conversations convert better, and every join here counts toward your growth loop.</p>
     </div>
   </aside>
 </div>

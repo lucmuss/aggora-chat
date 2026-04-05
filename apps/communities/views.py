@@ -13,20 +13,44 @@ from .models import Community, CommunityInvite, CommunityWikiPage
 from .services import (
     active_challenge_for_community,
     best_posts_for_community,
+    community_activity_snapshot,
     can_join_community,
     can_participate_in_community,
     can_view_community,
     community_leaderboard,
+    community_owner_dashboard,
+    community_topic_highlights,
     create_invite_for_community,
     enrich_challenges_for_user,
     join_challenge,
     redeem_invite,
     save_wiki_page,
     share_links_for_invite,
+    share_links_for_challenge,
     submit_community,
     suggested_communities_for_user,
+    top_challenge_entries,
     toggle_user_membership,
 )
+
+
+def _render_private_community_denied(request, community, *, primary_href=None, primary_label="Browse communities"):
+    return render(
+        request,
+        "403.html",
+        {
+            "access_title": "This community is private",
+            "access_copy": f"c/{community.slug} is only visible to members right now, including its wiki pages.",
+            "access_hint": "Ask a moderator for an invite or explore a public community while you wait.",
+            "access_primary_href": primary_href or reverse("community_discovery"),
+            "access_primary_label": primary_label,
+        },
+        status=403,
+    )
+
+
+def _community_detail_url(community):
+    return reverse("community_detail", kwargs={"slug": community.slug})
 
 
 @login_required
@@ -55,7 +79,7 @@ def toggle_membership(request, slug):
                 "access_title": "This community needs an invite",
                 "access_copy": "Joining is limited right now because this community is restricted.",
                 "access_hint": "Use an invite link from a member or ask a moderator for approval.",
-                "access_primary_href": f"/c/{community.slug}/",
+                "access_primary_href": _community_detail_url(community),
                 "access_primary_label": "Back to community",
             },
             status=403,
@@ -69,7 +93,7 @@ def toggle_membership(request, slug):
             {
                 "access_title": "You cannot join this community yet",
                 "access_copy": str(e),
-                "access_primary_href": "/c/",
+                "access_primary_href": reverse("community_discovery"),
                 "access_primary_label": "Browse communities",
             },
             status=403,
@@ -119,7 +143,7 @@ def community_settings(request, slug):
                 "access_title": "Moderator permissions required",
                 "access_copy": f"You need community settings access for c/{community.slug} to change posting rules or privacy.",
                 "access_hint": "If you should have access, ask an owner to update your moderator role.",
-                "access_primary_href": f"/c/{community.slug}/",
+                "access_primary_href": _community_detail_url(community),
                 "access_primary_label": "Back to community",
             },
             status=403,
@@ -157,7 +181,11 @@ def community_landing(request, slug):
             "leaderboard": leaderboard,
             "best_posts": best_posts,
             "challenge": challenge,
+            "topic_highlights": community_topic_highlights(community),
+            "activity_snapshot": community_activity_snapshot(community),
             "can_join_directly": request.user.is_authenticated and can_join_community(request.user, community),
+            "challenge_entries": top_challenge_entries(challenge, limit=6) if challenge else [],
+            "challenge_share_links": share_links_for_challenge(challenge) if challenge else None,
         },
     )
 
@@ -177,6 +205,34 @@ def community_share_card(request, slug):
             "invite": invite,
             "challenge": challenge,
             "best_posts": best_posts,
+        },
+    )
+
+
+@login_required
+def community_owner_dashboard_view(request, slug):
+    community = get_object_or_404(Community, slug=slug)
+    membership = community.memberships.filter(user=request.user).first()
+    if not (request.user.is_staff or (membership and membership.role == membership.Role.OWNER)):
+        return render(
+            request,
+            "403.html",
+            {
+                "access_title": "Owner access required",
+                "access_copy": f"The owner dashboard for c/{community.slug} is reserved for community owners.",
+                "access_hint": "Moderators can still use the queue, log, and settings tools linked from the community page.",
+                "access_primary_href": reverse("community_detail", kwargs={"slug": community.slug}),
+                "access_primary_label": "Back to community",
+            },
+            status=403,
+        )
+    dashboard = community_owner_dashboard(community)
+    return render(
+        request,
+        "communities/owner_dashboard.html",
+        {
+            "community": community,
+            "dashboard": dashboard,
         },
     )
 
@@ -217,7 +273,7 @@ def join_community_challenge(request, slug, challenge_id):
             {
                 "access_title": "Join the community first",
                 "access_copy": f"You need access to c/{community.slug} before joining its challenge.",
-                "access_primary_href": f"/c/{community.slug}/",
+                "access_primary_href": _community_detail_url(community),
                 "access_primary_label": "Back to community",
             },
             status=403,
@@ -236,6 +292,8 @@ def join_community_challenge(request, slug, challenge_id):
 
 def wiki_page(request, slug, page_slug="home"):
     community = get_object_or_404(Community, slug=slug)
+    if not can_view_community(request.user, community):
+        return _render_private_community_denied(request, community)
     pages = community.wiki_pages.all()
     page = pages.filter(slug=page_slug).first()
     can_edit = request.user.is_authenticated and has_mod_permission(
@@ -259,6 +317,13 @@ def wiki_page(request, slug, page_slug="home"):
 @login_required
 def wiki_edit(request, slug, page_slug="home"):
     community = get_object_or_404(Community, slug=slug)
+    if not can_view_community(request.user, community):
+        return _render_private_community_denied(
+            request,
+            community,
+            primary_href=reverse("community_discovery"),
+            primary_label="Browse communities",
+        )
     if not has_mod_permission(request.user, community, ModPermission.MANAGE_SETTINGS):
         return render(
             request,
@@ -266,7 +331,7 @@ def wiki_edit(request, slug, page_slug="home"):
             {
                 "access_title": "Moderator permissions required",
                 "access_copy": f"You need wiki access for c/{community.slug} to edit community docs.",
-                "access_primary_href": f"/c/{community.slug}/wiki/",
+                "access_primary_href": reverse("community_wiki_home", kwargs={"slug": community.slug}),
                 "access_primary_label": "View wiki",
             },
             status=403,

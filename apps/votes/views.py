@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.common.celery import dispatch_task
@@ -69,3 +69,26 @@ def toggle_save(request, post_id):
     else:
         is_saved = True
     return render(request, "votes/partials/save_button.html", {"post": post, "is_saved": is_saved})
+
+
+@require_POST
+@login_required
+def update_saved_post_status(request, post_id):
+    saved = get_object_or_404(
+        SavedPost.objects.select_related("post", "post__community"),
+        user=request.user,
+        post_id=post_id,
+    )
+    action = request.POST.get("action", "status")
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "/"
+    if action == "remove":
+        saved.delete()
+        return redirect(next_url)
+
+    status = request.POST.get("status", SavedPost.QueueStatus.UNREAD)
+    allowed_statuses = {choice for choice, _ in SavedPost.QueueStatus.choices}
+    if status not in allowed_statuses:
+        return HttpResponseForbidden("Unsupported reader queue status.")
+    saved.status = status
+    saved.save(update_fields=["status"])
+    return redirect(next_url)

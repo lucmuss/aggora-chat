@@ -10,7 +10,7 @@ from django.db.models import Case, IntegerField, Value, When
 from django.db.models import Q as DjangoQ
 
 from apps.posts.models import Post
-from apps.posts.services import apply_post_sort, pg_feed_queryset
+from apps.posts.services import apply_post_sort, personalize_post_window, pg_feed_queryset
 
 OPERATOR_MAP = {
     "author": "author__handle__iexact",
@@ -88,12 +88,20 @@ class SQLDiscoveryBackend(BaseDiscoveryBackend):
         next_cursor = self._encode_cursor(offset + page_size) if len(posts) == page_size else None
         return FeedResult(posts, next_cursor=next_cursor)
 
+    def _paginate_personalized_queryset(self, queryset, user, page_size=25, after=None) -> FeedResult:
+        offset = self._decode_cursor(after)
+        window_size = max(page_size * 3, 60)
+        posts = list(queryset[offset : offset + window_size])
+        ranked_posts = personalize_post_window(posts, user)
+        paginated = ranked_posts[:page_size]
+        next_cursor = self._encode_cursor(offset + page_size) if len(posts) >= page_size else None
+        return FeedResult(paginated, next_cursor=next_cursor)
+
     def home_feed(self, user, sort="hot", page_size=25, after=None, scope="all") -> FeedResult:
-        return self._paginate_queryset(
-            pg_feed_queryset(user=user, community=None, sort=sort, scope=scope),
-            page_size=page_size,
-            after=after,
-        )
+        queryset = pg_feed_queryset(user=user, community=None, sort=sort, scope=scope)
+        if user is not None and getattr(user, "is_authenticated", False) and scope == "all":
+            return self._paginate_personalized_queryset(queryset, user=user, page_size=page_size, after=after)
+        return self._paginate_queryset(queryset, page_size=page_size, after=after)
 
     def community_feed(self, user, community, sort="hot", page_size=25, after=None) -> FeedResult:
         return self._paginate_queryset(

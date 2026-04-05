@@ -9,14 +9,16 @@
 
     <!-- Search -->
     <div class="order-3 sm:order-none basis-full sm:basis-auto flex-1 max-w-[520px]">
-      <form method="get" action="{% url 'search' %}" class="relative">
+      <form method="get" action="{% url 'search' %}" class="relative" autocomplete="off">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none"
           stroke="currentColor" viewBox="0 0 24 24">
           <circle cx="11" cy="11" r="8" stroke-width="2" />
           <path d="m21 21-4.35-4.35" stroke-width="2" />
         </svg>
         <input type="search" id="search-input" name="q" placeholder="Search {{ APP_NAME }}" data-shortcut-search aria-label="Search posts, communities, and people"
+          hx-get="{% url 'search_quick' %}" hx-trigger="keyup changed delay:180ms, search" hx-target="#header-search-results" hx-include="#search-input" hx-vals='{"mode":"dropdown"}'
           class="w-full h-9 pl-9 pr-3 rounded-g bg-gray-50 border border-transparent text-sm text-gray-900 placeholder-gray-400 hover:bg-gray-100 hover:border-gray-200 focus:bg-white focus:border-primary focus:outline-none transition-all">
+        <div id="header-search-results" class="absolute left-0 right-0 top-full z-50"></div>
       </form>
     </div>
 
@@ -103,6 +105,11 @@
                 {% if request.path == '/search/' %}text-primary border-primary font-bold{% else %}text-gray-500 border-transparent font-medium hover:text-gray-900 hover:border-gray-300{% endif %}">
         Search
       </a>
+      <button type="button"
+        data-command-open
+        class="ml-auto px-4 h-10 flex items-center text-sm text-gray-500 border-b-2 border-transparent font-medium hover:text-gray-900 hover:border-gray-300 transition-colors">
+        Ctrl+K
+      </button>
     </nav>
   </div>
 </header>

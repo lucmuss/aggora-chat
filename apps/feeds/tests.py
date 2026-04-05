@@ -187,8 +187,10 @@ class DiscoveryFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         posts = list(response.context["posts"])
         self.assertEqual(posts[0].title, low_score_followed.title)
+        self.assertEqual(posts[0].feed_reason, "Because you follow this person")
         self.assertIn(joined_post.title, [post.title for post in posts[:3]])
         self.assertIn(high_score_other.title, [post.title for post in posts])
+        self.assertContains(response, "Why you see this")
 
     def test_home_feed_surfaces_friend_activity(self):
         followed_author = User.objects.create_user(
@@ -220,3 +222,50 @@ class DiscoveryFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Friend Activity")
         self.assertContains(response, "activityfriend")
+
+    def test_home_feed_shows_first_week_mission_and_conversation_context(self):
+        self.client.force_login(self.user)
+        Comment.objects.create(
+            post=self.post,
+            author=self.user,
+            body_md="Fresh reply",
+            body_html="<p>Fresh reply</p>",
+        )
+
+        response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "First week on Agora")
+        self.assertContains(response, "Start the discussion")
+
+    def test_for_you_feed_marks_challenge_entries_in_the_feed(self):
+        challenge = self.community.challenges.create(
+            title="Prompt sprint",
+            prompt_md="Ship one thoughtful post.",
+            starts_at=timezone.now() - timezone.timedelta(hours=1),
+            ends_at=timezone.now() + timezone.timedelta(days=2),
+            is_featured=True,
+            created_by=self.user,
+        )
+        challenge_post = Post.objects.create(
+            community=self.community,
+            author=self.user,
+            post_type="text",
+            title="Challenge thread",
+            body_md="Entry",
+            score=2,
+            hot_score=2,
+            challenge=challenge,
+        )
+        self.community.memberships.create(user=self.user, role=CommunityMembership.Role.MEMBER)
+        challenge.participations.create(user=self.user)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
+        posts = list(response.context["posts"])
+        matching = next(post for post in posts if post.id == challenge_post.id)
+        self.assertTrue(matching.feed_reason)
+        self.assertEqual(matching.challenge_id, challenge.id)
+        self.assertContains(response, "Challenge entry")

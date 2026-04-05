@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from apps.accounts.models import Notification
 from apps.communities.models import Community, CommunityInvite, CommunityMembership
+from apps.posts.models import Post
 
 User = get_user_model()
 
@@ -101,6 +102,55 @@ class TestAccountViews:
         assert response.status_code == 200
         assert list(response.context["notifications"]) == []
 
+    def test_notifications_view_filters_replies(self, client):
+        user = make_user(username="replyalerts", email="replyalerts@example.com", handle="replyalerts")
+        Notification.objects.create(
+            user=user,
+            notification_type=Notification.NotificationType.POST_REPLY,
+            message="A reply",
+        )
+        Notification.objects.create(
+            user=user,
+            notification_type=Notification.NotificationType.FOLLOWED_USER_JOINED,
+            message="A follow event",
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("notifications"), {"filter": "replies"})
+
+        assert response.status_code == 200
+        assert len(response.context["notifications"]) == 1
+        assert response.context["notification_filter"] == "replies"
+
+    def test_notification_toggle_read_flips_state(self, client):
+        user = make_user(username="toggleread", email="toggleread@example.com", handle="toggleread")
+        notification = Notification.objects.create(
+            user=user,
+            notification_type=Notification.NotificationType.POST_REPLY,
+            message="Unread",
+            is_read=False,
+        )
+        client.force_login(user)
+
+        response = client.post(reverse("notification_toggle_read", kwargs={"notification_id": notification.id}))
+
+        assert response.status_code == 302
+        notification.refresh_from_db()
+        assert notification.is_read is True
+
+    def test_notifications_mark_all_read_marks_only_current_user_items(self, client):
+        user = make_user(username="markall", email="markall@example.com", handle="markall")
+        other = make_user(username="markall_other", email="markall_other@example.com", handle="markall_other")
+        Notification.objects.create(user=user, notification_type=Notification.NotificationType.POST_REPLY, message="One")
+        Notification.objects.create(user=other, notification_type=Notification.NotificationType.POST_REPLY, message="Two")
+        client.force_login(user)
+
+        response = client.post(reverse("notifications_mark_all_read"))
+
+        assert response.status_code == 302
+        assert Notification.objects.filter(user=user, is_read=False).count() == 0
+        assert Notification.objects.filter(user=other, is_read=False).count() == 1
+
     def test_referrals_view_handles_no_memberships(self, client):
         user = make_user(username="noreferrals", email="noreferrals@example.com", handle="noreferrals")
         client.force_login(user)
@@ -109,7 +159,21 @@ class TestAccountViews:
 
         assert response.status_code == 200
         assert list(response.context["referral_cards"]) == []
-        assert response.context["total_referrals"] == 0
+        assert response.context["referral_stats"]["total_referrals"] == 0
+
+    def test_referrals_view_exposes_featured_card_and_invite_stats(self, client):
+        user = make_user(username="refstats", email="refstats@example.com", handle="refstats")
+        community = make_community("ref-stats", user)
+        CommunityMembership.objects.create(user=user, community=community)
+        invite = CommunityInvite.objects.create(community=community, created_by=user, token="refstats-token", usage_count=2)
+        client.force_login(user)
+
+        response = client.get(reverse("account_referrals"))
+
+        assert response.status_code == 200
+        assert response.context["featured_referral_card"].invite.id == invite.id
+        assert response.context["referral_stats"]["total_referrals"] == 2
+        assert response.context["referral_stats"]["total_invite_links"] == 1
 
     def test_start_with_friends_invalid_form_rerenders_errors(self, client):
         user = make_user(username="onboardinginvalid", email="onboardinginvalid@example.com", handle="onboardinginvalid")
@@ -199,7 +263,7 @@ class TestAccountViews:
         user.refresh_from_db()
         assert user.mfa_totp_enabled is True
 
-    def test_notifications_view_marks_only_unread_notifications(self, client):
+    def test_notifications_view_preserves_unread_state_until_user_acts(self, client):
         user = make_user(username="notifuser", email="notifuser@example.com", handle="notifuser")
         Notification.objects.create(
             user=user,
@@ -218,7 +282,7 @@ class TestAccountViews:
         response = client.get(reverse("notifications"))
 
         assert response.status_code == 200
-        assert Notification.objects.filter(user=user, is_read=False).count() == 0
+        assert Notification.objects.filter(user=user, is_read=False).count() == 1
 
     @override_settings(LOGOUT_REDIRECT_URL="/")
     def test_account_settings_context_uses_set_password_for_users_without_usable_password(self, client):
@@ -246,3 +310,21 @@ class TestAccountViews:
 
         assert response.status_code == 302
         assert response.url == reverse("handle_setup")
+
+    def test_record_post_share_marks_first_share_timestamp(self, client):
+        user = make_user(username="sharetracker", email="sharetracker@example.com", handle="sharetracker")
+        community = make_community("share-community", user)
+        post = Post.objects.create(
+            community=community,
+            author=user,
+            post_type="text",
+            title="A thread worth sharing",
+            body_md="Details",
+        )
+        client.force_login(user)
+
+        response = client.post(reverse("record_post_share", kwargs={"post_id": post.id}))
+
+        assert response.status_code == 200
+        user.refresh_from_db()
+        assert user.first_post_share_at is not None

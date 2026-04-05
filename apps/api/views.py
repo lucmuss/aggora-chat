@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.models import User
 from apps.communities.models import Community
-from apps.communities.services import can_participate_in_community, can_view_community
+from apps.communities.services import can_participate_in_community, can_view_community, community_owner_dashboard
 from apps.moderation.models import CommunityAgentSettings, ModAction, ModQueueItem
 from apps.moderation.permissions import ModPermission, has_mod_permission
 from apps.moderation.utils import is_user_banned
@@ -139,6 +139,37 @@ class CommunityFeedAPIView(generics.ListAPIView):
         posts, next_cursor = community_feed_results(user=request.user, community=community, sort=sort, after=after)
         serializer = self.get_serializer(posts, many=True)
         return Response({"items": serializer.data, "after": next_cursor, "before": None, "count": len(serializer.data)})
+
+
+class CommunityOwnerDashboardAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, slug):
+        community = get_object_or_404(Community, slug=slug)
+        membership = community.memberships.filter(user=request.user).first()
+        if not (request.user.is_staff or (membership and membership.role == membership.Role.OWNER)):
+            return Response({"error": "Owner access required"}, status=status.HTTP_403_FORBIDDEN)
+        dashboard = community_owner_dashboard(community)
+        return Response(
+            {
+                "member_count": dashboard["member_count"],
+                "recent_member_joins": dashboard["recent_member_joins"],
+                "challenge_uptake": dashboard["challenge_uptake"],
+                "invite_conversions": {
+                    "active_links": dashboard["invite_conversions"]["active_links"],
+                    "joins": dashboard["invite_conversions"]["joins"],
+                },
+                "queue_health": dashboard["queue_health"],
+                "unanswered_threads": PostListSerializer(dashboard["unanswered_threads"], many=True).data,
+                "active_posters": [
+                    {
+                        "handle": row["user"].handle if row["user"] else None,
+                        "posts": row["posts"],
+                    }
+                    for row in dashboard["active_poster_rows"]
+                ],
+            }
+        )
 
 
 class PostDetailAPIView(generics.RetrieveAPIView):

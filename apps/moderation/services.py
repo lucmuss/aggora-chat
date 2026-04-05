@@ -159,12 +159,22 @@ def execute_ban(
     return ban
 
 
-def create_mod_mail(creator: User, community: Community, body_md: str, title: str) -> ModMail:
+def create_mod_mail(
+    creator: User,
+    community: Community,
+    body_md: str,
+    title: str,
+    *,
+    is_mod_author: bool = False,
+    context: dict | None = None,
+) -> ModMail:
     """Creates a new mod mail thread."""
     thread = ModMail.objects.create(
         community=community,
         created_by=creator,
         subject=title,
+        status=ModMail.ThreadStatus.AWAITING_USER if is_mod_author else ModMail.ThreadStatus.AWAITING_MOD,
+        context_json=context or {},
     )
     ModMailMessage.objects.create(
         thread=thread,
@@ -178,10 +188,25 @@ def create_mod_mail(creator: User, community: Community, body_md: str, title: st
 
 def create_mod_mail_reply(author: User, thread: ModMail, body_md: str, is_mod_reply: bool) -> ModMailMessage:
     """Creates a reply in a mod mail thread."""
-    return ModMailMessage.objects.create(
+    message = ModMailMessage.objects.create(
         thread=thread,
         author=author,
         body_md=body_md,
         body_html=render_markdown(body_md),
         is_mod_reply=is_mod_reply,
     )
+    if thread.status != ModMail.ThreadStatus.CLOSED:
+        thread.status = ModMail.ThreadStatus.AWAITING_USER if is_mod_reply else ModMail.ThreadStatus.AWAITING_MOD
+        thread.is_resolved = False
+        thread.save(update_fields=["status", "is_resolved"])
+    return message
+
+
+def update_mod_mail_status(thread: ModMail, status: str) -> ModMail:
+    allowed = {choice for choice, _ in ModMail.ThreadStatus.choices}
+    if status not in allowed:
+        raise ValueError("Unsupported mod mail status.")
+    thread.status = status
+    thread.is_resolved = status == ModMail.ThreadStatus.CLOSED
+    thread.save(update_fields=["status", "is_resolved"])
+    return thread

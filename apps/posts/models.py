@@ -9,7 +9,7 @@ from apps.common.markdown import render_markdown
 
 class PostQuerySet(models.QuerySet):
     def visible(self):
-        return self.filter(is_removed=False)
+        return self.filter(is_removed=False, author_deleted_at__isnull=True)
 
     def for_listing(self):
         return self.select_related(
@@ -53,6 +53,14 @@ class Post(models.Model):
     is_stickied = models.BooleanField(default=False)
     is_removed = models.BooleanField(default=False)
     removed_reason = models.TextField(blank=True)
+    author_deleted_at = models.DateTimeField(null=True, blank=True)
+    challenge = models.ForeignKey(
+        "communities.CommunityChallenge",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="entries",
+    )
     crosspost_parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL)
 
     objects = PostQuerySet.as_manager()
@@ -121,6 +129,7 @@ class Comment(models.Model):
     downvote_count = models.PositiveIntegerField(default=0)
     is_removed = models.BooleanField(default=False)
     is_collapsed = models.BooleanField(default=False)
+    author_deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-score", "created_at"]

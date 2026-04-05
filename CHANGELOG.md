@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.3] - 2026-04-05
+
+Release focused on product polish, growth loops, explainable personalization, and a richer writing experience.
+
+### Added
+- Global search tabs, HTMX live search, and a `Ctrl+K` command palette for faster navigation.
+- First-week missions, richer referral surfaces, and stronger challenge participation and submission flows.
+- Community starter kits, reader-queue saved states, improved mod mail states, and owner dashboards for community health.
+- Explainable `For You` ranking signals with card-level context about why a thread appears in the feed.
+- Native Share API support with copy feedback across posts and community share surfaces.
+- Lightweight rich Markdown editing toolbar with live preview for posts, comments, bios, wiki pages, and mod mail.
+
+### Changed
+- Community landing pages now work as stronger acquisition pages with social proof, challenge galleries, and clearer invite/share CTAs.
+- Community settings, moderation queue, notifications, and account surfaces now use more consistent, product-led microcopy and clearer empty states.
+- Profile bios now render safely as Markdown instead of plain text.
+
+### Fixed
+- Wiki read and edit flows now enforce community privacy consistently, preventing private-community wiki leaks.
+- Comment, post, and challenge-entry creation now share a more coherent writing and discovery flow.
+
+### Verified
+- `python3 -m compileall apps config templates static`
+- `uv run pytest -q`
+
 ## [0.3.2] - 2026-04-05
 
 Patch release focused on GitHub CI reliability and repo-wide lint cleanup.

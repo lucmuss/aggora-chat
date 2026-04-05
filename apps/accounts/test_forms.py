@@ -94,6 +94,13 @@ class TestAccountSettingsForm:
         assert saved.notify_on_replies is True
         assert saved.notify_on_follows is False
 
+    def test_account_settings_bio_widget_enables_rich_markdown_preview(self):
+        form = AccountSettingsForm()
+        attrs = form.fields["bio"].widget.attrs
+
+        assert attrs["data-rich-markdown"] == "true"
+        assert attrs["data-markdown-preview-target"] == "account-bio-preview"
+
 
 class TestTotpVerificationForm:
     def test_totp_verification_form_accepts_code_field(self):
@@ -125,6 +132,8 @@ class TestStartWithFriendsForm:
         assert form.fields["display_name"].initial == "Starter"
         assert form.fields["bio"].initial == "Bio"
         assert form.fields["first_post_community"].initial == communities[0].pk
+        assert form.fields["bio"].widget.attrs["data-rich-markdown"] == "true"
+        assert form.fields["bio"].widget.attrs["data-markdown-preview-target"] == "onboarding-bio-preview"
 
     def test_clean_friend_emails_deduplicates_and_normalizes(self):
         user = make_user(username="emails", email="emails@example.com", handle="emails")

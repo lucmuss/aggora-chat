@@ -16,6 +16,7 @@ from .services import (
     execute_ban,
     execute_mod_action,
     submit_report,
+    update_mod_mail_status,
 )
 
 
@@ -150,8 +151,23 @@ def mod_mail_list(request, community_slug):
     if not has_mod_permission(request.user, community, ModPermission.MOD_MAIL):
         raise PermissionDenied
 
-    threads = ModMail.objects.filter(community=community).select_related("created_by")[:100]
-    return render(request, "moderation/mail_list.html", {"community": community, "threads": threads})
+    status_filter = request.GET.get("status", "open")
+    threads = ModMail.objects.filter(community=community).select_related("created_by")
+    if status_filter == "open":
+        threads = threads.exclude(status=ModMail.ThreadStatus.CLOSED)
+    elif status_filter in {choice for choice, _ in ModMail.ThreadStatus.choices}:
+        threads = threads.filter(status=status_filter)
+    threads = threads[:100]
+    return render(
+        request,
+        "moderation/mail_list.html",
+        {
+            "community": community,
+            "threads": threads,
+            "status_filter": status_filter,
+            "status_choices": ModMail.ThreadStatus,
+        },
+    )
 
 
 @login_required
@@ -179,13 +195,46 @@ def mod_mail_thread(request, community_slug, thread_id):
     return render(
         request,
         "moderation/mail_thread.html",
-        {"community": community, "thread": thread, "form": form},
+        {
+            "community": community,
+            "thread": thread,
+            "form": form,
+            "is_mod": is_mod,
+            "removal_reasons": community.removal_reasons.all(),
+            "status_choices": ModMail.ThreadStatus,
+        },
     )
+
+
+@require_POST
+@login_required
+def mod_mail_update_status(request, community_slug, thread_id):
+    community = get_object_or_404(Community, slug=community_slug)
+    if not has_mod_permission(request.user, community, ModPermission.MOD_MAIL):
+        raise PermissionDenied
+    thread = get_object_or_404(ModMail.objects.filter(community=community), pk=thread_id)
+    try:
+        update_mod_mail_status(thread, request.POST.get("status", ModMail.ThreadStatus.OPEN))
+    except ValueError:
+        return HttpResponseBadRequest("Unsupported mod mail status.")
+    return redirect("mod_mail_thread", community_slug=community.slug, thread_id=thread.id)
 
 
 @login_required
 def mod_mail_create(request, community_slug):
     community = get_object_or_404(Community, slug=community_slug)
+    is_mod = has_mod_permission(request.user, community, ModPermission.MOD_MAIL)
+    context = {}
+    if request.GET.get("post_id"):
+        context["post_id"] = request.GET.get("post_id")
+    if request.GET.get("comment_id"):
+        context["comment_id"] = request.GET.get("comment_id")
+    if request.GET.get("handle"):
+        context["handle"] = request.GET.get("handle")
+    if request.GET.get("reason_title"):
+        context["reason_title"] = request.GET.get("reason_title")
+    if request.GET.get("reason_code"):
+        context["reason_code"] = request.GET.get("reason_code")
     if request.method == "POST":
         form = ModMailCreateForm(request.POST)
         if form.is_valid():
@@ -194,12 +243,23 @@ def mod_mail_create(request, community_slug):
                 community=community,
                 body_md=form.cleaned_data["body_md"],
                 title=form.cleaned_data["subject"],
+                is_mod_author=is_mod,
+                context=context,
             )
             return redirect("mod_mail_thread", community_slug=community.slug, thread_id=thread.id)
     else:
         form = ModMailCreateForm()
 
-    return render(request, "moderation/mail_create.html", {"community": community, "form": form})
+    return render(
+        request,
+        "moderation/mail_create.html",
+        {
+            "community": community,
+            "form": form,
+            "context": context,
+            "is_mod": is_mod,
+        },
+    )
 
 
 @login_required

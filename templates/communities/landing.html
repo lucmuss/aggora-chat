@@ -14,15 +14,49 @@
           {{ community.name|first|upper }}
         </div>
         <div class="flex flex-wrap gap-2 pt-6">
-          <a href="{% url 'community_detail' slug=community.slug %}" class="h-9 px-4 rounded-g bg-primary text-white text-sm font-medium flex items-center hover:bg-primary-hover transition-colors">Open community</a>
-          <a href="{{ share_links.whatsapp }}" target="_blank" rel="noopener" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center hover:bg-gray-50 transition-colors">Share invite</a>
+          <a href="{% url 'community_detail' slug=community.slug %}" class="h-9 px-4 rounded-g bg-primary text-white text-sm font-medium flex items-center hover:bg-primary-hover transition-colors">{% if can_join_directly %}Join and explore{% else %}Open community{% endif %}</a>
+          <button type="button" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="h-9 px-4 rounded-g border border-opal-muted text-sm font-medium text-opal flex items-center hover:bg-opal-light transition-colors">Copy invite</button>
+          <button type="button" data-share-title="{{ community.title }}" data-share-text="{{ share_links.share_text }}" data-share-url="{{ share_links.copy_url }}" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center hover:bg-gray-50 transition-colors">Share</button>
           <a href="{% url 'community_share_card' slug=community.slug %}" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center hover:bg-gray-50 transition-colors">Share card</a>
         </div>
       </div>
       <h1 class="text-2xl font-semibold text-gray-900 mt-3">{{ community.title }}</h1>
       <p class="text-sm text-gray-500 mt-2">{{ community.seo_description|default:community.description }}</p>
+      <div class="mt-4 grid gap-3 sm:grid-cols-4">
+        <div class="rounded-g border border-gray-200 bg-gray-50 px-3 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400">Members</p>
+          <p class="mt-1 text-xl font-semibold text-gray-900">{{ community.subscriber_count }}</p>
+        </div>
+        <div class="rounded-g border border-gray-200 bg-gray-50 px-3 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400">Posts this week</p>
+          <p class="mt-1 text-xl font-semibold text-gray-900">{{ activity_snapshot.recent_posts }}</p>
+        </div>
+        <div class="rounded-g border border-gray-200 bg-gray-50 px-3 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400">Comments this week</p>
+          <p class="mt-1 text-xl font-semibold text-gray-900">{{ activity_snapshot.recent_comments }}</p>
+        </div>
+        <div class="rounded-g border border-gray-200 bg-gray-50 px-3 py-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400">Active people</p>
+          <p class="mt-1 text-xl font-semibold text-gray-900">{{ activity_snapshot.active_people }}</p>
+        </div>
+      </div>
+      {% if topic_highlights %}
+      <div class="mt-4">
+        <p class="text-xs font-semibold uppercase tracking-wide text-opal">Typical topics</p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          {% for topic in topic_highlights %}
+          <span class="inline-flex items-center rounded-full bg-opal-light px-3 py-1 text-xs font-medium text-opal">{{ topic }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
       {% if community.landing_intro_html %}
       <div class="prose mt-4">{{ community.landing_intro_html|safe }}</div>
+      {% else %}
+      <div class="mt-4 rounded-g border border-gray-200 bg-gray-50 px-4 py-4">
+        <p class="text-xs font-semibold uppercase tracking-wide text-opal">Why people join</p>
+        <p class="mt-2 text-sm text-gray-600">This community is still young, which means your first post or comment can shape its tone early. Join now if you want to help define what belongs here.</p>
+      </div>
       {% endif %}
     </div>
   </section>
@@ -47,8 +81,31 @@
               </button>
             </form>
             {% endif %}
-            <a href="{{ challenge.share_links.x }}" target="_blank" rel="noopener" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center justify-center hover:bg-gray-50 transition-colors">Share challenge</a>
+            <a href="{% url 'create_post' community_slug=community.slug %}?challenge={{ challenge.id }}" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center justify-center hover:bg-gray-50 transition-colors">Post an entry</a>
+            <button type="button" data-share-title="{{ challenge.title }}" data-share-text="{{ challenge_share_links.share_text }}" data-share-url="{{ challenge_share_links.copy_url }}" data-copy-text="{{ challenge_share_links.copy_url }}" data-copy-label="Challenge link copied" class="h-9 px-4 rounded-g border border-gray-200 text-sm font-medium text-gray-700 flex items-center justify-center hover:bg-gray-50 transition-colors">Share challenge</button>
           </div>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if challenge_entries %}
+      <section class="bg-white border border-gray-200 rounded-g overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
+          <div>
+            <h2 class="font-semibold text-sm text-gray-900">Challenge gallery</h2>
+            <p class="text-xs text-gray-500 mt-1">The entries already giving this prompt momentum.</p>
+          </div>
+          {% if challenge %}
+          <a href="{% url 'create_post' community_slug=community.slug %}?challenge={{ challenge.id }}" class="text-xs font-medium text-opal hover:underline">Submit yours</a>
+          {% endif %}
+        </div>
+        <div class="divide-y divide-gray-100">
+          {% for post in challenge_entries %}
+          <a href="{% url 'post_detail' community_slug=community.slug post_id=post.id slug=post.slug %}" class="block px-4 py-3 hover:bg-gray-50">
+            <p class="text-sm font-medium text-gray-900">{{ post.title }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ post|display_score }} score · {{ post.comment_count }} comments</p>
+          </a>
+          {% endfor %}
         </div>
       </section>
       {% endif %}
@@ -67,7 +124,7 @@
           {% endfor %}
         </div>
         {% else %}
-        <div class="px-4 py-6 text-sm text-gray-500">No featured posts yet.</div>
+        <div class="px-4 py-6 text-sm text-gray-500">No featured posts yet. The first great thread here can become the reason someone joins.</div>
         {% endif %}
       </section>
 
@@ -90,11 +147,14 @@
       <section class="bg-white border border-gray-200 rounded-g p-4">
         <h2 class="font-semibold text-sm text-opal mb-2">One-click invite</h2>
         <input type="text" readonly value="{{ share_links.copy_url }}" class="w-full h-9 px-3 rounded-g border border-gray-200 text-sm text-gray-700 bg-gray-50">
-        <div class="grid grid-cols-3 gap-2 mt-3">
+        <div class="grid grid-cols-5 gap-2 mt-3">
+          <button type="button" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="h-8 rounded-g bg-opal-light text-opal text-xs font-medium flex items-center justify-center">Copy</button>
+          <button type="button" data-share-title="{{ community.title }}" data-share-text="{{ share_links.share_text }}" data-share-url="{{ share_links.copy_url }}" data-copy-text="{{ share_links.copy_url }}" data-copy-label="Invite link copied" class="h-8 rounded-g bg-gray-900 text-white text-xs font-medium flex items-center justify-center">Share</button>
           <a href="{{ share_links.whatsapp }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-green-50 text-green-700 text-xs font-medium flex items-center justify-center">WhatsApp</a>
           <a href="{{ share_links.telegram }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-sky-50 text-sky-700 text-xs font-medium flex items-center justify-center">Telegram</a>
           <a href="{{ share_links.x }}" target="_blank" rel="noopener" class="h-8 rounded-g bg-gray-100 text-gray-700 text-xs font-medium flex items-center justify-center">X</a>
         </div>
+        <p class="text-xs text-gray-500 mt-3">Send people into one concrete room with one clear reason to care.</p>
       </section>
 
       {% if leaderboard %}

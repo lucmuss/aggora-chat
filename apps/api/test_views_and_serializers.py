@@ -8,7 +8,8 @@ from rest_framework.test import APIClient
 from apps.accounts.models import UserBadge
 from apps.api.pagination import AgoraCursorPagination
 from apps.api.serializers import CommentSerializer, PostDetailSerializer, UserProfileSerializer
-from apps.communities.models import Community, CommunityMembership
+from apps.communities.models import Community, CommunityChallenge, CommunityInvite, CommunityMembership
+from apps.moderation.models import ModQueueItem
 from apps.posts.models import Comment, Poll, PollOption, Post
 from apps.votes.models import Vote
 
@@ -197,3 +198,52 @@ class TestApiSerializersAndViews:
 
         assert response.status_code == 200
         assert [item["title"] for item in response.data["items"]] == ["Link only result"]
+
+    def test_owner_dashboard_api_requires_owner(self):
+        moderator = make_user(username="api_owner_dash_mod", email="api_owner_dash_mod@example.com", handle="api_owner_dash_mod", mfa_totp_enabled=True)
+        CommunityMembership.objects.create(user=moderator, community=self.community, role=CommunityMembership.Role.MODERATOR)
+        token = Token.objects.create(user=moderator)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = self.client.get(reverse("api_community_owner_dashboard", kwargs={"slug": self.community.slug}))
+
+        assert response.status_code == 403
+
+    def test_owner_dashboard_api_returns_metrics_for_owner(self):
+        member = make_user(username="api_owner_dash_member", email="api_owner_dash_member@example.com", handle="api_owner_dash_member")
+        CommunityMembership.objects.filter(user=self.user, community=self.community).update(role=CommunityMembership.Role.OWNER)
+        CommunityMembership.objects.create(user=member, community=self.community, role=CommunityMembership.Role.MEMBER)
+        challenge = CommunityChallenge.objects.create(
+            community=self.community,
+            title="API prompt",
+            prompt_md="Prompt",
+            starts_at=timezone.now() - timezone.timedelta(hours=1),
+            ends_at=timezone.now() + timezone.timedelta(days=2),
+            is_featured=True,
+            created_by=self.user,
+        )
+        challenge.participations.create(user=member)
+        CommunityInvite.objects.create(community=self.community, created_by=self.user, token="api-owner-dash", usage_count=3)
+        unanswered = Post.objects.create(
+            community=self.community,
+            author=member,
+            post_type=Post.PostType.TEXT,
+            title="Awaiting reply",
+            body_md="Body",
+            challenge=challenge,
+        )
+        ModQueueItem.objects.create(
+            community=self.community,
+            post=unanswered,
+            content_type=ModQueueItem.ContentType.POST,
+            status=ModQueueItem.Status.NEEDS_REVIEW,
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
+
+        response = self.client.get(reverse("api_community_owner_dashboard", kwargs={"slug": self.community.slug}))
+
+        assert response.status_code == 200
+        assert response.data["member_count"] >= 0
+        assert response.data["invite_conversions"]["joins"] == 3
+        assert response.data["queue_health"]["needs_review"] == 1
+        assert response.data["unanswered_threads"][0]["title"] == "Awaiting reply"

@@ -7,14 +7,16 @@ from urllib.parse import quote_plus
 
 from django.conf import settings
 from django.core.mail import send_mail
-from django.db.models import Count
+from django.db.models import Count, Sum
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
+from apps.moderation.models import ModQueueItem
 from apps.posts.models import Comment, Post
 from apps.votes.models import SavedPost, Vote
 
+from .starter_kits import STARTER_KIT_MAP
 from .models import (
     Community,
     CommunityChallenge,
@@ -28,6 +30,7 @@ from .models import (
 def submit_community(creator: User, form) -> Community:
     """Service to create a new community and assign the owner role."""
     community = form.save(commit=False)
+    starter_template = getattr(form, "cleaned_data", {}).get("starter_template")
     community.creator = creator
     community.save()
 
@@ -38,6 +41,50 @@ def submit_community(creator: User, form) -> Community:
     )
     community.subscriber_count = community.memberships.count()
     community.save(update_fields=["subscriber_count"])
+    if starter_template:
+        apply_starter_kit(community, starter_template, creator)
+    return community
+
+
+def apply_starter_kit(community: Community, starter_template: str, creator: User | None):
+    kit = STARTER_KIT_MAP.get(starter_template)
+    if not kit:
+        return community
+
+    for order, (title, description) in enumerate(kit.rules, start=1):
+        community.rules.get_or_create(
+            title=title,
+            defaults={"order": order, "description": description},
+        )
+
+    for flair_text in kit.flairs:
+        community.post_flairs.get_or_create(text=flair_text, defaults={"css_class": ""})
+
+    if kit.wiki_body:
+        CommunityWikiPage.objects.update_or_create(
+            community=community,
+            slug="home",
+            defaults={
+                "title": kit.wiki_title,
+                "body_md": kit.wiki_body,
+                "updated_by": creator,
+            },
+        )
+
+    if kit.challenge_title and kit.challenge_prompt:
+        now = timezone.now()
+        CommunityChallenge.objects.get_or_create(
+            community=community,
+            title=kit.challenge_title,
+            defaults={
+                "created_by": creator,
+                "prompt_md": kit.challenge_prompt,
+                "share_text": f"Join the {kit.challenge_title} in c/{community.slug}.",
+                "starts_at": now,
+                "ends_at": now + timezone.timedelta(days=7),
+                "is_featured": True,
+            },
+        )
     return community
 
 
@@ -280,6 +327,70 @@ def best_posts_for_community(community: Community, limit: int = 5):
     )
 
 
+def community_topic_highlights(community: Community, limit: int = 3):
+    topics = []
+    flair_rows = (
+        Post.objects.visible()
+        .filter(community=community, flair__isnull=False)
+        .values("flair__text")
+        .annotate(total=Count("id"))
+        .order_by("-total", "flair__text")[:limit]
+    )
+    for row in flair_rows:
+        label = (row.get("flair__text") or "").strip()
+        if label and label not in topics:
+            topics.append(label)
+
+    fallback_topics = []
+    if community.allow_text_posts:
+        fallback_topics.append("Text discussions")
+    if community.allow_link_posts:
+        fallback_topics.append("Links worth sharing")
+    if community.allow_image_posts:
+        fallback_topics.append("Visual inspiration")
+    if community.allow_polls:
+        fallback_topics.append("Community polls")
+
+    for topic in fallback_topics:
+        if len(topics) >= limit:
+            break
+        if topic not in topics:
+            topics.append(topic)
+
+    for rule in community.rules.all()[:limit]:
+        if len(topics) >= limit:
+            break
+        if rule.title not in topics:
+            topics.append(rule.title)
+    return topics[:limit]
+
+
+def community_activity_snapshot(community: Community, days: int = 7):
+    since = timezone.now() - timezone.timedelta(days=days)
+    recent_posts = Post.objects.visible().filter(community=community, created_at__gte=since).count()
+    recent_comments = Comment.objects.filter(post__community=community, is_removed=False, created_at__gte=since).count()
+    active_people = (
+        CommunityMembership.objects.filter(community=community)
+        .filter(user__posts__created_at__gte=since)
+        .values("user_id")
+        .distinct()
+        .count()
+    )
+    if not active_people:
+        active_people = (
+            Comment.objects.filter(post__community=community, is_removed=False, created_at__gte=since)
+            .exclude(author_id=None)
+            .values("author_id")
+            .distinct()
+            .count()
+        )
+    return {
+        "recent_posts": recent_posts,
+        "recent_comments": recent_comments,
+        "active_people": active_people,
+    }
+
+
 def notify_followers_about_join(user: User, community: Community):
     from apps.accounts.models import Notification
 
@@ -337,6 +448,79 @@ def share_links_for_challenge(challenge: CommunityChallenge):
         "telegram": f"https://t.me/share/url?url={encoded_url}&text={encoded_text}",
         "x": f"https://twitter.com/intent/tweet?text={encoded_text}&url={encoded_url}",
         "email": f"mailto:?subject={quote_plus(challenge.title)}&body={quote_plus(f'{share_message}\n\n{landing_url}')}",
+    }
+
+
+def top_challenge_entries(challenge: CommunityChallenge, limit: int = 6):
+    return list(
+        challenge.entries.visible()
+        .for_listing()
+        .order_by("-score", "-comment_count", "-created_at")[:limit]
+    )
+
+
+def community_owner_dashboard(community: Community, days: int = 7):
+    since = timezone.now() - timezone.timedelta(days=days)
+    memberships = community.memberships
+    recent_member_joins = memberships.filter(joined_at__gte=since).count()
+    active_posters = (
+        Post.objects.visible()
+        .filter(community=community, created_at__gte=since)
+        .exclude(author_id=None)
+        .values("author_id")
+        .annotate(posts=Count("id"))
+        .order_by("-posts", "author__handle")[:5]
+    )
+    active_poster_rows = [
+        {
+            "user": User.objects.filter(id=row["author_id"]).first(),
+            "posts": row["posts"],
+        }
+        for row in active_posters
+        if row["author_id"]
+    ]
+    active_challenge = active_challenge_for_community(community)
+    challenge_entries = []
+    challenge_uptake = {"participants": 0, "entries": 0, "member_share": 0}
+    if active_challenge:
+        challenge_entries = top_challenge_entries(active_challenge, limit=4)
+        participants = active_challenge.participations.count()
+        entries = active_challenge.entries.visible().count()
+        member_count = max(community.subscriber_count, 1)
+        challenge_uptake = {
+            "participants": participants,
+            "entries": entries,
+            "member_share": round((participants / member_count) * 100),
+        }
+    unanswered_threads = list(
+        Post.objects.visible()
+        .for_listing()
+        .filter(community=community, comment_count=0)
+        .order_by("-created_at")[:5]
+    )
+    invite_conversions = {
+        "active_links": community.invites.filter(is_active=True).count(),
+        "joins": community.invites.aggregate(total=Sum("usage_count"))["total"] or 0,
+        "top_invite": community.invites.order_by("-usage_count", "-created_at").first(),
+    }
+    queue_health = {
+        "needs_review": ModQueueItem.objects.filter(community=community, status=ModQueueItem.Status.NEEDS_REVIEW).count(),
+        "reported": ModQueueItem.objects.filter(community=community, status=ModQueueItem.Status.REPORTED).count(),
+        "resolved_today": ModQueueItem.objects.filter(
+            community=community,
+            resolved_at__gte=timezone.now() - timezone.timedelta(days=1),
+        ).count(),
+    }
+    return {
+        "recent_member_joins": recent_member_joins,
+        "member_count": community.subscriber_count,
+        "active_poster_rows": active_poster_rows,
+        "active_challenge": active_challenge,
+        "challenge_uptake": challenge_uptake,
+        "challenge_entries": challenge_entries,
+        "invite_conversions": invite_conversions,
+        "unanswered_threads": unanswered_threads,
+        "queue_health": queue_health,
     }
 
 

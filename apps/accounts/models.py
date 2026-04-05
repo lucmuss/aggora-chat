@@ -58,6 +58,7 @@ class User(AbstractUser):
     )
     onboarding_completed = models.BooleanField(default=False)
     onboarding_completed_at = models.DateTimeField(null=True, blank=True)
+    first_post_share_at = models.DateTimeField(null=True, blank=True)
 
     def total_karma(self) -> int:
         return self.post_karma + self.comment_karma

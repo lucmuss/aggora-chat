@@ -13,6 +13,7 @@
         <span>c/{{ community.slug }}</span>
       </div>
       <h1 class="text-xl font-semibold text-gray-900">Mod queue</h1>
+      <p class="text-sm text-gray-500 mt-1">Review reports, automated flags, and decisions that still need a human touch.</p>
     </div>
     <div class="bg-white border border-gray-200 rounded-g">
       <div class="flex items-center h-11 px-3 gap-1">
@@ -33,7 +34,10 @@
     </div>
     {% else %}
     <div class="bg-white border border-gray-200 rounded-g p-8 text-center">
-      <p class="text-sm text-gray-400">No queue items — this status bucket is empty right now.</p>
+      <p class="text-sm text-gray-500">No queue items right now. That means this bucket is clear and the community can breathe for a moment.</p>
+      <div class="mt-4 flex justify-center">
+        <a href="{% url 'community_detail' slug=community.slug %}" class="inline-flex h-9 px-4 items-center rounded-g border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Back to the community</a>
+      </div>
     </div>
     {% endif %}
   </div>
@@ -41,8 +45,9 @@
     <div class="bg-white border border-gray-200 rounded-g p-4 sticky top-[72px]">
       <h3 class="font-semibold text-sm text-opal mb-3">Shortcuts</h3>
       <ul class="text-sm text-gray-600 space-y-2">
-        <li><a href="/mod/{{ community.slug }}/log/" class="text-opal hover:underline">View mod log</a></li>
-        <li><a href="/c/{{ community.slug }}/" class="text-opal hover:underline">Back to community</a></li>
+        <li><a href="{% url 'mod_log' community_slug=community.slug %}" class="text-opal hover:underline">View mod log</a></li>
+        <li><a href="{% url 'mod_mail_list' community_slug=community.slug %}" class="text-opal hover:underline">Open mod mail</a></li>
+        <li><a href="{% url 'community_detail' slug=community.slug %}" class="text-opal hover:underline">Back to community</a></li>
       </ul>
     </div>
   </aside>

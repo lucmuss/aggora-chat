@@ -56,6 +56,30 @@ class CommunityFlowTests(TestCase):
         self.assertEqual(membership.role, CommunityMembership.Role.OWNER)
         self.assertEqual(community.subscriber_count, 1)
 
+    def test_create_community_with_starter_kit_prefills_rules_flairs_wiki_and_challenge(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("create_community"),
+            {
+                "starter_template": "discussion_club",
+                "name": "Agora Prompts",
+                "slug": "agora-prompts",
+                "title": "Agora Prompts",
+                "description": "Prompt-driven room",
+                "sidebar_md": "",
+                "community_type": "public",
+            },
+        )
+
+        community = Community.objects.get(slug="agora-prompts")
+
+        self.assertRedirects(response, reverse("community_detail", kwargs={"slug": community.slug}))
+        self.assertGreaterEqual(community.rules.count(), 1)
+        self.assertGreaterEqual(community.post_flairs.count(), 1)
+        self.assertTrue(CommunityWikiPage.objects.filter(community=community, slug="home").exists())
+        self.assertTrue(CommunityChallenge.objects.filter(community=community).exists())
+
     def test_community_detail_renders(self):
         response = self.client.get(reverse("community_detail", kwargs={"slug": self.community.slug}))
 
@@ -151,6 +175,8 @@ class CommunityFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "One-click invite")
         self.assertContains(response, "Best thread")
+        self.assertContains(response, "Typical topics")
+        self.assertContains(response, "Posts this week")
 
     def test_invite_link_joins_user_and_redirects_to_post_create(self):
         joining_user = User.objects.create_user(

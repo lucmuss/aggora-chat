@@ -10,6 +10,8 @@ from apps.communities.models import (
     CommunityMembership,
     CommunityWikiPage,
 )
+from apps.moderation.models import ModQueueItem
+from apps.posts.models import Post
 
 User = get_user_model()
 
@@ -193,6 +195,15 @@ class TestCommunityViews:
         assert response.status_code == 200
         assert response.context["page"] is None
 
+    def test_wiki_page_private_community_denies_anonymous_user(self, client):
+        owner = make_user(username="wiki_private_owner", email="wiki_private_owner@example.com", handle="wiki_private_owner")
+        community = make_community("wiki-private", creator=owner, community_type=Community.CommunityType.PRIVATE)
+
+        response = client.get(reverse("community_wiki_home", kwargs={"slug": community.slug}))
+
+        assert response.status_code == 403
+        assert "only visible to members" in response.content.decode()
+
     def test_wiki_edit_requires_permission(self, client):
         owner = make_user(username="wiki_owner", email="wiki_owner@example.com", handle="wiki_owner")
         outsider = make_user(username="wiki_outsider", email="wiki_outsider@example.com", handle="wiki_outsider")
@@ -220,3 +231,87 @@ class TestCommunityViews:
         assert response.context["form"].errors
         existing.refresh_from_db()
         assert existing.title == "Home"
+
+    def test_community_landing_shows_challenge_gallery(self, client):
+        owner = make_user(username="landing_gallery_owner", email="landing_gallery_owner@example.com", handle="landing_gallery_owner")
+        community = make_community("landing-gallery", creator=owner)
+        challenge = CommunityChallenge.objects.create(
+            community=community,
+            title="Landing prompt",
+            prompt_md="Prompt",
+            starts_at=timezone.now() - timezone.timedelta(hours=1),
+            ends_at=timezone.now() + timezone.timedelta(days=1),
+            is_featured=True,
+            created_by=owner,
+        )
+        Post.objects.create(
+            community=community,
+            author=owner,
+            post_type="text",
+            title="Challenge entry thread",
+            body_md="Entry",
+            score=5,
+            hot_score=5,
+            challenge=challenge,
+        )
+
+        response = client.get(reverse("community_landing", kwargs={"slug": community.slug}))
+
+        assert response.status_code == 200
+        assert "Challenge gallery" in response.content.decode()
+        assert "Challenge entry thread" in response.content.decode()
+
+    def test_owner_dashboard_requires_owner_or_staff(self, client):
+        owner = make_user(username="owner_dash_owner", email="owner_dash_owner@example.com", handle="owner_dash_owner")
+        moderator = make_user(username="owner_dash_mod", email="owner_dash_mod@example.com", handle="owner_dash_mod", mfa_totp_enabled=True)
+        community = make_community("owner-dash-denied", creator=owner)
+        CommunityMembership.objects.create(user=owner, community=community, role=CommunityMembership.Role.OWNER)
+        CommunityMembership.objects.create(user=moderator, community=community, role=CommunityMembership.Role.MODERATOR)
+        client.force_login(moderator)
+
+        response = client.get(reverse("community_owner_dashboard", kwargs={"slug": community.slug}))
+
+        assert response.status_code == 403
+        assert "Owner access required" in response.content.decode()
+
+    def test_owner_dashboard_renders_growth_health_and_threads(self, client):
+        owner = make_user(username="owner_dash_ok", email="owner_dash_ok@example.com", handle="owner_dash_ok", mfa_totp_enabled=True)
+        member = make_user(username="owner_dash_member", email="owner_dash_member@example.com", handle="owner_dash_member")
+        community = make_community("owner-dash-ok", creator=owner)
+        CommunityMembership.objects.create(user=owner, community=community, role=CommunityMembership.Role.OWNER)
+        CommunityMembership.objects.create(user=member, community=community, role=CommunityMembership.Role.MEMBER)
+        challenge = CommunityChallenge.objects.create(
+            community=community,
+            title="Owner dash prompt",
+            prompt_md="Prompt",
+            starts_at=timezone.now() - timezone.timedelta(hours=1),
+            ends_at=timezone.now() + timezone.timedelta(days=3),
+            is_featured=True,
+            created_by=owner,
+        )
+        challenge.participations.create(user=member)
+        invite = CommunityInvite.objects.create(community=community, created_by=owner, token="owner-dash-token", usage_count=2)
+        post = Post.objects.create(
+            community=community,
+            author=member,
+            post_type="text",
+            title="Needs a reply",
+            body_md="Body",
+            challenge=challenge,
+        )
+        ModQueueItem.objects.create(
+            community=community,
+            post=post,
+            content_type=ModQueueItem.ContentType.POST,
+            status=ModQueueItem.Status.NEEDS_REVIEW,
+        )
+        client.force_login(owner)
+
+        response = client.get(reverse("community_owner_dashboard", kwargs={"slug": community.slug}))
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "How c/owner-dash-ok is moving this week" in content
+        assert "Invite conversions" in content
+        assert "Needs a reply" in content
+        assert str(invite.usage_count) in content

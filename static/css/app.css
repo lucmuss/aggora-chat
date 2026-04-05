@@ -228,6 +228,38 @@ select:focus-visible {
     resize: vertical;
 }
 
+.markdown-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-bottom: 0.625rem;
+}
+
+.markdown-toolbar__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    height: 2.1rem;
+    padding: 0 0.625rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 0.5rem;
+    background-color: #FFFFFF;
+    color: #4B5563;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    transition: all 0.15s;
+}
+
+.markdown-toolbar__button:hover,
+.markdown-toolbar__button:focus-visible {
+    outline: none;
+    border-color: #0E7490;
+    background-color: #F0FDFA;
+    color: #0E7490;
+}
+
 .styled-form input[type="checkbox"] {
     width: 1rem;
     height: 1rem;
@@ -342,6 +374,19 @@ html.dark .styled-form select {
     background-color: #374151 !important;
     border-color: #4B5563 !important;
     color: #E5E7EB !important;
+}
+
+html.dark .markdown-toolbar__button {
+    background-color: #111827;
+    border-color: #374151;
+    color: #D1D5DB;
+}
+
+html.dark .markdown-toolbar__button:hover,
+html.dark .markdown-toolbar__button:focus-visible {
+    background-color: #0F172A;
+    border-color: #0E7490;
+    color: #5EEAD4;
 }
 
 /* ===== Responsive / Mobile ===== */

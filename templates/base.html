@@ -55,6 +55,28 @@
     </div>
   </div>
 
+  <div id="command-palette" class="hidden fixed inset-0 z-[60] bg-gray-900/40 p-4 sm:p-8" aria-hidden="true">
+    <div class="mx-auto mt-[8vh] max-w-2xl rounded-g border border-gray-200 bg-white shadow-glow">
+      <div class="border-b border-gray-100 px-4 py-3">
+        <input
+          id="command-palette-input"
+          type="search"
+          name="q"
+          placeholder="Jump to a community, person, thread, or action…"
+          class="w-full h-10 px-3 rounded-g border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none"
+          hx-get="{% url 'search_quick' %}"
+          hx-trigger="keyup changed delay:120ms, search"
+          hx-target="#command-palette-results"
+          hx-include="#command-palette-input"
+          hx-vals='{"mode":"palette"}'
+        >
+      </div>
+      <div id="command-palette-results">
+        {% include "search/partials/quick_results.html" with mode="palette" query="" posts="" communities="" users="" quick_actions="" recent_searches="" recent_communities="" show_empty_state=True %}
+      </div>
+    </div>
+  </div>
+
   {% include "partials/header.html" %}
 
   {% if messages %}

@@ -122,11 +122,19 @@ class CommunityAgentSettings(models.Model):
 
 
 class ModMail(models.Model):
+    class ThreadStatus(models.TextChoices):
+        OPEN = "open", "Open"
+        AWAITING_MOD = "awaiting_mod", "Awaiting mod"
+        AWAITING_USER = "awaiting_user", "Awaiting user"
+        CLOSED = "closed", "Closed"
+
     community = models.ForeignKey("communities.Community", on_delete=models.CASCADE)
     subject = models.CharField(max_length=200)
     created_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_resolved = models.BooleanField(default=False)
+    status = models.CharField(max_length=16, choices=ThreadStatus.choices, default=ThreadStatus.OPEN)
+    context_json = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ["-created_at"]

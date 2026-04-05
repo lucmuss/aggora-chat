@@ -1,19 +1,24 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 from apps.communities.models import Community
-from apps.communities.services import can_participate_in_community, can_view_community
+from apps.communities.services import active_challenge_for_community, can_participate_in_community, can_view_community
 from apps.moderation.utils import is_user_banned
 from apps.votes.models import Vote
 
 from .forms import PostCreateForm
-from .models import Poll, PollVote, Post
+from .models import Comment, Poll, PollVote, Post
 from .services import (
     annotate_posts_with_user_state,
     build_comment_tree,
+    restore_comment,
+    restore_post,
     share_links_for_post,
+    soft_delete_comment,
+    soft_delete_post,
     submit_comment,
     submit_poll_vote,
     submit_post,
@@ -29,6 +34,7 @@ def create_post(request, community_slug):
     if is_user_banned(request.user, community):
         return HttpResponseForbidden("You are banned from posting in this community.")
     crosspost_source = None
+    active_challenge = active_challenge_for_community(community)
     crosspost_source_id = request.GET.get("crosspost")
     if crosspost_source_id:
         crosspost_source = get_object_or_404(
@@ -58,6 +64,8 @@ def create_post(request, community_slug):
                 "title": crosspost_source.title,
                 "body_md": f"Crossposted from c/{crosspost_source.community.slug}.",
             }
+        if active_challenge and request.GET.get("challenge") == str(active_challenge.id):
+            initial["challenge"] = active_challenge.id
         form = PostCreateForm(community=community, initial=initial)
 
     return render(
@@ -67,6 +75,7 @@ def create_post(request, community_slug):
             "form": form,
             "community": community,
             "crosspost_source": crosspost_source,
+            "active_challenge": active_challenge,
         },
     )
 
@@ -81,6 +90,8 @@ def post_detail(request, community_slug, post_id, slug=None):
         pk=post_id,
         community__slug=community_slug,
     )
+    if post.author_deleted_at and request.user != post.author:
+        return HttpResponseForbidden("This thread has been removed by its author.")
     if not can_view_community(request.user, post.community):
         return HttpResponseForbidden("This private community is only visible to members.")
     sort = request.GET.get("sort", "top")
@@ -125,7 +136,7 @@ def post_detail(request, community_slug, post_id, slug=None):
 @login_required
 @require_http_methods(["POST"])
 def create_comment(request, post_id):
-    post = get_object_or_404(Post, pk=post_id, is_locked=False, is_removed=False)
+    post = get_object_or_404(Post, pk=post_id, is_locked=False, is_removed=False, author_deleted_at__isnull=True)
     if not can_participate_in_community(request.user, post.community):
         return HttpResponseForbidden("You need membership or an invite to comment in this community.")
     if is_user_banned(request.user, post.community):
@@ -166,3 +177,57 @@ def vote_poll(request, post_id):
         return HttpResponseForbidden(str(e))
 
     return redirect("post_detail", community_slug=post.community.slug, post_id=post.id, slug=post.slug)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_post(request, post_id):
+    post = get_object_or_404(Post.objects.select_related("community"), pk=post_id)
+    if post.author_id != request.user.id:
+        return HttpResponseForbidden("Only the author can remove this thread.")
+    soft_delete_post(post)
+    return redirect("profile", handle=request.user.handle)
+
+
+@login_required
+@require_http_methods(["POST"])
+def restore_deleted_post(request, post_id):
+    post = get_object_or_404(Post.objects.select_related("community"), pk=post_id, author=request.user)
+    restore_post(post)
+    next_url = request.POST.get("next") or reverse(
+        "post_detail",
+        kwargs={"community_slug": post.community.slug, "post_id": post.id, "slug": post.slug},
+    )
+    return redirect(next_url)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_comment(request, comment_id):
+    comment = get_object_or_404(Comment.objects.select_related("post", "post__community"), pk=comment_id)
+    if comment.author_id != request.user.id:
+        return HttpResponseForbidden("Only the author can remove this comment.")
+    soft_delete_comment(comment)
+    return redirect(
+        "post_detail",
+        community_slug=comment.post.community.slug,
+        post_id=comment.post.id,
+        slug=comment.post.slug,
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def restore_deleted_comment(request, comment_id):
+    comment = get_object_or_404(
+        Comment.objects.select_related("post", "post__community"),
+        pk=comment_id,
+        author=request.user,
+    )
+    restore_comment(comment)
+    return redirect(
+        "post_detail",
+        community_slug=comment.post.community.slug,
+        post_id=comment.post.id,
+        slug=comment.post.slug,
+    )

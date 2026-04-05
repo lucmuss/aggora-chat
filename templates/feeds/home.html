@@ -6,6 +6,30 @@
   <!-- Feed -->
   <div class="flex-1 min-w-0 max-w-[640px]">
     {% if user.is_authenticated %}
+    {% if first_week_missions %}
+    <div class="bg-white border border-gray-200 rounded-g mb-3 overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-opal">First week on {{ APP_NAME }}</p>
+          <p class="text-sm text-gray-500 mt-1">Small moves that make your feed, your referrals, and your community graph feel alive.</p>
+        </div>
+        <a href="{% url 'account_referrals' %}" class="text-xs font-medium text-opal hover:underline">Open progress</a>
+      </div>
+      <div class="divide-y divide-gray-100">
+        {% for mission in first_week_missions %}
+        {% if not mission.completed %}
+        <div class="px-4 py-3 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-gray-900">{{ mission.title }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ mission.detail }}</p>
+          </div>
+          <a href="{{ mission.action_url }}" class="shrink-0 h-8 px-3 flex items-center rounded-g border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50">{{ mission.action_label }}</a>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
     <div class="bg-white border border-gray-200 rounded-g mb-3">
       <div class="flex flex-wrap items-center gap-2 px-3 py-2">
         <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Feed</span>
@@ -137,7 +161,7 @@
         <a href="{% url 'account_referrals' %}" class="text-xs font-medium text-opal hover:underline">Open hub</a>
       </div>
       <div class="p-4 space-y-2">
-        <p class="text-sm text-gray-600">Share your invite links, track referrals, and unlock activation badges with a few simple actions.</p>
+        <p class="text-sm text-gray-600">Share your invite links, track successful joins, and unlock activation badges with a few simple actions.</p>
         <a href="{% url 'account_referrals' %}" class="inline-flex h-9 px-4 items-center rounded-g bg-primary text-white text-sm font-medium hover:bg-primary-hover">Referral links</a>
       </div>
     </div>

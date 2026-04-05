@@ -1,0 +1,183 @@
+{% if mode == "palette" %}
+<div class="max-h-[70vh] overflow-y-auto" data-quick-surface="palette">
+  {% if query and not show_empty_state %}
+  <div class="px-3 py-2 border-b border-gray-100">
+    <p class="text-[11px] uppercase tracking-wide text-gray-400">Results for "{{ query }}"</p>
+  </div>
+  {% endif %}
+  {% if communities %}
+  <div class="px-3 py-2 border-b border-gray-100">
+    <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Communities</p>
+    <div class="space-y-1">
+      {% for community in communities %}
+      <a href="{% url 'community_detail' slug=community.slug %}" class="block rounded-g px-3 py-2 hover:bg-gray-50" data-quick-item>
+        <p class="text-sm font-medium text-gray-900">{{ community.title|default:community.name }}</p>
+        <p class="text-xs text-gray-500">c/{{ community.slug }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% if users %}
+  <div class="px-3 py-2 border-b border-gray-100">
+    <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">People</p>
+    <div class="space-y-1">
+      {% for person in users %}
+      <a href="{% url 'profile' handle=person.handle %}" class="block rounded-g px-3 py-2 hover:bg-gray-50" data-quick-item>
+        <p class="text-sm font-medium text-gray-900">{{ person.display_name|default:person.handle }}</p>
+        <p class="text-xs text-gray-500">u/{{ person.handle }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% if posts %}
+  <div class="px-3 py-2 border-b border-gray-100">
+    <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Threads</p>
+    <div class="space-y-1">
+      {% for post in posts %}
+      <a href="{% url 'post_detail' community_slug=post.community.slug post_id=post.id slug=post.slug %}" class="block rounded-g px-3 py-2 hover:bg-gray-50" data-quick-item>
+        <p class="text-sm font-medium text-gray-900">{{ post.title }}</p>
+        <p class="text-xs text-gray-500">c/{{ post.community.slug }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% if not query %}
+  {% if recent_searches %}
+  <div class="px-3 py-2 border-b border-gray-100">
+    <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Recent searches</p>
+    <div class="space-y-1">
+      {% for item in recent_searches %}
+      <a href="{% url 'search' %}?q={{ item|urlencode }}" class="block rounded-g px-3 py-2 hover:bg-gray-50" data-quick-item>
+        <p class="text-sm font-medium text-gray-900">{{ item }}</p>
+        <p class="text-xs text-gray-500">Open full search</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% if recent_communities %}
+  <div class="px-3 py-2 border-b border-gray-100">
+    <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Recent communities</p>
+    <div class="space-y-1">
+      {% for community in recent_communities %}
+      <a href="{% url 'community_detail' slug=community.slug %}" class="block rounded-g px-3 py-2 hover:bg-gray-50" data-quick-item>
+        <p class="text-sm font-medium text-gray-900">c/{{ community.slug }}</p>
+        <p class="text-xs text-gray-500">{{ community.description|default:"Jump back in."|truncatechars:80 }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% if quick_actions %}
+  <div class="px-3 py-2">
+    <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Quick actions</p>
+    <div class="space-y-1">
+      {% for action in quick_actions %}
+      <a href="{{ action.url }}" class="block rounded-g px-3 py-2 hover:bg-gray-50" data-quick-item>
+        <p class="text-sm font-medium text-gray-900">{{ action.title }}</p>
+        <p class="text-xs text-gray-500">{{ action.subtitle }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+  {% if show_empty_state %}
+  <div class="px-4 py-8 text-center">
+    <p class="text-sm text-gray-600">No quick matches yet. Try another phrase or open the full search page.</p>
+  </div>
+  {% endif %}
+  {% if query %}
+  <div class="border-t border-gray-100 px-3 py-2">
+    <a href="{% url 'search' %}?q={{ query|urlencode }}" class="block rounded-g px-3 py-2 text-sm font-medium text-opal hover:bg-opal-light" data-quick-item>
+      View all results for "{{ query }}"
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<div class="mt-2 overflow-hidden rounded-g border border-gray-200 bg-white shadow-glow" data-quick-surface="dropdown">
+  {% if communities or users or posts %}
+  <div class="max-h-[24rem] overflow-y-auto">
+    {% if communities %}
+    <div class="px-3 py-2 border-b border-gray-100">
+      <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Communities</p>
+      <div class="space-y-1">
+        {% for community in communities|slice:":3" %}
+        <a href="{% url 'community_detail' slug=community.slug %}" class="block rounded-g px-3 py-2 hover:bg-gray-50" data-quick-item>
+          <p class="text-sm font-medium text-gray-900">c/{{ community.slug }}</p>
+          <p class="text-xs text-gray-500">{{ community.title|default:community.name }}</p>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if users %}
+    <div class="px-3 py-2 border-b border-gray-100">
+      <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">People</p>
+      <div class="space-y-1">
+        {% for person in users|slice:":3" %}
+        <a href="{% url 'profile' handle=person.handle %}" class="block rounded-g px-3 py-2 hover:bg-gray-50" data-quick-item>
+          <p class="text-sm font-medium text-gray-900">{{ person.display_name|default:person.handle }}</p>
+          <p class="text-xs text-gray-500">u/{{ person.handle }}</p>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if posts %}
+    <div class="px-3 py-2">
+      <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Threads</p>
+      <div class="space-y-1">
+        {% for post in posts|slice:":4" %}
+        <a href="{% url 'post_detail' community_slug=post.community.slug post_id=post.id slug=post.slug %}" class="block rounded-g px-3 py-2 hover:bg-gray-50" data-quick-item>
+          <p class="text-sm font-medium text-gray-900">{{ post.title }}</p>
+          <p class="text-xs text-gray-500">c/{{ post.community.slug }}</p>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% elif recent_searches or recent_communities %}
+  <div class="max-h-[24rem] overflow-y-auto">
+    {% if recent_searches %}
+    <div class="px-3 py-2 border-b border-gray-100">
+      <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Recent searches</p>
+      <div class="space-y-1">
+        {% for item in recent_searches %}
+        <a href="{% url 'search' %}?q={{ item|urlencode }}" class="block rounded-g px-3 py-2 hover:bg-gray-50" data-quick-item>
+          <p class="text-sm font-medium text-gray-900">{{ item }}</p>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if recent_communities %}
+    <div class="px-3 py-2">
+      <p class="text-[11px] uppercase tracking-wide text-gray-400 mb-2">Recent communities</p>
+      <div class="space-y-1">
+        {% for community in recent_communities %}
+        <a href="{% url 'community_detail' slug=community.slug %}" class="block rounded-g px-3 py-2 hover:bg-gray-50" data-quick-item>
+          <p class="text-sm font-medium text-gray-900">c/{{ community.slug }}</p>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="px-4 py-4 text-sm text-gray-500">Type at least two letters to search threads, people, and communities.</div>
+  {% endif %}
+  {% if query %}
+  <div class="border-t border-gray-100 px-3 py-2">
+    <a href="{% url 'search' %}?q={{ query|urlencode }}" class="block rounded-g px-3 py-2 text-sm font-medium text-opal hover:bg-opal-light" data-quick-item>
+      View all results for "{{ query }}"
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endif %}

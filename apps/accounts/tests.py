@@ -231,7 +231,7 @@ class HandleSetupTests(TestCase):
             ),
         )
 
-    def test_notifications_page_marks_reply_notifications_as_read(self):
+    def test_notifications_page_keeps_reply_notifications_unread_until_marked(self):
         author = User.objects.create_user(
             username="author",
             email="author@example.com",
@@ -265,7 +265,7 @@ class HandleSetupTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "replied to your post")
-        self.assertFalse(Notification.objects.filter(user=author, is_read=False).exists())
+        self.assertTrue(Notification.objects.filter(user=author, is_read=False).exists())
 
     @override_settings(
         SOCIALACCOUNT_PROVIDERS={

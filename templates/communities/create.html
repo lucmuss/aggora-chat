@@ -20,7 +20,41 @@
         </div>
         {% endif %}
 
+        {% if form.starter_kits %}
+        <div class="space-y-3">
+          <div>
+            <p class="text-sm font-medium text-gray-700">Starter kits</p>
+            <p class="text-xs text-gray-500 mt-1">Pick a shape, then edit anything you want before publishing.</p>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            {% for kit in form.starter_kits %}
+            <label class="block rounded-g border border-gray-200 p-3 hover:border-gray-300 cursor-pointer">
+              <div class="flex items-start gap-3">
+                <input type="radio" name="starter_template" value="{{ kit.key }}" class="mt-1" {% if form.data.starter_template == kit.key %}checked{% endif %}>
+                <div>
+                  <p class="text-sm font-medium text-gray-900">{{ kit.label }}</p>
+                  <p class="text-xs font-medium text-opal mt-1">{{ kit.tagline }}</p>
+                  <p class="text-xs text-gray-500 mt-1">{{ kit.description }}</p>
+                </div>
+              </div>
+            </label>
+            {% endfor %}
+            <label class="block rounded-g border border-gray-200 p-3 hover:border-gray-300 cursor-pointer">
+              <div class="flex items-start gap-3">
+                <input type="radio" name="starter_template" value="" class="mt-1" {% if not form.data.starter_template %}checked{% endif %}>
+                <div>
+                  <p class="text-sm font-medium text-gray-900">Start from scratch</p>
+                  <p class="text-xs text-gray-500 mt-1">Keep the form fully manual and create your own rules, wiki, and launch moment later.</p>
+                </div>
+              </div>
+            </label>
+          </div>
+          {% if form.starter_template.errors %}<p class="text-xs text-red-500 mt-1">{{ form.starter_template.errors.as_text }}</p>{% endif %}
+        </div>
+        {% endif %}
+
         {% for field in form %}
+        {% if field.name != "starter_template" %}
         <div>
           <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
             {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
@@ -41,6 +75,7 @@
           </div>
           {% endif %}
         </div>
+        {% endif %}
         {% endfor %}
 
         <div class="pt-2">
@@ -55,10 +90,11 @@
 
   <aside class="hidden lg:block w-80 shrink-0">
     <div class="bg-white border border-gray-200 rounded-g p-4 sticky top-[72px]">
-      <h3 class="font-semibold text-sm text-opal mb-3">Phase 1 defaults</h3>
+      <h3 class="font-semibold text-sm text-opal mb-3">What starter kits unlock</h3>
       <ul class="text-sm text-gray-600 space-y-2 list-disc pl-4 marker:text-gray-300">
-        <li>Public communities by default</li>
-        <li>Markdown sidebar support</li>
+        <li>Prefilled rules, flairs, and landing copy</li>
+        <li>A wiki home page you can edit later</li>
+        <li>An optional launch challenge to wake up the room</li>
         <li>Creator becomes owner automatically</li>
       </ul>
     </div>
