@@ -42,6 +42,12 @@ class SearchTests(TestCase):
         self.assertEqual(filters["author__handle__iexact"], "searcher")
         self.assertEqual(filters["community__slug__iexact"], "agora-search")
 
+    def test_parse_search_query_maps_country_codes_to_country_names(self):
+        text, filters = parse_search_query("country:DE policy")
+
+        self.assertEqual(text, "policy")
+        self.assertEqual(filters["author__country__iexact"], "Germany")
+
     def test_search_view_returns_matching_post(self):
         response = self.client.get(reverse("search"), {"q": "policy"})
 
@@ -82,6 +88,90 @@ class SearchTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Link only result")
         self.assertNotContains(response, "Safety policy draft")
+
+    def test_search_view_supports_video_post_type_filter(self):
+        Post.objects.create(
+            community=self.community,
+            author=self.user,
+            post_type="link",
+            title="Video result",
+            body_md="A video post",
+            url="https://www.youtube.com/watch?v=demo123",
+            score=7,
+            hot_score=7,
+        )
+        Post.objects.create(
+            community=self.community,
+            author=self.user,
+            post_type="link",
+            title="Plain link result",
+            body_md="A normal link post",
+            url="https://example.com/article",
+            score=6,
+            hot_score=6,
+        )
+
+        response = self.client.get(reverse("search"), {"q": "result", "post_type": "video"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Video result")
+        self.assertNotContains(response, "Plain link result")
+
+    def test_search_view_supports_video_media_filter(self):
+        Post.objects.create(
+            community=self.community,
+            author=self.user,
+            post_type="link",
+            title="Vimeo result",
+            body_md="A hosted video",
+            url="https://vimeo.com/123456",
+            score=7,
+            hot_score=7,
+        )
+        Post.objects.create(
+            community=self.community,
+            author=self.user,
+            post_type="image",
+            title="Image result",
+            body_md="An image post",
+            score=4,
+            hot_score=4,
+        )
+
+        response = self.client.get(reverse("search"), {"q": "result", "media": "videos"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Vimeo result")
+        self.assertNotContains(response, "Image result")
+
+    def test_search_view_supports_country_dropdown_filter(self):
+        german_author = self.user
+        german_author.country = "Germany"
+        german_author.save(update_fields=["country"])
+        french_author = User.objects.create_user(
+            username="frsearcher",
+            email="frsearcher@example.com",
+            password="password123",
+            handle="frsearcher",
+            country="France",
+        )
+        Post.objects.create(
+            community=self.community,
+            author=french_author,
+            post_type="text",
+            title="French policy draft",
+            body_md="Policy from France",
+            score=8,
+            hot_score=8,
+        )
+
+        response = self.client.get(reverse("search"), {"q": "policy", "country": "DE"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Safety policy draft")
+        self.assertNotContains(response, "French policy draft")
+        self.assertContains(response, "Any country")
+        self.assertContains(response, "Germany")
 
     def test_search_view_can_focus_on_communities_tab(self):
         response = self.client.get(reverse("search"), {"q": "search", "type": "communities"})

@@ -2,6 +2,7 @@ from django.db.models import Q
 from django.shortcuts import render
 from django.urls import reverse
 
+from apps.accounts.regions import COUNTRY_CODE_BY_NAME
 from apps.common.seo import (
     breadcrumb_schema,
     canonical_url_for_request,
@@ -167,19 +168,29 @@ def search_view(request):
     sort = request.GET.get("sort", "relevance")
     post_type = (request.GET.get("post_type") or "").strip()
     media = (request.GET.get("media") or "").strip()
+    country = (request.GET.get("country") or "").strip()
     result_type = (request.GET.get("type") or "all").strip()
     after = request.GET.get("after")
-    query_text, _filters = parse_search_query(query) if query else ("", {})
+    query_text, parsed_filters = parse_search_query(query) if query else ("", {})
     directory_query = query_text or query
-    if post_type not in {"", "text", "link", "image", "poll", "crosspost"}:
+    if post_type not in {"", "text", "link", "image", "poll", "crosspost", "video"}:
         post_type = ""
-    if media not in {"", "images", "links"}:
+    if media not in {"", "images", "links", "videos"}:
         media = ""
     if result_type not in {"all", "posts", "communities", "people"}:
         result_type = "all"
+    country_name_by_code = {code.upper(): name for name, code in COUNTRY_CODE_BY_NAME.items() if code}
+    country_options = sorted(
+        [{"code": code, "name": name} for code, name in country_name_by_code.items()],
+        key=lambda item: item["name"],
+    )
+    selected_country = country_name_by_code.get(country.upper(), country)
+    effective_query = query
+    if selected_country and "author__country__iexact" not in parsed_filters:
+        effective_query = f"{query} country:{country}".strip()
     result = (
-        get_discovery_backend().search_posts(query, sort=sort, after=after, post_type=post_type, media=media)
-        if query
+        get_discovery_backend().search_posts(effective_query, sort=sort, after=after, post_type=post_type, media=media)
+        if effective_query
         else None
     )
     if query:
@@ -207,6 +218,8 @@ def search_view(request):
             "sort": sort,
             "post_type": post_type,
             "media": media,
+            "country": country,
+            "country_options": country_options,
             "result_type": result_type,
             "posts": visible_posts,
             "communities": visible_communities,
@@ -225,7 +238,7 @@ def search_view(request):
             "meta_robots": "noindex,follow",
             "canonical_url": canonical_url_for_request(
                 request,
-                allowed_query_params=("q", "type", "sort", "post_type", "media"),
+                allowed_query_params=("q", "type", "sort", "post_type", "media", "country"),
             ),
             "structured_data": serialize_structured_data(
                 breadcrumb_schema([("Home", reverse("home")), ("Search", reverse("search"))]),
@@ -236,7 +249,7 @@ def search_view(request):
                     ),
                     url=canonical_url_for_request(
                         request,
-                        allowed_query_params=("q", "type", "sort", "post_type", "media"),
+                        allowed_query_params=("q", "type", "sort", "post_type", "media", "country"),
                     ),
                 ),
                 item_list_schema(

@@ -30,6 +30,7 @@ from apps.posts.services import annotate_posts_with_user_state
 from apps.votes.models import SavedPost
 
 from .forms import AccountSettingsForm, HandleSetupForm, StartWithFriendsForm, TotpVerificationForm
+from .google_places import GooglePlacesError, autocomplete_cities
 from .growth import (
     award_onboarding_badges,
     first_week_missions_for_user,
@@ -37,6 +38,7 @@ from .growth import (
     record_post_share,
     referral_summary_for_user,
 )
+from .regions import COUNTRY_CODE_BY_NAME
 from .models import User
 from .models import Notification
 from .security import build_totp_uri, generate_totp_secret, user_requires_mfa, verify_totp
@@ -522,7 +524,7 @@ def account_settings_view(request):
             "country_names": form.country_names,
             "regions_by_country_json": json.dumps(form.regions_by_country),
             "country_code_by_name_json": json.dumps(form.country_code_by_name),
-            "google_places_api_key": getattr(settings, "GOOGLE_PLACES_API_KEY", ""),
+            "location_autocomplete_url": reverse("location_autocomplete"),
             "connected_accounts": connected_accounts,
             "email_addresses": email_addresses,
             "profile_bio_html": render_markdown(request.user.bio) if request.user.bio else "",
@@ -531,6 +533,29 @@ def account_settings_view(request):
             "requires_mfa": user_requires_mfa(request.user),
             "missions": first_week_missions_for_user(request.user),
         },
+    )
+
+
+@login_required
+def location_autocomplete_view(request):
+    query = (request.GET.get("q") or request.GET.get("input") or "").strip()
+    country = (request.GET.get("country") or "").strip()
+    country_code = COUNTRY_CODE_BY_NAME.get(country, country).strip().lower() if country else ""
+    try:
+        suggestions = autocomplete_cities(
+            query,
+            country_code=country_code,
+            session_token=(request.GET.get("session_token") or "").strip(),
+        )
+    except GooglePlacesError as exc:
+        return JsonResponse({"suggestions": [], "error": str(exc)}, status=503)
+    return JsonResponse(
+        {
+            "suggestions": [
+                {"text": suggestion.text, "place_id": suggestion.place_id}
+                for suggestion in suggestions
+            ]
+        }
     )
 
 

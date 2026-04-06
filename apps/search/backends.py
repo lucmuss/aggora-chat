@@ -9,8 +9,15 @@ from django.conf import settings
 from django.db.models import Case, IntegerField, Value, When
 from django.db.models import Q as DjangoQ
 
+from apps.accounts.regions import COUNTRY_CODE_BY_NAME
 from apps.posts.models import Post
 from apps.posts.services import apply_post_sort, personalize_post_window, pg_feed_queryset
+
+VIDEO_URL_PATTERN = re.compile(
+    r"(youtube\.com|youtu\.be|vimeo\.com|tiktok\.com|dailymotion\.com|loom\.com|wistia\.(com|net))",
+    re.IGNORECASE,
+)
+COUNTRY_NAME_BY_CODE = {code.upper(): name for name, code in COUNTRY_CODE_BY_NAME.items() if code}
 
 OPERATOR_MAP = {
     "author": "author__handle__iexact",
@@ -18,6 +25,7 @@ OPERATOR_MAP = {
     "community": "community__slug__iexact",
     "subreddit": "community__slug__iexact",
     "type": "post_type__iexact",
+    "country": "author__country__iexact",
 }
 
 ELASTIC_OPERATOR_MAP = {
@@ -26,6 +34,7 @@ ELASTIC_OPERATOR_MAP = {
     "community": "community_slug",
     "subreddit": "community_slug",
     "type": "post_type",
+    "country": "author_country",
 }
 DJANGO_FILTER_TO_OPERATOR = {value: key for key, value in OPERATOR_MAP.items()}
 
@@ -36,7 +45,13 @@ def parse_search_query(raw_query: str):
     for token in raw_query.split():
         match = re.match(r"(\w+):(\S+)", token)
         if match and match.group(1) in OPERATOR_MAP:
-            filters[OPERATOR_MAP[match.group(1)]] = match.group(2)
+            operator = match.group(1)
+            value = match.group(2)
+            if operator == "country":
+                normalized = COUNTRY_NAME_BY_CODE.get(value.upper(), value.replace("-", " ").replace("_", " ").title())
+                filters[OPERATOR_MAP[operator]] = normalized
+            else:
+                filters[OPERATOR_MAP[operator]] = value
         else:
             text_parts.append(token)
     return " ".join(text_parts), filters
@@ -66,6 +81,24 @@ class BaseDiscoveryBackend:
 
 class SQLDiscoveryBackend(BaseDiscoveryBackend):
     name = "sql"
+
+    @staticmethod
+    def _apply_media_filter(queryset, media: str):
+        if media == "images":
+            return queryset.filter(image__gt="")
+        if media == "links":
+            return queryset.filter(url__gt="")
+        if media == "videos":
+            return queryset.filter(url__iregex=VIDEO_URL_PATTERN.pattern)
+        return queryset
+
+    @staticmethod
+    def _apply_post_type_filter(queryset, post_type: str):
+        if post_type == "video":
+            return queryset.filter(post_type__iexact="link").filter(url__iregex=VIDEO_URL_PATTERN.pattern)
+        if post_type:
+            return queryset.filter(post_type__iexact=post_type)
+        return queryset
 
     @staticmethod
     def _encode_cursor(offset: int) -> str:
@@ -126,14 +159,13 @@ class SQLDiscoveryBackend(BaseDiscoveryBackend):
             )
 
         for field, value in filters.items():
-            queryset = queryset.filter(**{field: value})
+            if field == "post_type__iexact" and value.lower() == "video":
+                queryset = self._apply_post_type_filter(queryset, "video")
+            else:
+                queryset = queryset.filter(**{field: value})
 
-        if post_type:
-            queryset = queryset.filter(post_type__iexact=post_type)
-        if media == "images":
-            queryset = queryset.filter(image__gt="")
-        elif media == "links":
-            queryset = queryset.filter(url__gt="")
+        queryset = self._apply_post_type_filter(queryset, post_type)
+        queryset = self._apply_media_filter(queryset, media)
 
         if sort in {"hot", "new", "top", "rising"}:
             queryset = apply_post_sort(queryset, sort=sort)
@@ -238,14 +270,21 @@ class ElasticsearchDiscoveryBackend(BaseDiscoveryBackend):
 
         for field, value in filters.items():
             es_field = ELASTIC_OPERATOR_MAP[DJANGO_FILTER_TO_OPERATOR[field]]
-            search = search.filter("term", **{es_field: value})
+            if es_field == "post_type" and str(value).lower() == "video":
+                search = search.filter("term", post_type="link").filter("regexp", url=".*(youtube\\.com|youtu\\.be|vimeo\\.com|tiktok\\.com|dailymotion\\.com|loom\\.com|wistia\\.(com|net)).*")
+            else:
+                search = search.filter("term", **{es_field: value})
 
-        if post_type:
+        if post_type == "video":
+            search = search.filter("term", post_type="link").filter("regexp", url=".*(youtube\\.com|youtu\\.be|vimeo\\.com|tiktok\\.com|dailymotion\\.com|loom\\.com|wistia\\.(com|net)).*")
+        elif post_type:
             search = search.filter("term", post_type=post_type)
         if media == "images":
             search = search.filter("exists", field="image")
         elif media == "links":
             search = search.filter("exists", field="url")
+        elif media == "videos":
+            search = search.filter("regexp", url=".*(youtube\\.com|youtu\\.be|vimeo\\.com|tiktok\\.com|dailymotion\\.com|loom\\.com|wistia\\.(com|net)).*")
 
         search = self._sort(search, sort)
         return self._search_to_posts(search, page_size=page_size, after=after, user=user)

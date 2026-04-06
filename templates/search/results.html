@@ -27,6 +27,7 @@
             <option value="text" {% if post_type == 'text' %}selected{% endif %}>Text</option>
             <option value="link" {% if post_type == 'link' %}selected{% endif %}>Links</option>
             <option value="image" {% if post_type == 'image' %}selected{% endif %}>Images</option>
+            <option value="video" {% if post_type == 'video' %}selected{% endif %}>Videos</option>
             <option value="poll" {% if post_type == 'poll' %}selected{% endif %}>Polls</option>
           </select>
           <select id="search_media" name="media" data-auto-submit aria-label="Media filter"
@@ -34,6 +35,14 @@
             <option value="" {% if not media %}selected{% endif %}>Any media</option>
             <option value="images" {% if media == 'images' %}selected{% endif %}>Has image</option>
             <option value="links" {% if media == 'links' %}selected{% endif %}>Has link</option>
+            <option value="videos" {% if media == 'videos' %}selected{% endif %}>Has video</option>
+          </select>
+          <select id="search_country" name="country" data-auto-submit aria-label="Country filter"
+            class="h-9 px-3 rounded-g border border-gray-200 text-sm text-gray-600 focus:border-primary focus:outline-none">
+            <option value="" {% if not country %}selected{% endif %}>Any country</option>
+            {% for option in country_options %}
+            <option value="{{ option.code }}" {% if country == option.code %}selected{% endif %}>{{ option.name }}</option>
+            {% endfor %}
           </select>
           <button type="submit"
             class="h-9 px-4 bg-primary text-white rounded-g text-sm font-medium hover:bg-primary-hover transition-colors border-0 cursor-pointer">Search</button>
@@ -44,19 +53,19 @@
     {% if query %}
     <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
       <div class="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center gap-2">
-        <a href="?q={{ query|urlencode }}&sort={{ sort }}&post_type={{ post_type }}&media={{ media }}"
+        <a href="?q={{ query|urlencode }}&sort={{ sort }}&post_type={{ post_type }}&media={{ media }}&country={{ country|urlencode }}"
           class="h-8 px-3 flex items-center rounded-g text-sm font-medium {% if result_type == 'all' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">
           All <span class="ml-1 text-xs text-gray-400">{{ post_count|add:community_count|add:user_count }}</span>
         </a>
-        <a href="?q={{ query|urlencode }}&sort={{ sort }}&post_type={{ post_type }}&media={{ media }}&type=posts"
+        <a href="?q={{ query|urlencode }}&sort={{ sort }}&post_type={{ post_type }}&media={{ media }}&country={{ country|urlencode }}&type=posts"
           class="h-8 px-3 flex items-center rounded-g text-sm font-medium {% if result_type == 'posts' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">
           Posts <span class="ml-1 text-xs text-gray-400">{{ post_count }}</span>
         </a>
-        <a href="?q={{ query|urlencode }}&sort={{ sort }}&post_type={{ post_type }}&media={{ media }}&type=communities"
+        <a href="?q={{ query|urlencode }}&sort={{ sort }}&post_type={{ post_type }}&media={{ media }}&country={{ country|urlencode }}&type=communities"
           class="h-8 px-3 flex items-center rounded-g text-sm font-medium {% if result_type == 'communities' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">
           Communities <span class="ml-1 text-xs text-gray-400">{{ community_count }}</span>
         </a>
-        <a href="?q={{ query|urlencode }}&sort={{ sort }}&post_type={{ post_type }}&media={{ media }}&type=people"
+        <a href="?q={{ query|urlencode }}&sort={{ sort }}&post_type={{ post_type }}&media={{ media }}&country={{ country|urlencode }}&type=people"
           class="h-8 px-3 flex items-center rounded-g text-sm font-medium {% if result_type == 'people' %}bg-primary-light text-primary{% else %}text-gray-600 hover:bg-gray-50{% endif %}">
           People <span class="ml-1 text-xs text-gray-400">{{ user_count }}</span>
         </a>
@@ -143,6 +152,8 @@
         <li><code class="text-gray-700">flair:name</code></li>
         <li><code class="text-gray-700">community:slug</code></li>
         <li><code class="text-gray-700">type:text</code></li>
+        <li><code class="text-gray-700">type:video</code></li>
+        <li><code class="text-gray-700">country:DE</code></li>
       </ul>
     </div>
   </aside>

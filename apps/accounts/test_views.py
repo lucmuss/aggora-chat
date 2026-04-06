@@ -355,7 +355,42 @@ class TestAccountViews:
 
         assert response.status_code == 200
         assert "regions_by_country_json" in response.context
-        assert "google_places_api_key" in response.context
+        assert "location_autocomplete_url" in response.context
+
+    def test_location_autocomplete_returns_google_places_suggestions(self, client, monkeypatch):
+        user = make_user(username="placesuser", email="placesuser@example.com", handle="placesuser")
+        client.force_login(user)
+
+        class Suggestion:
+            def __init__(self, text, place_id):
+                self.text = text
+                self.place_id = place_id
+
+        monkeypatch.setattr(
+            "apps.accounts.views.autocomplete_cities",
+            lambda query, country_code="", session_token="": [Suggestion("Berlin, Germany", "place-1")],
+        )
+
+        response = client.get(reverse("location_autocomplete"), {"q": "Ber", "country": "Germany"})
+
+        assert response.status_code == 200
+        assert response.json()["suggestions"][0]["text"] == "Berlin, Germany"
+
+    def test_location_autocomplete_returns_503_when_places_unavailable(self, client, monkeypatch):
+        user = make_user(username="placesfail", email="placesfail@example.com", handle="placesfail")
+        client.force_login(user)
+
+        from apps.accounts.google_places import GooglePlacesError
+
+        def broken(*args, **kwargs):
+            raise GooglePlacesError("Google Places API key is not configured.")
+
+        monkeypatch.setattr("apps.accounts.views.autocomplete_cities", broken)
+
+        response = client.get(reverse("location_autocomplete"), {"q": "Ber"})
+
+        assert response.status_code == 503
+        assert response.json()["suggestions"] == []
 
     def test_mfa_setup_invalid_code_adds_form_error(self, client):
         user = make_user(username="mfasetup", email="mfasetup@example.com", handle="mfasetup")
