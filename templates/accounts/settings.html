@@ -22,7 +22,7 @@
         <p class="text-xs text-gray-500 mt-1">Useful when you want a fallback sign-in beyond social login.</p>
       </a>
     </div>
-    <div id="notifications-preferences" class="bg-white border border-gray-200 rounded-g overflow-hidden">
+    <div id="notifications-preferences" class="bg-white border border-gray-200 rounded-g">
       <form method="post" enctype="multipart/form-data" class="styled-form p-5 space-y-4">
         {% csrf_token %}
         {% for field in form %}
@@ -84,10 +84,10 @@
           <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
             {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
           </label>
-          {% if field.name == "country" or field.name == "city" %}
+          {% if field.name == "country" or field.name == "region" or field.name == "city" %}
           <div class="autocomplete-field">
             {{ field }}
-            <div id="{% if field.name == 'country' %}country-suggestion-menu{% else %}city-suggestion-menu{% endif %}" class="autocomplete-menu" hidden></div>
+            <div id="{% if field.name == 'country' %}country-suggestion-menu{% elif field.name == 'region' %}region-suggestion-menu{% else %}city-suggestion-menu{% endif %}" class="autocomplete-menu" hidden></div>
           </div>
           {% else %}
           {{ field }}
@@ -225,6 +225,28 @@
 {{ regions_by_country_json|json_script:"regions-by-country-data" }}
 {{ country_code_by_name_json|json_script:"country-code-by-name-data" }}
 {{ country_search_index_json|json_script:"country-search-index-data" }}
+<style>
+  .autocomplete-field { position: relative; }
+  .autocomplete-menu {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
+    display: flex; flex-direction: column;
+    max-height: 16rem; overflow-y: auto;
+    border: 1px solid #D1D5DB; border-radius: 0.75rem;
+    background: #fff; box-shadow: 0 12px 28px rgba(15,23,42,0.12);
+  }
+  .autocomplete-menu[hidden] { display: none !important; }
+  .autocomplete-menu__item {
+    display: flex !important; flex-direction: column; align-items: flex-start;
+    width: 100%; padding: 0.65rem 0.85rem;
+    border: 0; border-bottom: 1px solid #F1F5F9;
+    background: #fff; text-align: left; cursor: pointer;
+  }
+  .autocomplete-menu__item:last-child { border-bottom: 0; }
+  .autocomplete-menu__item:hover { background: #F8FAFC; }
+  .autocomplete-menu__label { font-size: 0.875rem; font-weight: 500; color: #111827; display: block; }
+  .autocomplete-menu__meta { font-size: 0.75rem; color: #6B7280; display: block; }
+  .autocomplete-menu__empty { padding: 0.8rem 0.9rem; font-size: 0.8125rem; color: #6B7280; }
+</style>
 <script>
   (() => {
     const countryInput = document.getElementById("id_country");
@@ -232,6 +254,7 @@
     const cityInput = document.getElementById("id_city");
     const citySuggestionMenu = document.getElementById("city-suggestion-menu");
     const countrySuggestionMenu = document.getElementById("country-suggestion-menu");
+    const regionSuggestionMenu = document.getElementById("region-suggestion-menu");
     const handleInput = document.getElementById("id_handle");
     const handleMessage = document.getElementById("handle-check-message");
     const handleCheckUrl = "{{ handle_check_url }}";
@@ -240,12 +263,12 @@
     if (!countryInput || !regionInput || !cityInput) return;
 
     const regionsByCountry = JSON.parse(document.getElementById("regions-by-country-data").textContent || "{}");
-    const countryCodeByName = JSON.parse(document.getElementById("country-code-by-name-data").textContent || "{}");
     const countrySearchIndex = JSON.parse(document.getElementById("country-search-index-data").textContent || "{}");
     const locationAutocompleteUrl = "{{ location_autocomplete_url }}";
     const countryAutocompleteUrl = "{% url 'country_autocomplete' %}";
-    let autocompleteAbortController = null;
+    let cityAbortController = null;
     let countryAutocompleteAbortController = null;
+
     const canonicalCountry = (value) => {
       const normalized = (value || "")
         .normalize("NFKD")
@@ -255,36 +278,6 @@
         .replace(/\s+/g, " ");
       return countrySearchIndex[normalized] || (value || "").trim();
     };
-    const renderRegions = (country, selectedRegion = "") => {
-      const canonical = canonicalCountry(country);
-      const options = regionsByCountry[canonical] || [];
-      const previousValue = selectedRegion || regionInput.value || "";
-      regionInput.innerHTML = "";
-
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = options.length ? "Select region" : "No region suggestions for this country";
-      regionInput.appendChild(placeholder);
-
-      options.forEach((regionName) => {
-        const option = document.createElement("option");
-        option.value = regionName;
-        option.textContent = regionName;
-        if (previousValue === regionName) option.selected = true;
-        regionInput.appendChild(option);
-      });
-
-      regionInput.disabled = options.length === 0;
-      if (!options.includes(previousValue)) {
-        regionInput.value = "";
-      }
-    };
-
-    renderRegions(countryInput.value, regionInput.value);
-    countryInput.addEventListener("change", () => {
-      renderRegions(countryInput.value, "");
-      clearCitySuggestions();
-    });
 
     const hideSuggestionMenu = (menu) => {
       if (!menu) return;
@@ -320,23 +313,23 @@
     };
 
     const clearCountrySuggestions = () => hideSuggestionMenu(countrySuggestionMenu);
+    const clearRegionSuggestions = () => hideSuggestionMenu(regionSuggestionMenu);
     const clearCitySuggestions = () => hideSuggestionMenu(citySuggestionMenu);
 
+    // --- Country ---
     const selectCountrySuggestion = (item) => {
       countryInput.value = item.value;
-      renderRegions(item.value, "");
-      clearCountrySuggestions();
-      clearCitySuggestions();
+      regionInput.value = "";
       cityInput.value = "";
-      cityInput.focus();
+      clearCountrySuggestions();
+      clearRegionSuggestions();
+      clearCitySuggestions();
+      regionInput.focus();
     };
 
     const loadCountrySuggestions = async () => {
       const query = countryInput.value.trim();
-      if (!query) {
-        clearCountrySuggestions();
-        return;
-      }
+      if (!query) { clearCountrySuggestions(); return; }
       countryAutocompleteAbortController?.abort();
       countryAutocompleteAbortController = new AbortController();
       try {
@@ -344,10 +337,7 @@
           signal: countryAutocompleteAbortController.signal,
           headers: { "X-Requested-With": "XMLHttpRequest" },
         });
-        if (!response.ok) {
-          clearCountrySuggestions();
-          return;
-        }
+        if (!response.ok) { clearCountrySuggestions(); return; }
         const payload = await response.json();
         renderSuggestionMenu(
           countrySuggestionMenu,
@@ -357,13 +347,60 @@
             meta: item.label !== item.value ? item.value : "",
           })),
           selectCountrySuggestion,
-          "No matching countries yet."
+          "No matching countries."
         );
       } catch (_error) {
         clearCountrySuggestions();
       }
-    });
+    };
 
+    // --- Region ---
+    const getRegionOptions = () => {
+      const raw = countryInput.value.trim();
+      if (!raw) return [];
+      // Try canonical name, then raw value as fallback (handles pre-filled values)
+      const canonical = canonicalCountry(raw);
+      return regionsByCountry[canonical]
+        || regionsByCountry[raw]
+        || regionsByCountry[raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()]
+        || [];
+    };
+
+    const selectRegionSuggestion = (item) => {
+      regionInput.value = item.value;
+      cityInput.value = "";
+      clearRegionSuggestions();
+      clearCitySuggestions();
+      cityInput.focus();
+    };
+
+    const loadRegionSuggestions = () => {
+      const query = regionInput.value.trim().toLowerCase();
+      const options = getRegionOptions();
+      if (!options.length) {
+        if (!countryInput.value.trim()) {
+          renderSuggestionMenu(regionSuggestionMenu, [], selectRegionSuggestion, "Select a country first.");
+        } else {
+          clearRegionSuggestions();
+        }
+        return;
+      }
+      const matched = query
+        ? options.filter((r) => r.toLowerCase().includes(query))
+        : options;
+      if (!matched.length) {
+        renderSuggestionMenu(regionSuggestionMenu, [], selectRegionSuggestion, "No matching regions.");
+        return;
+      }
+      renderSuggestionMenu(
+        regionSuggestionMenu,
+        matched.slice(0, 12).map((r) => ({ label: r, value: r })),
+        selectRegionSuggestion,
+        "No matching regions."
+      );
+    };
+
+    // --- City ---
     const selectCitySuggestion = (item) => {
       cityInput.value = item.value;
       clearCitySuggestions();
@@ -371,29 +408,19 @@
 
     const loadCitySuggestions = async () => {
       const query = cityInput.value.trim();
-      if (query.length < 2) {
-        clearCitySuggestions();
-        return;
-      }
-      autocompleteAbortController?.abort();
-      autocompleteAbortController = new AbortController();
+      if (query.length < 2) { clearCitySuggestions(); return; }
+      cityAbortController?.abort();
+      cityAbortController = new AbortController();
       const params = new URLSearchParams({ q: query });
       const selectedCountry = canonicalCountry(countryInput.value.trim());
-      if (selectedCountry) {
-        params.set("country", selectedCountry);
-      }
-      if (regionInput.value.trim()) {
-        params.set("region", regionInput.value.trim());
-      }
+      if (selectedCountry) params.set("country", selectedCountry);
+      if (regionInput.value.trim()) params.set("region", regionInput.value.trim());
       try {
         const response = await fetch(`${locationAutocompleteUrl}?${params.toString()}`, {
-          signal: autocompleteAbortController.signal,
+          signal: cityAbortController.signal,
           headers: { "X-Requested-With": "XMLHttpRequest" },
         });
-        if (!response.ok) {
-          clearCitySuggestions();
-          return;
-        }
+        if (!response.ok) { clearCitySuggestions(); return; }
         const payload = await response.json();
         renderSuggestionMenu(
           citySuggestionMenu,
@@ -406,24 +433,29 @@
       }
     };
 
+    // --- Event listeners ---
     countryInput.addEventListener("input", loadCountrySuggestions);
     countryInput.addEventListener("focus", loadCountrySuggestions);
-    cityInput.addEventListener("input", loadCitySuggestions);
-    cityInput.addEventListener("focus", loadCitySuggestions);
-    countryInput.addEventListener("change", loadCitySuggestions);
-    regionInput.addEventListener("change", loadCitySuggestions);
     countryInput.addEventListener("blur", () => {
       window.setTimeout(() => {
         const canonical = canonicalCountry(countryInput.value.trim());
         if (canonical && canonical !== countryInput.value.trim()) {
           countryInput.value = canonical;
         }
-        renderRegions(countryInput.value, regionInput.value);
         clearCountrySuggestions();
-      }, 120);
+      }, 150);
     });
+
+    regionInput.addEventListener("input", loadRegionSuggestions);
+    regionInput.addEventListener("focus", loadRegionSuggestions);
+    regionInput.addEventListener("blur", () => {
+      window.setTimeout(clearRegionSuggestions, 150);
+    });
+
+    cityInput.addEventListener("input", loadCitySuggestions);
+    cityInput.addEventListener("focus", loadCitySuggestions);
     cityInput.addEventListener("blur", () => {
-      window.setTimeout(clearCitySuggestions, 120);
+      window.setTimeout(clearCitySuggestions, 150);
     });
 
     const resetHandleState = () => {

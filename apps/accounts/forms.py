@@ -38,9 +38,17 @@ class SignupForm(forms.Form):
 
 
 class AccountSettingsForm(forms.ModelForm):
-    region = forms.ChoiceField(
+    region = forms.CharField(
         required=False,
-        choices=[("", "Select region")],
+        max_length=120,
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "Start typing your region",
+                "autocomplete": "off",
+                "spellcheck": "false",
+                "autocapitalize": "words",
+            }
+        ),
     )
     city = forms.CharField(
         required=False,
@@ -59,14 +67,6 @@ class AccountSettingsForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["handle"].required = True
-        country = ""
-        if self.is_bound:
-            country = canonicalize_country_name((self.data.get("country") or "").strip())
-        elif self.instance and self.instance.pk:
-            country = (self.instance.country or "").strip()
-        self.fields["region"].choices = [("", "Select region")] + [
-            (region_name, region_name) for region_name in REGIONS_BY_COUNTRY.get(country, [])
-        ]
 
     class Meta:
         model = User
@@ -129,17 +129,12 @@ class AccountSettingsForm(forms.ModelForm):
                     "autocapitalize": "words",
                 }
             ),
-            "region": forms.Select(
-                attrs={
-                    "data-location-region": "true",
-                }
-            ),
         }
         help_texts = {
             "handle": "This is your public @name. Use lowercase letters, numbers, and underscores.",
             "birth_date": "Used to show your age on your public profile.",
             "country": "Choose the country you want to show on your profile.",
-            "region": "Agora will narrow this list to the regions that belong to your selected country.",
+            "region": "Select your country first, then type to filter regions.",
             "city": "Type your city. If Google Places is enabled, suggestions will appear automatically.",
             "preferred_theme": "Pick which color theme Agora should use by default on your devices.",
             "preferred_language": "Choose the interface language Agora should use after you save these settings.",

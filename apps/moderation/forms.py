@@ -21,7 +21,14 @@ class ContentReportForm(forms.Form):
         (REASON_OTHER, "Something else"),
     )
 
-    reason = forms.ChoiceField(choices=REASON_CHOICES)
+    reason = forms.ChoiceField(
+        choices=REASON_CHOICES,
+        widget=forms.Select(
+            attrs={
+                "class": "w-full min-h-[42px] rounded-g border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20",
+            }
+        ),
+    )
     details = forms.CharField(
         required=False,
         max_length=1000,
@@ -29,6 +36,7 @@ class ContentReportForm(forms.Form):
             attrs={
                 "rows": 3,
                 "placeholder": "Add context for the moderators (optional).",
+                "class": "w-full rounded-g border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none",
             }
         ),
     )

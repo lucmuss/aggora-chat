@@ -101,10 +101,6 @@
 
     {% if user.is_authenticated %}
     <div class="ui-card ui-card--padded">
-      <div class="mb-3 flex items-center justify-between gap-3 rounded-g border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        <span>You have {{ awards_remaining }} of 3 highlights left this month.</span>
-        <span class="font-medium">Use them on posts or comments worth surfacing.</span>
-      </div>
       {% if welcome_prompt %}
       <div class="mb-3 rounded-g border border-opal-muted bg-opal-light px-3 py-2 text-sm text-opal">
         Nice start. Reply to this thread to finish your first contribution and unlock a conversation badge.
@@ -131,7 +127,7 @@
           </div>
         </div>
         <div class="flex justify-end mt-2">
-          <button type="submit" class="btn-ui btn-ui--primary" data-submit-label="Posting…">Reply</button>
+          <button type="submit" class="btn-ui btn-ui--primary" data-submit-label="Posting…">Post comment</button>
         </div>
       </form>
     </div>

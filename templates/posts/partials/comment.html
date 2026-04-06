@@ -1,77 +1,94 @@
 {% load common_tags %}
 <div class="group" id="comment-{{ comment.id }}">
-  <div class="flex">
+  <div class="flex gap-2">
     {% if comment.depth > 0 %}
-      <div class="w-5 shrink-0 flex justify-center">
-        <div class="w-px bg-gray-200 group-hover:bg-opal-accent transition-colors mt-1"></div>
+      <div class="w-4 shrink-0 flex justify-center pt-1">
+        <div class="w-px bg-gray-200 group-hover:bg-opal/40 transition-colors"></div>
       </div>
     {% endif %}
-    <div class="flex-1 min-w-0 py-2 {% if comment.depth > 0 %}pl-1{% endif %}">
-      <div class="{% if comment_awards|get_item:comment.id %}rounded-g border border-amber-200 bg-amber-50/40 px-3 py-2{% endif %}">
-      <div class="flex items-center gap-1.5 text-xs mb-1">
-        {% if comment.author and comment.author.handle %}
-          <a href="{% url 'profile' handle=comment.author.handle %}" class="font-medium text-gray-900 hover:underline">
-            u/{{ comment.author.handle }}
-          </a>
-        {% else %}
-          <span class="font-medium text-gray-900">u/[deleted]</span>
-        {% endif %}
-        <span class="text-gray-300">·</span>
-        <span class="text-gray-500">{{ comment.score }} point{{ comment.score|pluralize }}</span>
-        {% if comment_awards|get_item:comment.id %}
-        <span class="text-gray-300">·</span>
-        <span class="font-semibold text-amber-700">Highlighted {{ comment_awards|get_item:comment.id }}x</span>
-        {% endif %}
-        <span class="text-gray-300">·</span>
-        <time class="text-gray-400">{{ comment.created_at|timesince_compact }} ago</time>
-      </div>
-      <div class="prose text-sm">{{ comment.body_html|safe }}</div>
-      {% if user == comment.author and comment.author_deleted_at %}
-      <div class="mt-2 rounded-g border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        This comment is hidden from everyone else.
-        <form method="post" action="{% url 'restore_deleted_comment' comment_id=comment.id %}" class="inline">
-          {% csrf_token %}
-          <button type="submit" class="font-medium underline">Undo</button>
-        </form>
-      </div>
-      {% endif %}
-      <div class="flex items-center gap-0.5 mt-1.5 -ml-1.5">
-        {% include "votes/partials/vote_widget.html" with target=comment target_type="comment" user_vote=comment_votes|get_item:comment.id layout="inline" %}
-        {% if user.is_authenticated %}
-          <details class="ml-1">
-            <summary class="list-none h-6 px-2 flex items-center rounded text-xs font-medium text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer">Reply</summary>
-            <form method="post" action="{% url 'create_comment' post_id=comment.post.id %}" class="mt-2 space-y-2">
-              {% csrf_token %}
-              <input type="hidden" name="parent_id" value="{{ comment.id }}">
-              <textarea name="body_md" rows="3" placeholder="Write a reply…" data-mentions-url="{% url 'mention_search' %}" data-community-slug="{{ comment.post.community.slug }}" class="w-full min-h-[6rem] px-3 py-2 text-sm text-gray-900 placeholder-gray-400 resize-y overflow-y-auto rounded-g border border-gray-200 focus:border-primary focus:outline-none transition-colors"></textarea>
-              <div class="flex justify-end">
-                <button type="submit" class="inline-flex h-8 px-3 items-center rounded-g bg-primary text-white text-xs font-medium hover:bg-primary-hover transition-colors">Post reply</button>
-              </div>
-            </form>
-          </details>
-          <form method="post" action="{% url 'give_award' %}" class="ml-1">
-            {% csrf_token %}
-            <input type="hidden" name="comment_id" value="{{ comment.id }}">
-            <input type="hidden" name="next" value="{{ request.get_full_path }}#comment-{{ comment.id }}">
-            <button type="submit" class="h-6 px-2 flex items-center rounded text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors" {% if comment.id in comment_awarded_ids or user == comment.author or awards_remaining <= 0 %}disabled{% endif %}>
-              {% if comment.id in comment_awarded_ids %}Awarded{% else %}Award{% endif %}
-            </button>
-          </form>
-          <a href="{% url 'report_comment' comment_id=comment.id %}" class="ml-1 h-6 px-2 inline-flex items-center rounded text-xs font-medium text-gray-500 hover:bg-gray-100 transition-colors">Report</a>
-        {% endif %}
-        {% if user == comment.author and not comment.author_deleted_at %}
-          <form method="post" action="{% url 'delete_comment' comment_id=comment.id %}">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <button type="submit" onclick="return confirm('Delete this comment? You can undo it shortly afterwards.')" class="h-6 px-2 flex items-center rounded text-xs font-medium text-red-600 hover:bg-red-50 transition-colors ml-1">Delete</button>
-          </form>
-        {% endif %}
-      </div>
-      {% if comment.children %}
-        <div class="mt-2 space-y-2 border-l-2 border-gray-100 pl-3">
-          {% for child in comment.children %}{% include "posts/partials/comment.html" with comment=child %}{% endfor %}
+    <div class="flex-1 min-w-0 py-2">
+      <div class="{% if comment_awards|get_item:comment.id %}rounded-g border border-amber-200 bg-amber-50/30 px-3 py-2{% endif %}">
+
+        {{/* Author + meta row */}}
+        <div class="flex items-center gap-1.5 text-xs mb-1.5">
+          {% if comment.author and comment.author.handle %}
+            <a href="{% url 'profile' handle=comment.author.handle %}" class="font-semibold text-gray-800 hover:text-primary transition-colors">
+              u/{{ comment.author.handle }}
+            </a>
+          {% else %}
+            <span class="font-semibold text-gray-400">u/[deleted]</span>
+          {% endif %}
+          <span class="text-gray-300">·</span>
+          <span class="text-gray-500">{{ comment.score }} point{{ comment.score|pluralize }}</span>
+          {% if comment_awards|get_item:comment.id %}
+          <span class="text-gray-300">·</span>
+          <span class="font-medium text-amber-600">⭐ Highlighted {{ comment_awards|get_item:comment.id }}x</span>
+          {% endif %}
+          <span class="text-gray-300">·</span>
+          <time class="text-gray-400">{{ comment.created_at|timesince_compact }} ago</time>
         </div>
-      {% endif %}
+
+        {{/* Comment body */}}
+        <div class="prose prose-sm text-gray-800 leading-relaxed">{{ comment.body_html|safe }}</div>
+
+        {% if user == comment.author and comment.author_deleted_at %}
+        <div class="mt-2 rounded-g border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          This comment is hidden from everyone else.
+          <form method="post" action="{% url 'restore_deleted_comment' comment_id=comment.id %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="font-medium underline">Undo</button>
+          </form>
+        </div>
+        {% endif %}
+
+        {{/* Action bar */}}
+        <div class="flex items-center gap-1 mt-2 -ml-1.5">
+          {% include "votes/partials/vote_widget.html" with target=comment target_type="comment" user_vote=comment_votes|get_item:comment.id layout="inline" %}
+          {% if user.is_authenticated %}
+            <details class="ml-1">
+              <summary class="list-none h-7 px-2.5 flex items-center rounded-g text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer select-none">Reply</summary>
+              <div class="mt-2 pl-1">
+                <form method="post" action="{% url 'create_comment' post_id=comment.post.id %}" class="space-y-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                  <textarea name="body_md" rows="3" placeholder="Write a reply…"
+                            data-mentions-url="{% url 'mention_search' %}"
+                            data-community-slug="{{ comment.post.community.slug }}"
+                            class="w-full min-h-[5rem] px-3 py-2 text-sm text-gray-900 placeholder-gray-400 resize-y rounded-g border border-gray-200 bg-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors"></textarea>
+                  <div class="flex justify-end">
+                    <button type="submit" class="btn-ui btn-ui--primary btn-ui--sm">Post reply</button>
+                  </div>
+                </form>
+              </div>
+            </details>
+            <form method="post" action="{% url 'give_award' %}" class="ml-0.5">
+              {% csrf_token %}
+              <input type="hidden" name="comment_id" value="{{ comment.id }}">
+              <input type="hidden" name="next" value="{{ request.get_full_path }}#comment-{{ comment.id }}">
+              <button type="submit" class="h-7 px-2.5 flex items-center rounded-g text-xs font-medium text-amber-600 hover:bg-amber-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      {% if comment.id in comment_awarded_ids or user == comment.author or awards_remaining <= 0 %}disabled{% endif %}>
+                {% if comment.id in comment_awarded_ids %}⭐ Awarded{% else %}Award{% endif %}
+              </button>
+            </form>
+            <a href="{% url 'report_comment' comment_id=comment.id %}" class="h-7 px-2.5 inline-flex items-center rounded-g text-xs font-medium text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">Report</a>
+          {% endif %}
+          {% if user == comment.author and not comment.author_deleted_at %}
+            <form method="post" action="{% url 'delete_comment' comment_id=comment.id %}" class="ml-0.5">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" onclick="return confirm('Delete this comment? You can undo it shortly afterwards.')"
+                      class="h-7 px-2.5 flex items-center rounded-g text-xs font-medium text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">Delete</button>
+            </form>
+          {% endif %}
+        </div>
+
+        {{/* Nested children */}}
+        {% if comment.children %}
+          <div class="mt-3 space-y-1 border-l-2 border-gray-100 pl-3">
+            {% for child in comment.children %}{% include "posts/partials/comment.html" with comment=child %}{% endfor %}
+          </div>
+        {% endif %}
+
       </div>
     </div>
   </div>
