@@ -84,7 +84,14 @@
           <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
             {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
           </label>
+          {% if field.name == "country" or field.name == "city" %}
+          <div class="autocomplete-field">
+            {{ field }}
+            <div id="{% if field.name == 'country' %}country-suggestion-menu{% else %}city-suggestion-menu{% endif %}" class="autocomplete-menu" hidden></div>
+          </div>
+          {% else %}
           {{ field }}
+          {% endif %}
           {% endif %}
           {% if field.name == "avatar" %}
           <div class="mt-3 flex items-center gap-3">
@@ -108,10 +115,6 @@
             </div>
             <p class="text-xs text-gray-500">Use a wide image, ideally around 4:1. PNG, JPG, GIF, or WebP. Maximum size: 4 MB.</p>
           </div>
-          {% elif field.name == "country" %}
-          <datalist id="country-options"></datalist>
-          {% elif field.name == "city" %}
-          <datalist id="city-suggestions"></datalist>
           {% endif %}
           {% if field.help_text and field.field.widget.input_type != "checkbox" %}<p class="text-xs text-gray-400 mt-1">{{ field.help_text }}</p>{% endif %}
           {% if field.name == "handle" %}
@@ -227,8 +230,8 @@
     const countryInput = document.getElementById("id_country");
     const regionInput = document.getElementById("id_region");
     const cityInput = document.getElementById("id_city");
-    const citySuggestions = document.getElementById("city-suggestions");
-    const countrySuggestions = document.getElementById("country-options");
+    const citySuggestionMenu = document.getElementById("city-suggestion-menu");
+    const countrySuggestionMenu = document.getElementById("country-suggestion-menu");
     const handleInput = document.getElementById("id_handle");
     const handleMessage = document.getElementById("handle-check-message");
     const handleCheckUrl = "{{ handle_check_url }}";
@@ -283,10 +286,49 @@
       clearCitySuggestions();
     });
 
-    const clearCountrySuggestions = () => {
-      if (countrySuggestions) {
-        countrySuggestions.innerHTML = "";
+    const hideSuggestionMenu = (menu) => {
+      if (!menu) return;
+      menu.hidden = true;
+      menu.innerHTML = "";
+    };
+
+    const renderSuggestionMenu = (menu, items, onSelect, emptyMessage) => {
+      if (!menu) return;
+      menu.innerHTML = "";
+      if (!items.length) {
+        menu.hidden = false;
+        const empty = document.createElement("div");
+        empty.className = "autocomplete-menu__empty";
+        empty.textContent = emptyMessage;
+        menu.appendChild(empty);
+        return;
       }
+      items.forEach((item) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "autocomplete-menu__item";
+        button.innerHTML = item.meta
+          ? `<span class="autocomplete-menu__label">${item.label}</span><span class="autocomplete-menu__meta">${item.meta}</span>`
+          : `<span class="autocomplete-menu__label">${item.label}</span>`;
+        button.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+          onSelect(item);
+        });
+        menu.appendChild(button);
+      });
+      menu.hidden = false;
+    };
+
+    const clearCountrySuggestions = () => hideSuggestionMenu(countrySuggestionMenu);
+    const clearCitySuggestions = () => hideSuggestionMenu(citySuggestionMenu);
+
+    const selectCountrySuggestion = (item) => {
+      countryInput.value = item.value;
+      renderRegions(item.value, "");
+      clearCountrySuggestions();
+      clearCitySuggestions();
+      cityInput.value = "";
+      cityInput.focus();
     };
 
     const loadCountrySuggestions = async () => {
@@ -307,21 +349,24 @@
           return;
         }
         const payload = await response.json();
-        clearCountrySuggestions();
-        (payload.suggestions || []).forEach((item) => {
-          const option = document.createElement("option");
-          option.value = item.label;
-          countrySuggestions.appendChild(option);
-        });
+        renderSuggestionMenu(
+          countrySuggestionMenu,
+          (payload.suggestions || []).map((item) => ({
+            label: item.label,
+            value: item.value,
+            meta: item.label !== item.value ? item.value : "",
+          })),
+          selectCountrySuggestion,
+          "No matching countries yet."
+        );
       } catch (_error) {
         clearCountrySuggestions();
       }
     });
 
-    const clearCitySuggestions = () => {
-      if (citySuggestions) {
-        citySuggestions.innerHTML = "";
-      }
+    const selectCitySuggestion = (item) => {
+      cityInput.value = item.value;
+      clearCitySuggestions();
     };
 
     const loadCitySuggestions = async () => {
@@ -350,21 +395,36 @@
           return;
         }
         const payload = await response.json();
-        clearCitySuggestions();
-        (payload.suggestions || []).forEach((item) => {
-          const option = document.createElement("option");
-          option.value = item.text;
-          citySuggestions.appendChild(option);
-        });
+        renderSuggestionMenu(
+          citySuggestionMenu,
+          (payload.suggestions || []).map((item) => ({ label: item.text, value: item.text })),
+          selectCitySuggestion,
+          "No city matches yet."
+        );
       } catch (_error) {
         clearCitySuggestions();
       }
     };
 
     countryInput.addEventListener("input", loadCountrySuggestions);
+    countryInput.addEventListener("focus", loadCountrySuggestions);
     cityInput.addEventListener("input", loadCitySuggestions);
+    cityInput.addEventListener("focus", loadCitySuggestions);
     countryInput.addEventListener("change", loadCitySuggestions);
     regionInput.addEventListener("change", loadCitySuggestions);
+    countryInput.addEventListener("blur", () => {
+      window.setTimeout(() => {
+        const canonical = canonicalCountry(countryInput.value.trim());
+        if (canonical && canonical !== countryInput.value.trim()) {
+          countryInput.value = canonical;
+        }
+        renderRegions(countryInput.value, regionInput.value);
+        clearCountrySuggestions();
+      }, 120);
+    });
+    cityInput.addEventListener("blur", () => {
+      window.setTimeout(clearCitySuggestions, 120);
+    });
 
     const resetHandleState = () => {
       if (!handleInput || !handleMessage) return;

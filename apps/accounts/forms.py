@@ -47,11 +47,11 @@ class AccountSettingsForm(forms.ModelForm):
         max_length=120,
         widget=forms.TextInput(
             attrs={
-                "type": "search",
-                "list": "city-suggestions",
+                "type": "text",
                 "placeholder": "Start typing your city",
                 "autocomplete": "address-level2",
                 "spellcheck": "false",
+                "autocapitalize": "words",
             }
         ),
     )
@@ -123,10 +123,10 @@ class AccountSettingsForm(forms.ModelForm):
             ),
             "country": forms.TextInput(
                 attrs={
-                    "list": "country-options",
                     "placeholder": "Start typing your country",
-                    "autocomplete": "country-name",
+                    "autocomplete": "off",
                     "spellcheck": "false",
+                    "autocapitalize": "words",
                 }
             ),
             "region": forms.Select(

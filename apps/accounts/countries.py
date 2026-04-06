@@ -266,6 +266,17 @@ COUNTRY_ALIASES_BY_NAME = {
     "South Korea": ["Korea", "Republic of Korea"],
 }
 
+COUNTRY_PRIORITY = {
+    "Germany": 0,
+    "United States": 1,
+    "United Kingdom": 2,
+    "France": 3,
+    "Spain": 4,
+    "Italy": 5,
+    "Canada": 6,
+    "Australia": 7,
+}
+
 
 def _normalize_country_search(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode("ascii")
@@ -307,6 +318,7 @@ def country_suggestions(query: str, limit: int = 8) -> list[dict[str, str]]:
     suggestions.sort(
         key=lambda item: (
             0 if _normalize_country_search(item["label"]) == needle else 1,
+            COUNTRY_PRIORITY.get(item["value"], 99),
             0 if item["label"] == item["value"] else 1,
             len(item["label"]),
             item["label"],

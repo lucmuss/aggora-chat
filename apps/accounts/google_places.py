@@ -6,6 +6,7 @@ import requests
 from django.conf import settings
 
 GOOGLE_PLACES_AUTOCOMPLETE_URL = "https://places.googleapis.com/v1/places:autocomplete"
+GOOGLE_PLACE_DETAILS_URL = "https://places.googleapis.com/v1/places/{place_id}"
 
 
 class GooglePlacesError(RuntimeError):
@@ -16,6 +17,34 @@ class GooglePlacesError(RuntimeError):
 class PlaceSuggestion:
     text: str
     place_id: str = ""
+
+
+def _normalize_place_text(value: str) -> str:
+    return " ".join((value or "").casefold().split())
+
+
+def _extract_region_from_place(body: dict) -> str:
+    for component in body.get("addressComponents", []):
+        types = set(component.get("types") or [])
+        if "administrative_area_level_1" in types:
+            return (component.get("longText") or component.get("shortText") or "").strip()
+    return ""
+
+
+def _load_place_region(place_id: str, *, api_key: str, session) -> str:
+    if not place_id:
+        return ""
+    response = session.get(
+        GOOGLE_PLACE_DETAILS_URL.format(place_id=place_id),
+        headers={
+            "X-Goog-Api-Key": api_key,
+            "X-Goog-FieldMask": "addressComponents",
+        },
+        timeout=10,
+    )
+    if response.status_code >= 400:
+        return ""
+    return _extract_region_from_place(response.json())
 
 
 def autocomplete_cities(
@@ -34,10 +63,8 @@ def autocomplete_cities(
     if not api_key:
         raise GooglePlacesError("Google Places API key is not configured.")
 
-    location_parts = [part.strip() for part in (region, country_name) if (part or "").strip()]
-    query_input = query if not location_parts else f"{query}, {', '.join(location_parts)}"
     payload: dict[str, object] = {
-        "input": query_input,
+        "input": query,
         "includedPrimaryTypes": ["(cities)"],
     }
     normalized_country_code = (country_code or "").strip().lower()
@@ -72,4 +99,16 @@ def autocomplete_cities(
                 place_id=(prediction.get("placeId") or "").strip(),
             )
         )
+    normalized_region = _normalize_place_text(region)
+    if normalized_region and suggestions and hasattr(session, "get"):
+        indexed_suggestions = list(enumerate(suggestions))
+        scored = []
+        for index, suggestion in indexed_suggestions[:8]:
+            region_name = _normalize_place_text(_load_place_region(suggestion.place_id, api_key=api_key, session=session))
+            score = 0 if region_name and region_name == normalized_region else 1
+            scored.append((score, index, suggestion))
+        if scored and any(score == 0 for score, _, _ in scored):
+            ranked = [suggestion for _, _, suggestion in sorted(scored, key=lambda item: (item[0], item[1]))]
+            ranked_ids = {suggestion.place_id for suggestion in ranked}
+            suggestions = ranked + [suggestion for suggestion in suggestions if suggestion.place_id not in ranked_ids]
     return suggestions
