@@ -13,6 +13,8 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone as django_timezone
 
+from apps.accounts.mentions import resolve_mentioned_users
+from apps.accounts.models import Notification
 from apps.common.celery import dispatch_task
 from apps.communities.models import Community, CommunityChallenge
 from apps.search.tasks import index_post_task
@@ -74,6 +76,7 @@ def submit_post(user, community, post_data: dict, poll_lines: list[str] = None, 
     from apps.accounts.growth import award_post_badges
 
     award_post_badges(user)
+    create_mention_notifications(post=post, actor=user, text_chunks=[post.title, post.body_md])
     dispatch_task(index_post_task, post.pk)
     return post
 
@@ -97,10 +100,42 @@ def submit_comment(user, post: Post, body_md: str, parent_id: str | None = None)
     Post.objects.filter(pk=post.pk).update(comment_count=models.F("comment_count") + 1)
     dispatch_task(recalculate_post_vote_totals, post.id)
     create_reengagement_notifications(comment)
+    create_mention_notifications(comment=comment, post=post, actor=user, text_chunks=[comment.body_md])
     from apps.accounts.growth import award_comment_badges
 
     award_comment_badges(user)
     return comment
+
+
+def create_mention_notifications(*, actor, text_chunks: list[str], post: Post, comment: Comment | None = None):
+    mentioned_users = resolve_mentioned_users(*text_chunks, exclude_ids=[actor.id])
+    if not mentioned_users.exists():
+        return
+    target_url = reverse(
+        "post_detail",
+        kwargs={"community_slug": post.community.slug, "post_id": post.id, "slug": post.slug},
+    )
+    if comment is not None:
+        target_url = f"{target_url}#comment-{comment.id}"
+        message = f"{actor.handle or actor.username} mentioned you in a comment."
+    else:
+        message = f"{actor.handle or actor.username} mentioned you in a thread."
+
+    notifications = []
+    for mentioned_user in mentioned_users:
+        notifications.append(
+            Notification(
+                user=mentioned_user,
+                actor=actor,
+                community=post.community,
+                post=post,
+                comment=comment,
+                notification_type=Notification.NotificationType.MENTION,
+                message=message,
+                url=target_url,
+            )
+        )
+    Notification.objects.bulk_create(notifications)
 
 
 def submit_poll_vote(user, poll: Poll, option_id: str):
@@ -338,7 +373,7 @@ def apply_personalized_post_sort(queryset, sort="hot"):
 
 
 def pg_feed_queryset(user, community=None, sort="hot", scope="all"):
-    queryset = Post.objects.visible().for_listing()
+    queryset = Post.objects.visible_to(user).for_listing()
     memberships = []
     if user is not None and user.is_authenticated:
         blocked_ids = list(user.blocked_users.values_list("id", flat=True))

@@ -30,6 +30,32 @@ class CanonicalHostMiddleware:
         return self.get_response(request)
 
 
+class HtmxRedirectMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        is_htmx_request = getattr(request, "htmx", False) or request.headers.get("HX-Request") == "true"
+        if not is_htmx_request:
+            return response
+
+        location = response.headers.get("Location", "")
+        login_path = urlsplit(str(settings.LOGIN_URL)).path or "/accounts/login/"
+        redirected_to_login = (
+            response.status_code in {301, 302, 303, 307, 308}
+            and location
+            and urlsplit(location).path.startswith(login_path)
+        )
+        if redirected_to_login:
+            htmx_response = HttpResponse(status=204)
+            htmx_response.headers["HX-Redirect"] = location
+            return htmx_response
+
+        return response
+
+
 class SimpleRateLimitMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response

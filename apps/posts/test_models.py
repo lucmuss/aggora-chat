@@ -47,6 +47,23 @@ class TestPostModel:
 
         assert list(Post.objects.visible().values_list("id", flat=True)) == [visible.id]
 
+    def test_visible_to_hides_nsfw_for_signed_out_or_opted_out_users(self):
+        community = make_community("visible-nsfw")
+        safe = Post.objects.create(community=community, author=community.creator, post_type="text", title="Safe", body_md="Body")
+        nsfw = Post.objects.create(
+            community=community,
+            author=community.creator,
+            post_type="text",
+            title="NSFW",
+            body_md="Body",
+            is_nsfw=True,
+        )
+        opted_in_user = make_user(username="optedin", email="optedin@example.com", handle="optedin", allow_nsfw_content=True)
+
+        assert list(Post.objects.visible_to(None).values_list("id", flat=True)) == [safe.id]
+        assert list(Post.objects.visible_to(community.creator).values_list("id", flat=True)) == [safe.id]
+        assert set(Post.objects.visible_to(opted_in_user).values_list("id", flat=True)) == {safe.id, nsfw.id}
+
     def test_for_listing_selects_related_objects(self):
         community = make_community("for-listing")
         post = Post.objects.create(community=community, author=community.creator, post_type="text", title="Listed", body_md="Body")

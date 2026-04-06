@@ -4,7 +4,7 @@ from django.db import IntegrityError
 
 from apps.communities.models import Community
 from apps.posts.models import Comment, Post
-from apps.votes.models import SavedPost, Vote
+from apps.votes.models import ContentAward, SavedPost, Vote
 
 User = get_user_model()
 
@@ -83,3 +83,35 @@ class TestSavedPostModel:
         saved = SavedPost.objects.create(user=voter, post=post)
 
         assert saved.status == SavedPost.QueueStatus.UNREAD
+
+
+@pytest.mark.django_db
+class TestContentAwardModel:
+    def test_remaining_for_user_defaults_to_three(self):
+        giver = make_user(username="award_giver_default", email="award_giver_default@example.com", handle="award_giver_default")
+
+        assert ContentAward.remaining_for_user(giver) == 3
+
+    def test_awards_given_this_month_reduces_remaining_quota(self):
+        giver = make_user(username="award_giver_quota", email="award_giver_quota@example.com", handle="award_giver_quota")
+        recipient = make_user(username="award_recipient_quota", email="award_recipient_quota@example.com", handle="award_recipient_quota")
+        post = make_post()
+        other_post = Post.objects.create(community=post.community, author=recipient, post_type="text", title="Other", body_md="Body")
+        comment = Comment.objects.create(post=post, author=recipient, body_md="Reply", body_html="<p>Reply</p>")
+
+        ContentAward.objects.create(user=giver, recipient=recipient, post=post)
+        ContentAward.objects.create(user=giver, recipient=recipient, post=other_post)
+        ContentAward.objects.create(user=giver, recipient=recipient, comment=comment)
+
+        assert ContentAward.awards_given_this_month(giver) == 3
+        assert ContentAward.remaining_for_user(giver) == 0
+
+    def test_award_unique_constraint_prevents_duplicate_post_awards(self):
+        giver = make_user(username="award_dup_giver", email="award_dup_giver@example.com", handle="award_dup_giver")
+        recipient = make_user(username="award_dup_recipient", email="award_dup_recipient@example.com", handle="award_dup_recipient")
+        post = make_post()
+
+        ContentAward.objects.create(user=giver, recipient=recipient, post=post)
+
+        with pytest.raises(IntegrityError):
+            ContentAward.objects.create(user=giver, recipient=recipient, post=post)

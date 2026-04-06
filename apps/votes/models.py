@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 
 class Vote(models.Model):
@@ -51,3 +52,52 @@ class SavedPost(models.Model):
 
     class Meta:
         unique_together = ("user", "post")
+
+
+class ContentAward(models.Model):
+    MONTHLY_LIMIT = 3
+
+    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="content_awards_given")
+    recipient = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="content_awards_received")
+    post = models.ForeignKey("posts.Post", null=True, blank=True, on_delete=models.CASCADE, related_name="awards")
+    comment = models.ForeignKey("posts.Comment", null=True, blank=True, on_delete=models.CASCADE, related_name="awards")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "post"],
+                condition=models.Q(post__isnull=False),
+                name="unique_post_award",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "comment"],
+                condition=models.Q(comment__isnull=False),
+                name="unique_comment_award",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(post__isnull=False) & models.Q(comment__isnull=True))
+                    | (models.Q(post__isnull=True) & models.Q(comment__isnull=False))
+                ),
+                name="award_targets_exactly_one_object",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["user", "-created_at"]),
+            models.Index(fields=["recipient", "-created_at"]),
+        ]
+
+    @classmethod
+    def awards_given_this_month(cls, user, *, now=None):
+        if user is None or not getattr(user, "is_authenticated", False):
+            return 0
+        now = now or timezone.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        return cls.objects.filter(user=user, created_at__gte=month_start).count()
+
+    @classmethod
+    def remaining_for_user(cls, user, *, now=None):
+        if user is None or not getattr(user, "is_authenticated", False):
+            return 0
+        return max(0, cls.MONTHLY_LIMIT - cls.awards_given_this_month(user, now=now))

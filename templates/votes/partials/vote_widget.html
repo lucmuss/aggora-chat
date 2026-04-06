@@ -1,4 +1,4 @@
-<div class="vote-widget flex flex-col items-center py-3 gap-0.5 w-10">
+<div class="vote-widget {% if layout == 'inline' %}inline-flex items-center gap-0.5{% else %}flex flex-col items-center py-3 gap-0.5 w-10{% endif %}">
   <button hx-post="/vote/"
           hx-target="closest .vote-widget"
           hx-swap="outerHTML"
@@ -6,9 +6,9 @@
           data-vote-up
           class="w-6 h-6 flex items-center justify-center rounded transition-colors
                  {% if user_vote == 1 %}text-primary{% else %}text-gray-400 hover:text-primary hover:bg-primary-light{% endif %}">
-    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4 4 12h5v8h6v-8h5z"/></svg>
+    <svg class="{% if layout == 'inline' %}w-3 h-3{% else %}w-4 h-4{% endif %}" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4 4 12h5v8h6v-8h5z"/></svg>
   </button>
-  <span class="text-xs font-medium leading-none
+  <span class="text-xs font-medium leading-none {% if layout == 'inline' %}min-w-[18px] text-center{% endif %}
                {% if user_vote == 1 %}text-primary{% elif user_vote == -1 %}text-gray-400{% else %}text-gray-700{% endif %}">
     {{ target.score }}
   </span>
@@ -19,6 +19,6 @@
           data-vote-down
           class="w-6 h-6 flex items-center justify-center rounded transition-colors
                  {% if user_vote == -1 %}text-gray-700{% else %}text-gray-400 hover:text-gray-600 hover:bg-gray-100{% endif %}">
-    <svg class="w-4 h-4 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4 4 12h5v8h6v-8h5z"/></svg>
+    <svg class="{% if layout == 'inline' %}w-3 h-3{% else %}w-4 h-4{% endif %} rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4 4 12h5v8h6v-8h5z"/></svg>
   </button>
 </div>

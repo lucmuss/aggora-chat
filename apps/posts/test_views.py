@@ -4,6 +4,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.accounts.models import Notification
 from apps.communities.models import Community, CommunityChallenge, CommunityMembership
 from apps.moderation.models import Ban
 from apps.posts.models import Comment, Poll, PollOption, Post
@@ -114,6 +115,7 @@ class TestPostViews:
         assert response.status_code == 200
         assert 'data-rich-markdown="true"' in response.content.decode()
         assert "Comment preview" in response.content.decode()
+        assert 'data-mentions-url="' in response.content.decode()
 
     def test_create_comment_requires_body(self, client):
         user = make_user(username="comment_empty", email="comment_empty@example.com", handle="comment_empty")
@@ -141,6 +143,80 @@ class TestPostViews:
 
         assert response.status_code == 200
         assert "comment-" in response.content.decode()
+
+    def test_post_detail_renders_reply_form_for_signed_in_users(self, client):
+        user = make_user(username="reply_form_user", email="reply_form_user@example.com", handle="reply_form_user")
+        community = make_community("reply-form", creator=user)
+        post = Post.objects.create(community=community, author=user, post_type="text", title="Thread", body_md="Body")
+        Comment.objects.create(post=post, author=user, body_md="Parent comment", body_html="<p>Parent comment</p>")
+        client.force_login(user)
+
+        response = client.get(reverse("post_detail", kwargs={"community_slug": community.slug, "post_id": post.id, "slug": post.slug}))
+
+        assert response.status_code == 200
+        assert "Post reply" in response.content.decode()
+        assert 'name="parent_id"' in response.content.decode()
+
+    def test_post_detail_renders_report_and_award_actions(self, client):
+        user = make_user(username="report_award_ui", email="report_award_ui@example.com", handle="report_award_ui")
+        other = make_user(username="report_award_other", email="report_award_other@example.com", handle="report_award_other")
+        community = make_community("report-award-ui", creator=other)
+        post = Post.objects.create(community=community, author=other, post_type="text", title="Thread", body_md="Body")
+        Comment.objects.create(post=post, author=other, body_md="Parent comment", body_html="<p>Parent comment</p>")
+        client.force_login(user)
+
+        response = client.get(reverse("post_detail", kwargs={"community_slug": community.slug, "post_id": post.id, "slug": post.slug}))
+        content = response.content.decode()
+
+        assert response.status_code == 200
+        assert "Send report" in content
+        assert "Award" in content
+        assert "You have 3 of 3 highlights left this month." in content
+
+    def test_create_comment_supports_nested_reply(self, client):
+        user = make_user(username="nested_reply_user", email="nested_reply_user@example.com", handle="nested_reply_user")
+        community = make_community("nested-reply", creator=user)
+        post = Post.objects.create(community=community, author=user, post_type="text", title="Thread", body_md="Body")
+        parent = Comment.objects.create(post=post, author=user, body_md="Parent", body_html="<p>Parent</p>")
+        client.force_login(user)
+
+        response = client.post(
+            reverse("create_comment", kwargs={"post_id": post.id}),
+            {"body_md": "Child reply", "parent_id": str(parent.id)},
+        )
+
+        assert response.status_code == 302
+        child = Comment.objects.get(body_md="Child reply")
+        assert child.parent_id == parent.id
+
+    def test_create_comment_creates_mention_notification(self, client):
+        author = make_user(username="mention_author", email="mention_author@example.com", handle="mention_author")
+        mentioned = make_user(username="ariane", email="mention_target@example.com", handle="ariane")
+        community = make_community("mention-comment", creator=author)
+        post = Post.objects.create(community=community, author=author, post_type="text", title="Thread", body_md="Body")
+        client.force_login(author)
+
+        response = client.post(reverse("create_comment", kwargs={"post_id": post.id}), {"body_md": "Hey @ariane"})
+
+        assert response.status_code == 302
+        notification = Notification.objects.get(user=mentioned, notification_type=Notification.NotificationType.MENTION)
+        assert "mentioned you in a comment" in notification.message
+        assert f"#comment-" in notification.url
+
+    def test_create_post_creates_mention_notification(self, client):
+        author = make_user(username="mention_post_author", email="mention_post_author@example.com", handle="mention_post_author")
+        mentioned = make_user(username="ariane_post", email="mention_post_target@example.com", handle="ariane_post")
+        community = make_community("mention-post", creator=author)
+        client.force_login(author)
+
+        response = client.post(
+            reverse("create_post", kwargs={"community_slug": community.slug}),
+            {"post_type": "text", "title": "Calling @ariane_post", "body_md": "Join this thread"},
+        )
+
+        assert response.status_code == 302
+        notification = Notification.objects.get(user=mentioned, notification_type=Notification.NotificationType.MENTION)
+        assert "mentioned you in a thread" in notification.message
 
     def test_create_comment_rejects_banned_user(self, client):
         user = make_user(username="comment_banned", email="comment_banned@example.com", handle="comment_banned")

@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.db import models
+from django.utils import timezone
 
 handle_validator = RegexValidator(
     regex=r"^[a-z0-9_]{3,30}$",
@@ -14,6 +15,10 @@ class User(AbstractUser):
         MEMBERS = "members", "Signed-in members"
         PRIVATE = "private", "Private"
 
+    class PreferredTheme(models.TextChoices):
+        LIGHT = "light", "Light"
+        DARK = "dark", "Dark"
+
     handle = models.CharField(
         max_length=30,
         unique=True,
@@ -25,6 +30,11 @@ class User(AbstractUser):
     display_name = models.CharField(max_length=50, blank=True)
     bio = models.TextField(max_length=500, blank=True)
     avatar = models.ImageField(upload_to="avatars/", blank=True)
+    banner = models.ImageField(upload_to="profile_banners/", blank=True)
+    birth_date = models.DateField(null=True, blank=True)
+    country = models.CharField(max_length=100, blank=True)
+    region = models.CharField(max_length=120, blank=True)
+    city = models.CharField(max_length=120, blank=True)
     post_karma = models.IntegerField(default=0)
     comment_karma = models.IntegerField(default=0)
     is_agent = models.BooleanField(default=False)
@@ -38,6 +48,7 @@ class User(AbstractUser):
     )
     email_notifications_enabled = models.BooleanField(default=False)
     push_notifications_enabled = models.BooleanField(default=False)
+    allow_nsfw_content = models.BooleanField(default=False)
     notify_on_replies = models.BooleanField(default=True)
     notify_on_follows = models.BooleanField(default=True)
     notify_on_challenges = models.BooleanField(default=True)
@@ -59,9 +70,30 @@ class User(AbstractUser):
     onboarding_completed = models.BooleanField(default=False)
     onboarding_completed_at = models.DateTimeField(null=True, blank=True)
     first_post_share_at = models.DateTimeField(null=True, blank=True)
+    preferred_theme = models.CharField(
+        max_length=10,
+        choices=PreferredTheme.choices,
+        default=PreferredTheme.LIGHT,
+    )
 
     def total_karma(self) -> int:
         return self.post_karma + self.comment_karma
+
+    @property
+    def awards_received_count(self) -> int:
+        post_total = self.posts.aggregate(total=models.Sum("award_count")).get("total") or 0
+        comment_total = self.comment_set.aggregate(total=models.Sum("award_count")).get("total") or 0
+        return post_total + comment_total
+
+    @property
+    def age(self) -> int | None:
+        if not self.birth_date:
+            return None
+        today = timezone.localdate()
+        years = today.year - self.birth_date.year
+        if (today.month, today.day) < (self.birth_date.month, self.birth_date.day):
+            years -= 1
+        return max(years, 0)
 
     def __str__(self) -> str:
         return self.handle or self.email or self.username
@@ -94,6 +126,7 @@ class Notification(models.Model):
     class NotificationType(models.TextChoices):
         POST_REPLY = "post_reply", "Post Reply"
         COMMENT_REPLY = "comment_reply", "Comment Reply"
+        MENTION = "mention", "Mention"
         FOLLOWED_USER_JOINED = "followed_user_joined", "Followed User Joined"
         CHALLENGE_STARTED = "challenge_started", "Challenge Started"
 

@@ -35,6 +35,26 @@ def make_community(slug="post-form-community", creator=None, **overrides):
 
 @pytest.mark.django_db
 class TestPostCreateForm:
+    def test_safe_for_work_defaults_to_non_nsfw(self):
+        community = make_community("sfw-default")
+        form = PostCreateForm(
+            data={"post_type": Post.PostType.TEXT, "title": "Thread", "body_md": "Body"},
+            community=community,
+        )
+
+        assert form.is_valid() is True
+        assert form.cleaned_data["is_nsfw"] is False
+
+    def test_unchecking_safe_for_work_marks_post_as_nsfw(self):
+        community = make_community("nsfw-toggle")
+        form = PostCreateForm(
+            data={"post_type": Post.PostType.TEXT, "title": "Thread", "body_md": "Body", "is_safe_for_work": ""},
+            community=community,
+        )
+
+        assert form.is_valid() is True
+        assert form.cleaned_data["is_nsfw"] is True
+
     def test_text_post_requires_body(self):
         community = make_community("text-body")
         form = PostCreateForm(data={"post_type": Post.PostType.TEXT, "title": "Thread", "body_md": ""}, community=community)

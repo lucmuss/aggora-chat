@@ -60,7 +60,7 @@ class BaseDiscoveryBackend:
     def popular_feed(self, user=None, sort="hot", page_size=25, after=None) -> FeedResult:
         raise NotImplementedError
 
-    def search_posts(self, raw_query, sort="relevance", page_size=50, after=None):
+    def search_posts(self, raw_query, sort="relevance", page_size=50, after=None, user=None):
         raise NotImplementedError
 
 
@@ -113,9 +113,9 @@ class SQLDiscoveryBackend(BaseDiscoveryBackend):
     def popular_feed(self, user=None, sort="hot", page_size=25, after=None) -> FeedResult:
         return self._paginate_queryset(pg_feed_queryset(user=None, community=None, sort=sort), page_size=page_size, after=after)
 
-    def search_posts(self, raw_query, sort="relevance", page_size=50, after=None, *, post_type="", media=""):
+    def search_posts(self, raw_query, sort="relevance", page_size=50, after=None, *, post_type="", media="", user=None):
         query_text, filters = parse_search_query(raw_query)
-        queryset = Post.objects.visible().for_listing()
+        queryset = Post.objects.visible_to(user).for_listing()
 
         if query_text:
             queryset = queryset.filter(
@@ -161,14 +161,14 @@ class ElasticsearchDiscoveryBackend(BaseDiscoveryBackend):
         }
         return search.sort(*sort_map.get(sort, sort_map["hot"]))
 
-    def _ordered_posts(self, ids: list[int]) -> list[Post]:
+    def _ordered_posts(self, ids: list[int], user=None) -> list[Post]:
         if not ids:
             return []
         ordering = Case(
             *[When(pk=post_id, then=Value(index)) for index, post_id in enumerate(ids)],
             output_field=IntegerField(),
         )
-        queryset = Post.objects.visible().for_listing().filter(pk__in=ids).annotate(_sort_order=ordering)
+        queryset = Post.objects.visible_to(user).for_listing().filter(pk__in=ids).annotate(_sort_order=ordering)
         posts_by_id = {post.id: post for post in queryset.order_by("_sort_order")}
         return [posts_by_id[post_id] for post_id in ids if post_id in posts_by_id]
 
@@ -177,13 +177,13 @@ class ElasticsearchDiscoveryBackend(BaseDiscoveryBackend):
             return []
         return list(user.blocked_users.values_list("handle", flat=True))
 
-    def _search_to_posts(self, search, page_size=25, after=None):
+    def _search_to_posts(self, search, page_size=25, after=None, user=None):
         offset = SQLDiscoveryBackend._decode_cursor(after)
         search = search[offset : offset + page_size]
         results = search.execute()
         ids = [int(hit.id) for hit in results]
         next_cursor = SQLDiscoveryBackend._encode_cursor(offset + page_size) if len(ids) == page_size else None
-        return FeedResult(self._ordered_posts(ids), next_cursor=next_cursor)
+        return FeedResult(self._ordered_posts(ids, user=user), next_cursor=next_cursor)
 
     def home_feed(self, user, sort="hot", page_size=25, after=None, scope="all") -> FeedResult:
         from elasticsearch_dsl import Q as ElasticQ
@@ -211,7 +211,7 @@ class ElasticsearchDiscoveryBackend(BaseDiscoveryBackend):
         if blocked_handles:
             search = search.exclude("terms", author_handle=blocked_handles)
         search = self._sort(search, sort)
-        return self._search_to_posts(search, page_size=page_size, after=after)
+        return self._search_to_posts(search, page_size=page_size, after=after, user=user)
 
     def community_feed(self, user, community, sort="hot", page_size=25, after=None) -> FeedResult:
         search = self.document.search().filter("term", is_removed=False).filter("term", community_slug=community.slug)
@@ -219,7 +219,7 @@ class ElasticsearchDiscoveryBackend(BaseDiscoveryBackend):
         if blocked_handles:
             search = search.exclude("terms", author_handle=blocked_handles)
         search = self._sort(search, sort)
-        return self._search_to_posts(search, page_size=page_size, after=after)
+        return self._search_to_posts(search, page_size=page_size, after=after, user=user)
 
     def popular_feed(self, user=None, sort="hot", page_size=25, after=None) -> FeedResult:
         search = self.document.search().filter("term", is_removed=False)
@@ -227,9 +227,9 @@ class ElasticsearchDiscoveryBackend(BaseDiscoveryBackend):
         if blocked_handles:
             search = search.exclude("terms", author_handle=blocked_handles)
         search = self._sort(search, sort)
-        return self._search_to_posts(search, page_size=page_size, after=after)
+        return self._search_to_posts(search, page_size=page_size, after=after, user=user)
 
-    def search_posts(self, raw_query, sort="relevance", page_size=50, after=None, *, post_type="", media=""):
+    def search_posts(self, raw_query, sort="relevance", page_size=50, after=None, *, post_type="", media="", user=None):
         query_text, filters = parse_search_query(raw_query)
         search = self.document.search().filter("term", is_removed=False)
 
@@ -248,7 +248,7 @@ class ElasticsearchDiscoveryBackend(BaseDiscoveryBackend):
             search = search.filter("exists", field="url")
 
         search = self._sort(search, sort)
-        return self._search_to_posts(search, page_size=page_size, after=after)
+        return self._search_to_posts(search, page_size=page_size, after=after, user=user)
 
 
 def get_discovery_backend() -> BaseDiscoveryBackend:

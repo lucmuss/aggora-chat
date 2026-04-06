@@ -16,8 +16,9 @@ from apps.common.seo import (
 )
 from apps.communities.models import Community
 from apps.communities.services import active_challenge_for_community, can_participate_in_community, can_view_community
+from apps.moderation.forms import ContentReportForm
 from apps.moderation.utils import is_user_banned
-from apps.votes.models import Vote
+from apps.votes.models import ContentAward, Vote
 
 from .forms import PostCreateForm
 from .models import Comment, Poll, PollVote, Post
@@ -40,21 +41,33 @@ def _build_post_detail_context(request, post, *, sort=None, comment_body_md="", 
     comments = build_comment_tree(post, sort=sort, user=request.user)
     post_votes, saved_posts = annotate_posts_with_user_state([post], request.user)
     poll_vote = None
+    visible_ids = []
     if request.user.is_authenticated and hasattr(post, "poll"):
         poll_vote = PollVote.objects.filter(poll=post.poll, user=request.user).select_related("option").first()
     comment_votes = {}
-    if request.user.is_authenticated and comments:
-        visible_ids = []
+    def flatten(items):
+        for item in items:
+            visible_ids.append(item.id)
+            flatten(getattr(item, "children", []))
 
-        def flatten(items):
-            for item in items:
-                visible_ids.append(item.id)
-                flatten(getattr(item, "children", []))
-
+    if comments:
         flatten(comments)
+    if request.user.is_authenticated and visible_ids:
         comment_votes = dict(
             Vote.objects.filter(user=request.user, comment_id__in=visible_ids).values_list("comment_id", "value")
         )
+    comment_awards = dict(Comment.objects.filter(id__in=visible_ids).values_list("id", "award_count")) if visible_ids else {}
+    comment_awarded_ids = (
+        set(ContentAward.objects.filter(user=request.user, comment_id__in=visible_ids).values_list("comment_id", flat=True))
+        if request.user.is_authenticated and visible_ids
+        else set()
+    )
+    post_awarded_by_user = (
+        ContentAward.objects.filter(user=request.user, post=post).exists()
+        if request.user.is_authenticated
+        else False
+    )
+    awards_remaining = ContentAward.remaining_for_user(request.user) if request.user.is_authenticated else 0
     seo_description = clean_description(
         post.body_html or post.body_md or post.community.seo_description or post.community.description or post.title
     )
@@ -67,6 +80,11 @@ def _build_post_detail_context(request, post, *, sort=None, comment_body_md="", 
         "post_user_vote": post_votes.get(post.id, 0),
         "is_saved": post.id in saved_posts,
         "comment_votes": comment_votes,
+        "comment_awards": comment_awards,
+        "comment_awarded_ids": comment_awarded_ids,
+        "post_awarded_by_user": post_awarded_by_user,
+        "awards_remaining": awards_remaining,
+        "report_reason_choices": ContentReportForm.REASON_CHOICES,
         "poll_vote": poll_vote,
         "joined": request.user.is_authenticated and post.community.memberships.filter(user=request.user).exists(),
         "share_links": share_links_for_post(post),
@@ -119,7 +137,7 @@ def create_post(request, community_slug):
     crosspost_source_id = request.GET.get("crosspost")
     if crosspost_source_id:
         crosspost_source = get_object_or_404(
-            Post.objects.visible().select_related("community", "author"),
+            Post.objects.visible_to(request.user).select_related("community", "author"),
             pk=crosspost_source_id,
         )
 
@@ -165,7 +183,7 @@ def create_post(request, community_slug):
 
 def post_detail(request, community_slug, post_id, slug=None):
     post = get_object_or_404(
-        Post.objects.for_listing().select_related(
+        Post.objects.visible_to(request.user).for_listing().select_related(
             "crosspost_parent",
             "crosspost_parent__community",
             "crosspost_parent__author",
@@ -183,7 +201,7 @@ def post_detail(request, community_slug, post_id, slug=None):
 @login_required
 @require_http_methods(["POST"])
 def create_comment(request, post_id):
-    post = get_object_or_404(Post, pk=post_id, is_locked=False, is_removed=False, author_deleted_at__isnull=True)
+    post = get_object_or_404(Post.objects.visible_to(request.user), pk=post_id, is_locked=False)
     if not can_participate_in_community(request.user, post.community):
         return HttpResponseForbidden("You need membership or an invite to comment in this community.")
     if is_user_banned(request.user, post.community):

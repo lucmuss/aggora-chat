@@ -6,6 +6,12 @@ from .seo import absolute_url
 
 def branding(request):
     unread_count = 0
+    theme_mode = request.COOKIES.get("agora_theme", "").strip().lower()
+    if theme_mode not in {"light", "dark"}:
+        if getattr(request.user, "is_authenticated", False):
+            theme_mode = getattr(request.user, "preferred_theme", "light") or "light"
+        else:
+            theme_mode = "light"
     if getattr(request.user, "is_authenticated", False):
         unread_count = request.user.notifications.filter(is_read=False).count()
     default_og_image = absolute_url(static("icons/agora-logo.svg"))
@@ -29,4 +35,5 @@ def branding(request):
         "GOOGLE_AUTH_ENABLED": bool(getattr(settings, "SOCIALACCOUNT_PROVIDERS", {}).get("google", {}).get("APP", {}).get("client_id")),
         "GITHUB_AUTH_ENABLED": bool(getattr(settings, "SOCIALACCOUNT_PROVIDERS", {}).get("github", {}).get("APP", {}).get("client_id")),
         "unread_notifications_count": unread_count,
+        "theme_mode": theme_mode,
     }

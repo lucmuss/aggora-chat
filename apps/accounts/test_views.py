@@ -1,11 +1,15 @@
+from datetime import date
 import pytest
+import tempfile
+
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.urls import reverse
 
 from apps.accounts.models import Notification
 from apps.communities.models import Community, CommunityInvite, CommunityMembership
-from apps.posts.models import Post
+from apps.posts.models import Comment, Post
 
 User = get_user_model()
 
@@ -56,6 +60,38 @@ class TestAccountViews:
 
         assert response.status_code == 200
         assert "This profile is not publicly visible right now." in response.content.decode()
+
+    def test_profile_shows_total_awards_received(self, client):
+        owner = make_user(username="awardprofile", email="awardprofile@example.com", handle="awardprofile")
+        giver = make_user(username="awardgiver", email="awardgiver@example.com", handle="awardgiver")
+        community = make_community("award-profile-community", owner)
+        post = Post.objects.create(community=community, author=owner, post_type="text", title="Awarded thread", body_md="Body", award_count=2)
+        Comment.objects.create(post=post, author=owner, body_md="Awarded comment", body_html="<p>Awarded comment</p>", award_count=1)
+        client.force_login(giver)
+
+        response = client.get(reverse("profile", kwargs={"handle": owner.handle}))
+
+        assert response.status_code == 200
+        assert "Awards received" in response.content.decode()
+        assert ">3<" in response.content.decode()
+
+    def test_profile_shows_city_region_and_country(self, client):
+        owner = make_user(
+            username="locationprofile",
+            email="locationprofile@example.com",
+            handle="locationprofile",
+            country="Germany",
+            region="Berlin",
+            city="Berlin",
+        )
+        viewer = make_user(username="locationviewer", email="locationviewer@example.com", handle="locationviewer")
+        client.force_login(viewer)
+
+        response = client.get(reverse("profile", kwargs={"handle": owner.handle}))
+
+        assert response.status_code == 200
+        assert "Berlin" in response.content.decode()
+        assert "Germany" in response.content.decode()
 
     def test_toggle_follow_get_redirects_without_changing_state(self, client):
         user = make_user(username="followget", email="followget@example.com", handle="followget")
@@ -122,6 +158,26 @@ class TestAccountViews:
         assert len(response.context["notifications"]) == 1
         assert response.context["notification_filter"] == "replies"
 
+    def test_notifications_view_filters_mentions(self, client):
+        user = make_user(username="mentionalerts", email="mentionalerts@example.com", handle="mentionalerts")
+        Notification.objects.create(
+            user=user,
+            notification_type=Notification.NotificationType.MENTION,
+            message="You were mentioned",
+        )
+        Notification.objects.create(
+            user=user,
+            notification_type=Notification.NotificationType.FOLLOWED_USER_JOINED,
+            message="A follow event",
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("notifications"), {"filter": "mentions"})
+
+        assert response.status_code == 200
+        assert len(response.context["notifications"]) == 1
+        assert response.context["notification_filter"] == "mentions"
+
     def test_notification_toggle_read_flips_state(self, client):
         user = make_user(username="toggleread", email="toggleread@example.com", handle="toggleread")
         notification = Notification.objects.create(
@@ -150,6 +206,68 @@ class TestAccountViews:
         assert response.status_code == 302
         assert Notification.objects.filter(user=user, is_read=False).count() == 0
         assert Notification.objects.filter(user=other, is_read=False).count() == 1
+
+    def test_browser_notifications_feed_returns_only_recent_unread_items(self, client):
+        user = make_user(
+            username="pushfeed",
+            email="pushfeed@example.com",
+            handle="pushfeed",
+            push_notifications_enabled=True,
+        )
+        older = Notification.objects.create(
+            user=user,
+            notification_type=Notification.NotificationType.POST_REPLY,
+            message="Older",
+        )
+        newer = Notification.objects.create(
+            user=user,
+            notification_type=Notification.NotificationType.MENTION,
+            message="Newer",
+        )
+        client.force_login(user)
+
+        response = client.get(
+            reverse("browser_notifications_feed"),
+            {"since": older.created_at.isoformat()},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert len(payload["notifications"]) == 1
+        assert payload["notifications"][0]["message"] == "Newer"
+
+    def test_browser_notifications_feed_respects_push_setting(self, client):
+        user = make_user(username="nopushfeed", email="nopushfeed@example.com", handle="nopushfeed")
+        Notification.objects.create(
+            user=user,
+            notification_type=Notification.NotificationType.POST_REPLY,
+            message="Ignored",
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("browser_notifications_feed"))
+
+        assert response.status_code == 200
+        assert response.json() == {"notifications": []}
+
+    def test_mention_search_prefers_followed_and_community_members(self, client):
+        user = make_user(username="searchowner", email="searchowner@example.com", handle="searchowner")
+        followed = make_user(username="ariane", email="ariane@example.com", handle="ariane", display_name="Ariane Keller")
+        community_member = make_user(username="arihelper", email="arihelper@example.com", handle="arihelper", display_name="Ari Helper")
+        outsider = make_user(username="otherariane", email="otherariane@example.com", handle="otherariane", display_name="Other Ari")
+        community = make_community("mention-community", user)
+        user.followed_users.add(followed)
+        CommunityMembership.objects.create(user=community_member, community=community)
+        client.force_login(user)
+
+        response = client.get(reverse("mention_search"), {"q": "ari", "community_slug": community.slug})
+
+        assert response.status_code == 200
+        handles = [item["handle"] for item in response.json()["results"]]
+        assert "ariane" in handles
+        assert "arihelper" in handles
+        assert "otherariane" in handles
 
     def test_referrals_view_handles_no_memberships(self, client):
         user = make_user(username="noreferrals", email="noreferrals@example.com", handle="noreferrals")
@@ -229,6 +347,16 @@ class TestAccountViews:
         assert response.context["connected_accounts"] == []
         assert response.context["email_addresses"] == []
 
+    def test_account_settings_context_exposes_regions_and_places_provider(self, client):
+        user = make_user(username="settingslocation", email="settingslocation@example.com", handle="settingslocation")
+        client.force_login(user)
+
+        response = client.get(reverse("account_settings"))
+
+        assert response.status_code == 200
+        assert "regions_by_country_json" in response.context
+        assert "google_places_api_key" in response.context
+
     def test_mfa_setup_invalid_code_adds_form_error(self, client):
         user = make_user(username="mfasetup", email="mfasetup@example.com", handle="mfasetup")
         client.force_login(user)
@@ -305,6 +433,52 @@ class TestAccountViews:
 
         assert response.status_code == 200
         assert response.context["password_url_name"] == "account_set_password"
+
+    def test_account_settings_save_updates_theme_cookie_and_primary_email(self, client):
+        user = make_user(username="themeuser", email="themeuser@example.com", handle="themeuser")
+        client.force_login(user)
+
+        response = client.post(
+            reverse("account_settings"),
+            {
+                "handle": "themeuser",
+                "email": "newthemeuser@example.com",
+                "display_name": "Theme User",
+                "bio": "",
+                "birth_date": "",
+                "country": "Germany",
+                "profile_visibility": User.ProfileVisibility.PUBLIC,
+                "preferred_theme": User.PreferredTheme.DARK,
+                "email_notifications_enabled": "",
+                "push_notifications_enabled": "",
+                "notify_on_replies": "on",
+                "notify_on_follows": "on",
+                "notify_on_challenges": "on",
+            },
+        )
+
+        user.refresh_from_db()
+        assert response.status_code == 302
+        assert response.cookies["agora_theme"].value == "dark"
+        assert user.email == "newthemeuser@example.com"
+
+    @override_settings(MEDIA_ROOT=tempfile.gettempdir())
+    def test_profile_shows_avatar_country_and_age_when_present(self, client):
+        user = make_user(
+            username="profilemeta",
+            email="profilemeta@example.com",
+            handle="profilemeta",
+            country="Germany",
+        )
+        user.birth_date = date(1990, 1, 1)
+        user.avatar = SimpleUploadedFile("avatar.png", b"fake-image", content_type="image/png")
+        user.save(update_fields=["birth_date", "avatar", "country"])
+
+        response = client.get(reverse("profile", kwargs={"handle": user.handle}))
+
+        assert response.status_code == 200
+        assert "Germany" in response.content.decode()
+        assert 'src="/media/avatars/avatar' in response.content.decode()
 
     def test_profile_me_redirects_anonymous_user_to_login(self, client):
         response = client.get(reverse("profile", kwargs={"handle": "me"}))

@@ -98,6 +98,25 @@ self.addEventListener("fetch", (event) => {{
     }}).catch(() => caches.match(event.request).then((fallback) => fallback || caches.match(OFFLINE_URL))))
   );
 }});
+
+self.addEventListener("notificationclick", (event) => {{
+  event.notification.close();
+  const targetUrl = event.notification?.data?.url || "{reverse('notifications')}";
+  event.waitUntil(
+    clients.matchAll({{ type: "window", includeUncontrolled: true }}).then((windows) => {{
+      for (const client of windows) {{
+        if ("focus" in client) {{
+          client.navigate(targetUrl);
+          return client.focus();
+        }}
+      }}
+      if (clients.openWindow) {{
+        return clients.openWindow(targetUrl);
+      }}
+      return undefined;
+    }})
+  );
+}});
 """.strip()
     return HttpResponse(script, content_type="application/javascript")
 

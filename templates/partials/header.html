@@ -73,8 +73,12 @@
         <span class="sm:hidden">Set</span>
       </a>
       <a href="{% url 'profile' handle=user.handle|default:'me' %}"
-        class="h-8 w-8 flex items-center justify-center rounded-full bg-opal text-white text-xs font-medium hover:bg-opal-hover transition-colors">
+        class="h-8 w-8 flex items-center justify-center rounded-full bg-opal text-white text-xs font-medium hover:bg-opal-hover transition-colors overflow-hidden">
+        {% if user.avatar %}
+        <img src="{{ user.avatar.url }}" alt="{{ user.display_name|default:user.handle|default:user.email }}" class="h-full w-full object-cover">
+        {% else %}
         {{ user.handle|default:user.email|first|upper }}
+        {% endif %}
       </a>
       <a href="{% url 'account_logout' %}"
         class="hidden sm:flex h-8 px-3 items-center rounded-g text-sm text-gray-500 hover:bg-gray-100 transition-colors">

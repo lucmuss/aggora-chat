@@ -11,6 +11,14 @@ class PostQuerySet(models.QuerySet):
     def visible(self):
         return self.filter(is_removed=False, author_deleted_at__isnull=True)
 
+    def visible_to(self, user):
+        queryset = self.visible()
+        if user is None or not getattr(user, "is_authenticated", False):
+            return queryset.filter(is_nsfw=False)
+        if not getattr(user, "allow_nsfw_content", False):
+            return queryset.filter(is_nsfw=False)
+        return queryset
+
     def for_listing(self):
         return self.select_related(
             "community",
@@ -46,6 +54,7 @@ class Post(models.Model):
     upvote_count = models.PositiveIntegerField(default=0)
     downvote_count = models.PositiveIntegerField(default=0)
     comment_count = models.PositiveIntegerField(default=0)
+    award_count = models.PositiveIntegerField(default=0)
     hot_score = models.FloatField(default=0.0, db_index=True)
     is_spoiler = models.BooleanField(default=False)
     is_nsfw = models.BooleanField(default=False)
@@ -127,6 +136,7 @@ class Comment(models.Model):
     score = models.IntegerField(default=0, db_index=True)
     upvote_count = models.PositiveIntegerField(default=0)
     downvote_count = models.PositiveIntegerField(default=0)
+    award_count = models.PositiveIntegerField(default=0)
     is_removed = models.BooleanField(default=False)
     is_collapsed = models.BooleanField(default=False)
     author_deleted_at = models.DateTimeField(null=True, blank=True)

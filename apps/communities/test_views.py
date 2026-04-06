@@ -48,6 +48,17 @@ class TestCommunityViews:
         assert response.status_code == 302
         assert reverse("account_login") in response.url
 
+    def test_toggle_membership_requires_login_with_htmx_redirect_header(self, client):
+        community = make_community("anon-join")
+
+        response = client.post(
+            reverse("toggle_membership", kwargs={"slug": community.slug}),
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 204
+        assert reverse("account_login") in response.headers["HX-Redirect"]
+
     def test_create_community_invalid_post_rerenders_form(self, client):
         user = make_user(username="creator_invalid", email="creator_invalid@example.com", handle="creator_invalid")
         client.force_login(user)

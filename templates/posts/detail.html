@@ -12,7 +12,7 @@
         <li>{{ post.title }}</li>
       </ol>
     </nav>
-    <article class="ui-card flex">
+    <article class="ui-card flex {% if post.award_count %}border-amber-300 shadow-[0_0_0_1px_rgba(245,158,11,0.18)]{% endif %}">
       <div class="w-10 shrink-0 flex flex-col items-center bg-gray-50 rounded-l-g">
         {% include "votes/partials/vote_widget.html" with target=post target_type="post" user_vote=post_user_vote %}
       </div>
@@ -24,7 +24,14 @@
           <span class="text-gray-300">·</span>
           <time class="text-gray-400">{{ post.created_at|timesince_compact }} ago</time>
         </div>
-        <h1 class="font-semibold text-xl text-gray-900 leading-snug mb-2">{{ post.title }}</h1>
+        <div class="flex flex-wrap items-center gap-2 mb-2">
+          <h1 class="font-semibold text-xl text-gray-900 leading-snug">{{ post.title }}</h1>
+          {% if post.award_count %}
+          <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+            Highlighted {{ post.award_count }}x
+          </span>
+          {% endif %}
+        </div>
         {% if post.url %}
           <a href="{{ post.url }}" target="_blank" rel="noopener" class="text-sm text-opal hover:underline block mb-2 truncate">↗ {{ post.url }}</a>
         {% endif %}
@@ -47,6 +54,38 @@
         <div class="flex flex-wrap items-center gap-2 -ml-1.5">
           {% include "votes/partials/save_button.html" with post=post is_saved=is_saved %}
           <span class="h-7 px-2 flex items-center text-xs text-gray-500">{{ post.comment_count }} comment{{ post.comment_count|pluralize }}</span>
+          {% if user.is_authenticated %}
+          <form method="post" action="{% url 'give_award' %}">
+            {% csrf_token %}
+            <input type="hidden" name="post_id" value="{{ post.id }}">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn-ui btn-ui--secondary btn-ui--sm" {% if post_awarded_by_user or user == post.author or awards_remaining <= 0 %}disabled{% endif %}>
+              <span aria-hidden="true">✦</span><span>{% if post_awarded_by_user %}Awarded{% else %}Award{% endif %}</span>
+            </button>
+          </form>
+          <details class="relative">
+            <summary class="list-none btn-ui btn-ui--secondary btn-ui--sm cursor-pointer">Report</summary>
+            <div class="absolute left-0 z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-g border border-gray-200 bg-white p-3 shadow-lg">
+              <form method="post" action="{% url 'report_content' %}" class="space-y-3">
+                {% csrf_token %}
+                <input type="hidden" name="post_id" value="{{ post.id }}">
+                <label class="block text-xs font-medium text-gray-700">
+                  Reason
+                  <select name="reason" class="mt-1 w-full rounded-g border border-gray-200 px-3 py-2 text-sm">
+                    {% for value, label in report_reason_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+                <label class="block text-xs font-medium text-gray-700">
+                  Notes for the moderators
+                  <textarea name="details" rows="3" class="mt-1 w-full resize-y rounded-g border border-gray-200 px-3 py-2 text-sm" placeholder="Optional context"></textarea>
+                </label>
+                <button type="submit" class="btn-ui btn-ui--primary btn-ui--full">Send report</button>
+              </form>
+            </div>
+          </details>
+          {% endif %}
           <button type="button"
              data-share-sheet-open
              data-share-title="{{ post.title }}"
@@ -83,6 +122,10 @@
 
     {% if user.is_authenticated %}
     <div class="ui-card ui-card--padded">
+      <div class="mb-3 flex items-center justify-between gap-3 rounded-g border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <span>You have {{ awards_remaining }} of 3 highlights left this month.</span>
+        <span class="font-medium">Use them on posts or comments worth surfacing.</span>
+      </div>
       {% if welcome_prompt %}
       <div class="mb-3 rounded-g border border-opal-muted bg-opal-light px-3 py-2 text-sm text-opal">
         Nice start. Reply to this thread to finish your first contribution and unlock a conversation badge.
@@ -94,6 +137,8 @@
                   data-rich-markdown="true"
                   data-markdown-preview-target="comment-markdown-preview"
                   data-markdown-preview-label="Comment preview"
+                  data-mentions-url="{% url 'mention_search' %}"
+                  data-community-slug="{{ post.community.slug }}"
                   class="w-full min-h-[9rem] px-3 py-2 text-sm text-gray-900 placeholder-gray-400 resize-y overflow-y-auto rounded-g border {% if comment_error %}border-red-300 bg-red-50{% else %}border-gray-200{% endif %} focus:border-primary focus:outline-none transition-colors">{{ comment_body_md }}</textarea>
         {% if comment_error %}
         <p class="mt-2 text-sm text-red-600">{{ comment_error }}</p>

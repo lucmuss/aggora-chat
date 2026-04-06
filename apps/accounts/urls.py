@@ -2,7 +2,9 @@ from django.urls import path
 
 from .views import (
     account_settings_view,
+    browser_notifications_feed_view,
     handle_setup,
+    mention_search_view,
     mfa_disable_view,
     mfa_setup_view,
     notifications_view,
@@ -21,6 +23,8 @@ urlpatterns = [
     path("accounts/handle-setup/", handle_setup, name="handle_setup"),
     path("accounts/get-started/", start_with_friends, name="start_with_friends"),
     path("accounts/settings/", account_settings_view, name="account_settings"),
+    path("accounts/notifications/browser-feed/", browser_notifications_feed_view, name="browser_notifications_feed"),
+    path("accounts/mentions/search/", mention_search_view, name="mention_search"),
     path("accounts/referrals/", referrals_view, name="account_referrals"),
     path("accounts/share/posts/<int:post_id>/record/", record_share_view, name="record_post_share"),
     path("accounts/mfa/", mfa_setup_view, name="account_mfa_setup"),

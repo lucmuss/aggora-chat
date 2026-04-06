@@ -178,6 +178,29 @@ class PublicApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["items"][0]["title"], "API thread")
 
+    def test_search_api_hides_nsfw_threads_until_user_opts_in(self):
+        Post.objects.create(
+            community=self.community,
+            author=self.user,
+            post_type="text",
+            title="Adult API thread",
+            body_md="Body",
+            is_nsfw=True,
+        )
+
+        anonymous_response = self.client.get(reverse("api_search"), {"q": "Adult"})
+        self.assertEqual(anonymous_response.status_code, 200)
+        self.assertEqual(anonymous_response.data["items"], [])
+
+        self.client.force_authenticate(user=self.user)
+        authenticated_hidden = self.client.get(reverse("api_search"), {"q": "Adult"})
+        self.assertEqual(authenticated_hidden.data["items"], [])
+
+        self.user.allow_nsfw_content = True
+        self.user.save(update_fields=["allow_nsfw_content"])
+        visible_response = self.client.get(reverse("api_search"), {"q": "Adult"})
+        self.assertEqual(visible_response.data["items"][0]["title"], "Adult API thread")
+
     def test_search_api_returns_matching_communities_and_users(self):
         self.user.display_name = "API Captain"
         self.user.bio = "Builds API search flows."
@@ -192,8 +215,13 @@ class PublicApiTests(APITestCase):
     def test_user_profile_api_includes_visibility_mfa_and_badges(self):
         self.user.profile_visibility = User.ProfileVisibility.MEMBERS
         self.user.mfa_totp_enabled = True
-        self.user.save(update_fields=["profile_visibility", "mfa_totp_enabled"])
+        self.user.country = "Germany"
+        self.user.region = "Berlin"
+        self.user.city = "Berlin"
+        self.user.save(update_fields=["profile_visibility", "mfa_totp_enabled", "country", "region", "city"])
         self.user.badges.create(code="first_steps", title="First Steps", description="Started", icon="➜")
+        self.post.award_count = 2
+        self.post.save(update_fields=["award_count"])
 
         response = self.client.get(reverse("api_user_profile", kwargs={"handle": self.user.handle}))
 
@@ -201,6 +229,10 @@ class PublicApiTests(APITestCase):
         self.assertEqual(response.data["profile_visibility"], User.ProfileVisibility.MEMBERS)
         self.assertTrue(response.data["mfa_totp_enabled"])
         self.assertEqual(response.data["badges"][0]["code"], "first_steps")
+        self.assertEqual(response.data["awards_received_count"], 2)
+        self.assertEqual(response.data["country"], "Germany")
+        self.assertEqual(response.data["region"], "Berlin")
+        self.assertEqual(response.data["city"], "Berlin")
 
     def test_authenticated_post_create_api_works(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")

@@ -26,7 +26,7 @@ PROJECT_SLUG = env_str("PROJECT_SLUG", "aggora_chat")
 APP_NAME = env_str("APP_NAME", "Agora")
 APP_TAGLINE = env_str("APP_TAGLINE", "communities first")
 APP_PUBLIC_URL = env_str("APP_PUBLIC_URL", "").rstrip("/")
-APP_VERSION = env_str("APP_VERSION", "0.3.8")
+APP_VERSION = env_str("APP_VERSION", "0.3.9")
 SEED_USERS_FILE = env_str("SEED_USERS_FILE", "data/seed/users.json")
 SEED_ADMINS_FILE = env_str("SEED_ADMINS_FILE", "data/seed/admins.json")
 SEED_COMMUNITIES_FILE = env_str("SEED_COMMUNITIES_FILE", "data/seed/communities.json")
@@ -82,6 +82,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
+    "apps.common.middleware.HtmxRedirectMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "apps.common.middleware.SimpleRateLimitMiddleware",
     "apps.accounts.middleware.HandleRequiredMiddleware",
@@ -176,7 +177,7 @@ ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = env_str("ACCOUNT_EMAIL_VERIFICATION", "optional")
 ACCOUNT_PRESERVE_USERNAME_CASING = False
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
 FORMS_URLFIELD_ASSUME_HTTPS = True
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = env_str(
     "ACCOUNT_DEFAULT_HTTP_PROTOCOL",
@@ -281,6 +282,7 @@ COMPANY_SUPPORT_URL = env_str(
     "COMPANY_SUPPORT_URL",
     f"{APP_PUBLIC_URL}/support" if APP_PUBLIC_URL else "",
 )
+GOOGLE_PLACES_API_KEY = env_str("GOOGLE_PLACES_API_KEY", "").strip()
 
 APP_LOG_LEVEL = env_str("APP_LOG_LEVEL", "DEBUG" if DEBUG else "INFO")
 LOGGING = {

@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.9] - 2026-04-06
+
+Patch release focused on richer profile settings, moderation/reporting, content awards, mentions, browser notifications, and production Google Places support on `aggora.org`.
+
+### Added
+- Browser notification delivery preferences with live in-browser notification polling for signed-in members.
+- `@mentions` autocomplete across thread and comment composers, mention link rendering, and dedicated mention notifications.
+- Profile enrichment for banner images, age, country, region, city, and safer 18+ content preferences.
+- Reporting and monthly content awards across posts and comments, including moderation queue visibility and profile totals.
+
+### Changed
+- Account settings now use the configured Google Places API key on production for city autocomplete while keeping country/region selection robust.
+- Signup, password reset, and HTMX auth flows now fail more gracefully and keep users in a cleaner navigation flow.
+- Mobile and community UI surfaces received another polish pass around navigation, sharing, and thread actions.
+
+### Fixed
+- Prevented HTMX login redirects from rendering inside existing templates on protected actions.
+- Fixed comment replies, comment voting, password reset lookup, and install-prompt persistence issues.
+- Corrected live profile rendering for uploaded avatar/banner assets and improved validation around usernames and location fields.
+
+### Verified
+- `python3 -m compileall apps templates static`
+- `uv run python manage.py check`
+- `uv run pytest -q`
+
 ## [0.3.8] - 2026-04-05
 
 Patch release focused on the `aggora.org` production cutover, Cloudflare Tunnel routing, and documentation consistency.

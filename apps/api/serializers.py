@@ -82,6 +82,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
     total_karma = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
     badges = serializers.SerializerMethodField()
+    age = serializers.SerializerMethodField()
+    awards_received_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -89,9 +91,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "handle",
             "display_name",
             "bio",
+            "country",
+            "region",
+            "city",
             "post_karma",
             "comment_karma",
+            "age",
             "total_karma",
+            "awards_received_count",
             "is_agent",
             "avatar_url",
             "profile_visibility",
@@ -101,6 +108,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def get_total_karma(self, obj):
         return obj.total_karma()
+
+    def get_awards_received_count(self, obj):
+        return obj.awards_received_count
+
+    def get_age(self, obj):
+        return obj.age
 
     def get_avatar_url(self, obj):
         return obj.avatar.url if obj.avatar else None

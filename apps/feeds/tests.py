@@ -91,6 +91,30 @@ class DiscoveryFlowTests(TestCase):
         self.assertContains(response, followed_post.title)
         self.assertNotContains(response, "Blocked thread")
 
+    def test_home_feed_hides_nsfw_posts_until_user_opts_in(self):
+        Post.objects.create(
+            community=self.community,
+            author=self.user,
+            post_type="text",
+            title="Adults only thread",
+            body_md="Hidden unless opted in",
+            score=15,
+            hot_score=15,
+            is_nsfw=True,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Adults only thread")
+
+        self.user.allow_nsfw_content = True
+        self.user.save(update_fields=["allow_nsfw_content"])
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, "Adults only thread")
+
     def test_home_feed_scope_can_focus_following(self):
         followed_author = User.objects.create_user(
             username="followingonly",

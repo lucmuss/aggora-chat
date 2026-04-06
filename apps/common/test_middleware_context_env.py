@@ -10,7 +10,7 @@ from django.test import RequestFactory
 from apps.accounts.models import Notification
 from apps.common.celery import dispatch_task
 from apps.common.context_processors import branding
-from apps.common.middleware import CanonicalHostMiddleware, SimpleRateLimitMiddleware
+from apps.common.middleware import CanonicalHostMiddleware, HtmxRedirectMiddleware, SimpleRateLimitMiddleware
 
 User = get_user_model()
 
@@ -44,6 +44,27 @@ class TestCommonInfrastructure:
         settings.ALLOWED_HOSTS = ["aggora.org", "www.aggora.org"]
         middleware = CanonicalHostMiddleware(lambda request: HttpResponse("ok"))
         request = RequestFactory().get("/popular/", HTTP_HOST="aggora.org")
+
+        response = middleware(request)
+
+        assert response.status_code == 200
+
+    def test_htmx_redirect_middleware_converts_login_redirects_to_hx_redirect(self, settings):
+        settings.LOGIN_URL = "/accounts/login/"
+        redirected = HttpResponse(status=302)
+        redirected.headers["Location"] = "/accounts/login/?next=/vote/"
+        middleware = HtmxRedirectMiddleware(lambda request: redirected)
+        request = RequestFactory().post("/vote/", HTTP_HX_REQUEST="true")
+
+        response = middleware(request)
+
+        assert response.status_code == 204
+        assert response.headers["HX-Redirect"] == "/accounts/login/?next=/vote/"
+
+    def test_htmx_redirect_middleware_ignores_normal_responses(self, settings):
+        settings.LOGIN_URL = "/accounts/login/"
+        middleware = HtmxRedirectMiddleware(lambda request: HttpResponse("ok"))
+        request = RequestFactory().get("/popular/", HTTP_HX_REQUEST="true")
 
         response = middleware(request)
 

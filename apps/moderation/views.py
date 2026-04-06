@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.http import HttpResponseBadRequest
@@ -6,8 +7,9 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.models import User
 from apps.communities.models import Community
+from apps.posts.models import Comment, Post
 
-from .forms import ModMailCreateForm, ModMailReplyForm, RemovalReasonForm
+from .forms import ContentReportForm, ModMailCreateForm, ModMailReplyForm, RemovalReasonForm
 from .models import ModAction, ModMail, ModQueueItem
 from .permissions import ModPermission, has_mod_permission
 from .services import (
@@ -89,19 +91,36 @@ def mod_action(request, community_slug):
 @require_POST
 @login_required
 def report_content(request):
+    form = ContentReportForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Choose a report reason before you send it.")
+        return redirect(request.META.get("HTTP_REFERER") or "home")
+
+    post_id = request.POST.get("post_id")
+    comment_id = request.POST.get("comment_id")
+    target_author_id = None
+    if post_id:
+        target_author_id = Post.objects.filter(pk=post_id).values_list("author_id", flat=True).first()
+    elif comment_id:
+        target_author_id = Comment.objects.filter(pk=comment_id).values_list("author_id", flat=True).first()
+    if target_author_id and target_author_id == request.user.id:
+        messages.error(request, "You cannot report your own content.")
+        return redirect(request.META.get("HTTP_REFERER") or "home")
+
     try:
         report, community, post, comment = submit_report(
             reporter=request.user,
-            post_id=request.POST.get("post_id"),
-            comment_id=request.POST.get("comment_id"),
-            reason=request.POST.get("reason", "other"),
-            details=request.POST.get("details", "")
+            post_id=post_id,
+            comment_id=comment_id,
+            reason=form.cleaned_data["reason"],
+            details=form.cleaned_data["details"],
         )
     except ObjectDoesNotExist:
         raise PermissionDenied from None
 
     if request.htmx:
         return render(request, "moderation/partials/report_success.html")
+    messages.success(request, "Thanks. The moderation team has received your report.")
     if post:
         return redirect(
             "post_detail",

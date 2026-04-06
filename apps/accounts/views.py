@@ -1,3 +1,7 @@
+import json
+from datetime import datetime
+
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import models
@@ -34,6 +38,7 @@ from .growth import (
     referral_summary_for_user,
 )
 from .models import User
+from .models import Notification
 from .security import build_totp_uri, generate_totp_secret, user_requires_mfa, verify_totp
 
 try:
@@ -42,6 +47,24 @@ try:
 except ImportError:  # pragma: no cover - optional dependency wiring
     EmailAddress = None
     SocialAccount = None
+
+
+def _sync_primary_email_address(user, email):
+    if EmailAddress is None or not email:
+        return
+    normalized_email = email.strip().lower()
+    current_primary = EmailAddress.objects.filter(user=user, primary=True).first()
+    if current_primary and current_primary.email.lower() == normalized_email:
+        return
+    EmailAddress.objects.filter(user=user, primary=True).update(primary=False)
+    email_address, created = EmailAddress.objects.get_or_create(
+        user=user,
+        email=normalized_email,
+        defaults={"primary": True, "verified": False},
+    )
+    if not created:
+        email_address.primary = True
+        email_address.save(update_fields=["primary"])
 
 
 @login_required
@@ -95,7 +118,7 @@ def profile_view(request, handle):
     if is_blocked or visibility_restricted:
         tab = "posts"
     elif tab == "posts":
-        posts = list(Post.objects.visible().for_listing().filter(author=profile_user).order_by("-created_at")[:25])
+        posts = list(Post.objects.visible_to(request.user).for_listing().filter(author=profile_user).order_by("-created_at")[:25])
     elif tab == "saved":
         saved_entries = [
             saved
@@ -214,6 +237,9 @@ def toggle_theme(request):
     next_url = request.GET.get("next") or request.META.get("HTTP_REFERER") or reverse("home")
     current_theme = request.COOKIES.get("agora_theme", "light")
     next_theme = "dark" if current_theme != "dark" else "light"
+    if request.user.is_authenticated and getattr(request.user, "preferred_theme", None) != next_theme:
+        request.user.preferred_theme = next_theme
+        request.user.save(update_fields=["preferred_theme"])
     response = redirect(next_url)
     response.set_cookie("agora_theme", next_theme, max_age=31536000, samesite="Lax")
     return response
@@ -320,6 +346,9 @@ def notifications_view(request):
         "replies": request.user.notifications.filter(
             notification_type__in=NOTIFICATION_FILTERS["replies"]
         ).count(),
+        "mentions": request.user.notifications.filter(
+            notification_type__in=NOTIFICATION_FILTERS["mentions"]
+        ).count(),
         "follows": request.user.notifications.filter(
             notification_type__in=NOTIFICATION_FILTERS["follows"]
         ).count(),
@@ -337,6 +366,81 @@ def notifications_view(request):
             "notification_counts": counts,
         },
     )
+
+
+@login_required
+def browser_notifications_feed_view(request):
+    if not request.user.push_notifications_enabled:
+        return JsonResponse({"notifications": []})
+    since_param = (request.GET.get("since") or "").strip()
+    notifications_qs = request.user.notifications.filter(is_read=False).select_related("community", "post", "comment")
+    if since_param:
+        try:
+            since_value = datetime.fromisoformat(since_param.replace("Z", "+00:00"))
+        except ValueError:
+            since_value = None
+        if since_value is not None:
+            notifications_qs = notifications_qs.filter(created_at__gt=since_value)
+    notifications = []
+    for notification in notifications_qs.order_by("created_at")[:12]:
+        notifications.append(
+            {
+                "id": notification.id,
+                "title": notification.get_notification_type_display(),
+                "message": notification.message,
+                "url": notification.url or reverse("notifications"),
+                "created_at": notification.created_at.isoformat(),
+            }
+        )
+    return JsonResponse({"notifications": notifications})
+
+
+@login_required
+def mention_search_view(request):
+    query = (request.GET.get("q") or "").strip()
+    community_slug = (request.GET.get("community_slug") or "").strip()
+    if len(query) < 1:
+        return JsonResponse({"results": []})
+
+    followed = list(
+        request.user.followed_users.filter(handle__isnull=False)
+        .filter(models.Q(handle__istartswith=query) | models.Q(display_name__icontains=query))
+        .order_by("handle")[:6]
+    )
+    results_by_id = {user.id: user for user in followed if user.handle}
+
+    if community_slug:
+        community_members = (
+            User.objects.filter(communitymembership__community__slug=community_slug, handle__isnull=False)
+            .exclude(pk=request.user.pk)
+            .filter(models.Q(handle__istartswith=query) | models.Q(display_name__icontains=query))
+            .distinct()
+            .order_by("handle")[:8]
+        )
+        for member in community_members:
+            if member.handle:
+                results_by_id.setdefault(member.id, member)
+
+    if len(results_by_id) < 8:
+        global_matches = (
+            User.objects.filter(handle__isnull=False)
+            .exclude(pk=request.user.pk)
+            .filter(models.Q(handle__istartswith=query) | models.Q(display_name__icontains=query))
+            .order_by("handle")[:8]
+        )
+        for match in global_matches:
+            if match.handle:
+                results_by_id.setdefault(match.id, match)
+
+    payload = [
+        {
+            "handle": user.handle,
+            "display_name": user.display_name or user.handle,
+            "profile_url": reverse("profile", kwargs={"handle": user.handle}),
+        }
+        for user in list(results_by_id.values())[:8]
+    ]
+    return JsonResponse({"results": payload})
 
 
 @login_required
@@ -392,9 +496,12 @@ def account_settings_view(request):
     if request.method == "POST":
         form = AccountSettingsForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
-            form.save()
+            user = form.save()
+            _sync_primary_email_address(user, user.email)
             messages.success(request, "Account settings updated.")
-            return redirect("account_settings")
+            response = redirect("account_settings")
+            response.set_cookie("agora_theme", user.preferred_theme, max_age=31536000, samesite="Lax")
+            return response
     else:
         form = AccountSettingsForm(instance=request.user)
 
@@ -412,6 +519,10 @@ def account_settings_view(request):
         "accounts/settings.html",
         {
             "form": form,
+            "country_names": form.country_names,
+            "regions_by_country_json": json.dumps(form.regions_by_country),
+            "country_code_by_name_json": json.dumps(form.country_code_by_name),
+            "google_places_api_key": getattr(settings, "GOOGLE_PLACES_API_KEY", ""),
             "connected_accounts": connected_accounts,
             "email_addresses": email_addresses,
             "profile_bio_html": render_markdown(request.user.bio) if request.user.bio else "",
@@ -472,6 +583,7 @@ NOTIFICATION_FILTERS = {
         "post_reply",
         "comment_reply",
     ],
+    "mentions": ["mention"],
     "follows": ["followed_user_joined"],
     "challenges": ["challenge_started"],
 }

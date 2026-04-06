@@ -34,6 +34,9 @@ class Report(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     queue_item = models.ForeignKey(ModQueueItem, null=True, on_delete=models.SET_NULL)
 
+    class Meta:
+        ordering = ["-created_at"]
+
 
 class ModAction(models.Model):
     class ActionType(models.TextChoices):

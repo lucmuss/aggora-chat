@@ -1,6 +1,10 @@
 import pytest
+from io import BytesIO
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core import mail
+from django.test import RequestFactory, override_settings
+from PIL import Image
 
 from apps.accounts.allauth_forms import StyledResetPasswordForm, StyledResetPasswordKeyForm
 from apps.accounts.forms import (
@@ -70,13 +74,28 @@ class TestSignupForm:
 
 @pytest.mark.django_db
 class TestAccountSettingsForm:
+    @staticmethod
+    def _banner_file(width=1600, height=400):
+        file_obj = BytesIO()
+        Image.new("RGB", (width, height), color="#0d9488").save(file_obj, format="PNG")
+        file_obj.seek(0)
+        return SimpleUploadedFile("banner.png", file_obj.read(), content_type="image/png")
+
     def test_account_settings_accepts_profile_and_notification_values(self):
         user = make_user(username="settings", email="settings@example.com", handle="settings")
         form = AccountSettingsForm(
             data={
+                "handle": "settings",
+                "email": "settings@example.com",
                 "display_name": "Settings User",
                 "bio": "Testing settings",
+                "birth_date": "1994-04-15",
+                "country": "Germany",
+                "region": "Berlin",
+                "city": "Berlin",
                 "profile_visibility": User.ProfileVisibility.MEMBERS,
+                "preferred_theme": User.PreferredTheme.DARK,
+                "allow_nsfw_content": "on",
                 "email_notifications_enabled": "on",
                 "push_notifications_enabled": "",
                 "notify_on_replies": "on",
@@ -90,6 +109,11 @@ class TestAccountSettingsForm:
         saved = form.save()
 
         assert saved.profile_visibility == User.ProfileVisibility.MEMBERS
+        assert saved.country == "Germany"
+        assert saved.region == "Berlin"
+        assert saved.city == "Berlin"
+        assert saved.preferred_theme == User.PreferredTheme.DARK
+        assert saved.allow_nsfw_content is True
         assert saved.email_notifications_enabled is True
         assert saved.push_notifications_enabled is False
         assert saved.notify_on_replies is True
@@ -107,9 +131,14 @@ class TestAccountSettingsForm:
         user = make_user(username="avatar", email="avatar@example.com", handle="avatar")
         form = AccountSettingsForm(
             data={
+                "handle": "avatar",
+                "email": "avatar@example.com",
                 "display_name": "Avatar User",
                 "bio": "",
+                "birth_date": "",
+                "country": "",
                 "profile_visibility": User.ProfileVisibility.PUBLIC,
+                "preferred_theme": User.PreferredTheme.LIGHT,
                 "email_notifications_enabled": "",
                 "push_notifications_enabled": "",
                 "notify_on_replies": "",
@@ -122,6 +151,107 @@ class TestAccountSettingsForm:
 
         assert form.is_valid() is False
         assert "avatar" in form.errors
+
+    def test_account_settings_rejects_unknown_country(self):
+        user = make_user(username="country", email="country@example.com", handle="country")
+        form = AccountSettingsForm(
+            data={
+                "handle": "country",
+                "email": "country@example.com",
+                "display_name": "Country User",
+                "bio": "",
+                "birth_date": "",
+                "country": "Atlantis",
+                "profile_visibility": User.ProfileVisibility.PUBLIC,
+                "preferred_theme": User.PreferredTheme.LIGHT,
+                "email_notifications_enabled": "",
+                "push_notifications_enabled": "",
+                "notify_on_replies": "",
+                "notify_on_follows": "",
+                "notify_on_challenges": "",
+            },
+            instance=user,
+        )
+
+        assert form.is_valid() is False
+        assert "country" in form.errors
+
+    def test_account_settings_rejects_region_that_does_not_match_country(self):
+        user = make_user(username="regionbad", email="regionbad@example.com", handle="regionbad")
+        form = AccountSettingsForm(
+            data={
+                "handle": "regionbad",
+                "email": "regionbad@example.com",
+                "display_name": "Region User",
+                "bio": "",
+                "birth_date": "",
+                "country": "Germany",
+                "region": "California",
+                "city": "Berlin",
+                "profile_visibility": User.ProfileVisibility.PUBLIC,
+                "preferred_theme": User.PreferredTheme.LIGHT,
+                "email_notifications_enabled": "",
+                "push_notifications_enabled": "",
+                "notify_on_replies": "",
+                "notify_on_follows": "",
+                "notify_on_challenges": "",
+            },
+            instance=user,
+        )
+
+        assert form.is_valid() is False
+        assert "region" in form.errors
+
+    def test_account_settings_accepts_wide_banner_image(self):
+        user = make_user(username="bannerok", email="bannerok@example.com", handle="bannerok")
+        form = AccountSettingsForm(
+            data={
+                "handle": "bannerok",
+                "email": "bannerok@example.com",
+                "display_name": "Banner User",
+                "bio": "",
+                "birth_date": "",
+                "country": "",
+                "profile_visibility": User.ProfileVisibility.PUBLIC,
+                "preferred_theme": User.PreferredTheme.LIGHT,
+                "email_notifications_enabled": "",
+                "push_notifications_enabled": "",
+                "allow_nsfw_content": "",
+                "notify_on_replies": "",
+                "notify_on_follows": "",
+                "notify_on_challenges": "",
+            },
+            files={"banner": self._banner_file()},
+            instance=user,
+        )
+
+        assert form.is_valid() is True
+
+    def test_account_settings_rejects_tall_banner_image(self):
+        user = make_user(username="bannerbad", email="bannerbad@example.com", handle="bannerbad")
+        form = AccountSettingsForm(
+            data={
+                "handle": "bannerbad",
+                "email": "bannerbad@example.com",
+                "display_name": "Banner User",
+                "bio": "",
+                "birth_date": "",
+                "country": "",
+                "profile_visibility": User.ProfileVisibility.PUBLIC,
+                "preferred_theme": User.PreferredTheme.LIGHT,
+                "email_notifications_enabled": "",
+                "push_notifications_enabled": "",
+                "allow_nsfw_content": "",
+                "notify_on_replies": "",
+                "notify_on_follows": "",
+                "notify_on_challenges": "",
+            },
+            files={"banner": self._banner_file(width=800, height=700)},
+            instance=user,
+        )
+
+        assert form.is_valid() is False
+        assert "banner" in form.errors
 
 
 class TestTotpVerificationForm:
@@ -195,11 +325,31 @@ class TestStartWithFriendsForm:
 class TestStyledAllauthForms:
     def test_reset_password_form_sets_widget_attributes(self):
         form = StyledResetPasswordForm()
-        attrs = form.fields["email"].widget.attrs
+        attrs = form.fields["identifier"].widget.attrs
 
-        assert attrs["placeholder"] == "you@example.com"
-        assert attrs["autocomplete"] == "email"
+        assert attrs["placeholder"] == "you@example.com or your username"
+        assert attrs["autocomplete"] == "username"
         assert attrs["spellcheck"] == "false"
+
+    @pytest.mark.django_db
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_reset_password_form_accepts_username_and_sends_email(self):
+        user = make_user(username="resetuser", email="resetuser@example.com", handle="resetuser")
+        form = StyledResetPasswordForm(data={"identifier": "resetuser"})
+
+        assert form.is_valid() is True
+        email = form.save(RequestFactory().post("/accounts/password/reset/"))
+
+        assert email == user.email
+        assert len(mail.outbox) == 1
+        assert user.email in mail.outbox[0].to
+
+    @pytest.mark.django_db
+    def test_reset_password_form_rejects_unknown_identifier(self):
+        form = StyledResetPasswordForm(data={"identifier": "missing-user"})
+
+        assert form.is_valid() is False
+        assert "identifier" in form.errors
 
     def test_reset_password_key_form_sets_new_password_attributes(self):
         form = StyledResetPasswordKeyForm(user=None, temp_key="dummy")

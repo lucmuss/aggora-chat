@@ -5,11 +5,19 @@
   const commandPaletteInput = document.getElementById("command-palette-input");
   const headerSearchInput = document.getElementById("search-input");
   const headerSearchResults = document.getElementById("header-search-results");
+  const pushPreferenceCheckbox = document.getElementById("id_push_notifications_enabled");
+  const browserNotificationsEnabled = document.body.dataset.browserNotificationsEnabled === "true";
+  const browserNotificationsFeedUrl = document.body.dataset.browserNotificationsFeedUrl || "";
+  const browserNotificationsOpenUrl = document.body.dataset.browserNotificationsUrl || "/accounts/notifications/";
   let activeCardIndex = -1;
   let markdownPreviewTimer;
   let deferredInstallPrompt;
   let activeQuickIndex = -1;
   let activeQuickSurface = null;
+  let browserNotificationTimer = null;
+  let browserNotificationsRuntimeEnabled = browserNotificationsEnabled;
+  const installPromptSeenKey = "agora.installPromptSeen";
+  const browserNotificationCursorKey = "agora.browserNotificationCursor";
 
   const cards = () => Array.from(document.querySelectorAll("[data-post-card]"));
   const quickItems = () =>
@@ -81,6 +89,7 @@
         updateQuickSelection(0);
       }
     }
+    initializeRichTextareas(event.target);
   });
 
   document.addEventListener("keydown", (event) => {
@@ -180,6 +189,107 @@
         // Preview failures should never block the editor itself.
       }
     }, 180);
+  };
+
+  const getBrowserNotificationCursor = () => {
+    try {
+      return window.localStorage.getItem(browserNotificationCursorKey);
+    } catch (_error) {
+      return null;
+    }
+  };
+
+  const setBrowserNotificationCursor = (value) => {
+    if (!value) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(browserNotificationCursorKey, value);
+    } catch (_error) {
+      // Ignore storage failures and keep browser notifications best-effort.
+    }
+  };
+
+  const showBrowserNotification = async (item) => {
+    if (!("Notification" in window) || Notification.permission !== "granted") {
+      return;
+    }
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      if (registration?.showNotification) {
+        await registration.showNotification(item.title || "Agora notification", {
+          body: item.message || "",
+          icon: "/static/icons/agora-icon.svg",
+          badge: "/static/icons/agora-icon.svg",
+          data: { url: item.url || browserNotificationsOpenUrl },
+        });
+        return;
+      }
+    } catch (_error) {
+      // Fall back to the window API below.
+    }
+    const notification = new Notification(item.title || "Agora notification", {
+      body: item.message || "",
+      icon: "/static/icons/agora-icon.svg",
+    });
+    notification.onclick = () => {
+      window.location.href = item.url || browserNotificationsOpenUrl;
+    };
+  };
+
+  const pollBrowserNotifications = async () => {
+    if (!browserNotificationsFeedUrl || Notification.permission !== "granted") {
+      return;
+    }
+    const url = new URL(browserNotificationsFeedUrl, window.location.origin);
+    const since = getBrowserNotificationCursor();
+    if (since) {
+      url.searchParams.set("since", since);
+    }
+    try {
+      const response = await fetch(url.toString(), {
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+      });
+      if (!response.ok) {
+        return;
+      }
+      const payload = await response.json();
+      const notifications = Array.isArray(payload.notifications) ? payload.notifications : [];
+      if (!notifications.length) {
+        return;
+      }
+      for (const item of notifications) {
+        await showBrowserNotification(item);
+      }
+      const latestCreatedAt = notifications[notifications.length - 1]?.created_at;
+      if (latestCreatedAt) {
+        setBrowserNotificationCursor(latestCreatedAt);
+      }
+    } catch (_error) {
+      // Polling failures should not break the rest of the app.
+    }
+  };
+
+  const stopBrowserNotificationPolling = () => {
+    if (browserNotificationTimer) {
+      window.clearInterval(browserNotificationTimer);
+      browserNotificationTimer = null;
+    }
+  };
+
+  const startBrowserNotificationPolling = () => {
+    if (!browserNotificationsRuntimeEnabled || !browserNotificationsFeedUrl || !("Notification" in window)) {
+      return;
+    }
+    if (Notification.permission !== "granted") {
+      return;
+    }
+    stopBrowserNotificationPolling();
+    if (!getBrowserNotificationCursor()) {
+      setBrowserNotificationCursor(new Date().toISOString());
+    }
+    pollBrowserNotifications();
+    browserNotificationTimer = window.setInterval(pollBrowserNotifications, 30000);
   };
 
   const setTextareaSelection = (textarea, start, end) => {
@@ -299,19 +409,175 @@
     textarea.parentNode.insertBefore(toolbar, textarea);
   };
 
-  document.querySelectorAll("textarea[data-rich-markdown], textarea[data-markdown-preview-target]").forEach((textarea) => {
-    attachMarkdownToolbar(textarea);
-  });
+  const hideMentionDropdown = (controller) => {
+    if (!controller?.dropdown) {
+      return;
+    }
+    controller.dropdown.classList.add("hidden");
+    controller.dropdown.replaceChildren();
+    controller.items = [];
+    controller.activeIndex = -1;
+    controller.currentRange = null;
+  };
 
-  document.querySelectorAll("textarea[data-markdown-preview-target]").forEach((textarea) => {
+  const insertMentionAtCursor = (textarea, mentionRange, handle) => {
+    const before = textarea.value.slice(0, mentionRange.start);
+    const after = textarea.value.slice(mentionRange.end);
+    textarea.value = `${before}@${handle} ${after}`;
+    const nextCursor = before.length + handle.length + 2;
+    setTextareaSelection(textarea, nextCursor, nextCursor);
+  };
+
+  const attachMentionAutocomplete = (textarea) => {
+    if (!textarea?.dataset.mentionsUrl || textarea.dataset.mentionsMounted === "true") {
+      return;
+    }
+    textarea.dataset.mentionsMounted = "true";
+    const dropdown = document.createElement("div");
+    dropdown.className = "hidden mt-2 overflow-hidden rounded-g border border-gray-200 bg-white shadow-glow";
+    textarea.insertAdjacentElement("afterend", dropdown);
+    const controller = {
+      dropdown,
+      items: [],
+      activeIndex: -1,
+      currentRange: null,
+      abortController: null,
+    };
+
+    const updateActiveItem = (nextIndex) => {
+      if (!controller.items.length) {
+        controller.activeIndex = -1;
+        return;
+      }
+      controller.activeIndex = Math.max(0, Math.min(nextIndex, controller.items.length - 1));
+      Array.from(dropdown.children).forEach((node, index) => {
+        node.classList.toggle("bg-opal-light", index === controller.activeIndex);
+        node.classList.toggle("text-opal", index === controller.activeIndex);
+      });
+    };
+
+    const renderItems = (results) => {
+      controller.items = results;
+      controller.activeIndex = results.length ? 0 : -1;
+      dropdown.replaceChildren();
+      if (!results.length) {
+        hideMentionDropdown(controller);
+        return;
+      }
+      results.forEach((item, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm ${index === 0 ? "bg-opal-light text-opal" : "text-gray-700 hover:bg-gray-50"}`;
+        button.innerHTML = `<span class="font-medium">@${item.handle}</span><span class="truncate text-xs text-gray-500">${item.display_name || item.handle}</span>`;
+        button.addEventListener("click", () => {
+          if (!controller.currentRange) {
+            return;
+          }
+          insertMentionAtCursor(textarea, controller.currentRange, item.handle);
+          hideMentionDropdown(controller);
+          announce(`Mentioned @${item.handle}`);
+        });
+        dropdown.appendChild(button);
+      });
+      dropdown.classList.remove("hidden");
+    };
+
+    const refreshSuggestions = async () => {
+      const cursor = textarea.selectionStart ?? textarea.value.length;
+      const beforeCursor = textarea.value.slice(0, cursor);
+      const match = beforeCursor.match(/(?:^|\s)@([a-z0-9_]{1,30})$/i);
+      if (!match) {
+        hideMentionDropdown(controller);
+        return;
+      }
+      const query = match[1];
+      controller.currentRange = {
+        start: cursor - query.length - 1,
+        end: cursor,
+      };
+      const url = new URL(textarea.dataset.mentionsUrl, window.location.origin);
+      url.searchParams.set("q", query);
+      if (textarea.dataset.communitySlug) {
+        url.searchParams.set("community_slug", textarea.dataset.communitySlug);
+      }
+      controller.abortController?.abort();
+      controller.abortController = new AbortController();
+      try {
+        const response = await fetch(url.toString(), {
+          signal: controller.abortController.signal,
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        });
+        if (!response.ok) {
+          hideMentionDropdown(controller);
+          return;
+        }
+        const payload = await response.json();
+        renderItems(Array.isArray(payload.results) ? payload.results : []);
+      } catch (_error) {
+        hideMentionDropdown(controller);
+      }
+    };
+
+    textarea.addEventListener("input", refreshSuggestions);
+    textarea.addEventListener("blur", () => {
+      window.setTimeout(() => hideMentionDropdown(controller), 100);
+    });
+    textarea.addEventListener("keydown", (event) => {
+      if (dropdown.classList.contains("hidden") || !controller.items.length) {
+        return;
+      }
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        updateActiveItem(controller.activeIndex + 1);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        updateActiveItem(controller.activeIndex - 1);
+      } else if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        const item = controller.items[controller.activeIndex];
+        if (item && controller.currentRange) {
+          insertMentionAtCursor(textarea, controller.currentRange, item.handle);
+          hideMentionDropdown(controller);
+          announce(`Mentioned @${item.handle}`);
+        }
+      } else if (event.key === "Escape") {
+        hideMentionDropdown(controller);
+      }
+    });
+  };
+
+  const attachMarkdownPreview = (textarea) => {
+    if (!textarea || textarea.dataset.previewMounted === "true") {
+      return;
+    }
+    textarea.dataset.previewMounted = "true";
     textarea.addEventListener("input", () => requestMarkdownPreview(textarea));
     if (textarea.value.trim()) {
       requestMarkdownPreview(textarea);
     }
-  });
+  };
+
+  const initializeRichTextareas = (root = document) => {
+    root.querySelectorAll?.("textarea[data-rich-markdown], textarea[data-markdown-preview-target]").forEach((textarea) => {
+      attachMarkdownToolbar(textarea);
+    });
+    root.querySelectorAll?.("textarea[data-markdown-preview-target]").forEach((textarea) => {
+      attachMarkdownPreview(textarea);
+    });
+    root.querySelectorAll?.("textarea[data-mentions-url]").forEach((textarea) => {
+      attachMentionAutocomplete(textarea);
+    });
+  };
+
+  initializeRichTextareas(document);
 
   const dismissInstallPrompt = () => {
     installPromptNode?.classList.add("hidden");
+    try {
+      window.localStorage.setItem(installPromptSeenKey, "1");
+    } catch (_error) {
+      // Ignore storage failures and still hide the prompt for this page view.
+    }
   };
 
   document.querySelector("[data-install-dismiss]")?.addEventListener("click", dismissInstallPrompt);
@@ -329,6 +595,14 @@
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredInstallPrompt = event;
+    try {
+      if (window.localStorage.getItem(installPromptSeenKey) === "1") {
+        return;
+      }
+      window.localStorage.setItem(installPromptSeenKey, "1");
+    } catch (_error) {
+      // If storage is unavailable, we still show the prompt for this page view.
+    }
     installPromptNode?.classList.remove("hidden");
   });
 
@@ -360,6 +634,9 @@
       }
       try {
         await navigator.clipboard.writeText(text);
+        if (button.dataset.shareRecordUrl) {
+          recordShare(button.dataset.shareRecordUrl);
+        }
         announce(button.dataset.copyLabel || "Copied");
       } catch (_error) {
         // Clipboard failures should not block the rest of the page.
@@ -511,6 +788,32 @@
   document.querySelectorAll("[data-share-sheet-close]").forEach((button) => {
     button.addEventListener("click", closeShareSheet);
   });
+
+  pushPreferenceCheckbox?.addEventListener("change", async () => {
+    if (!pushPreferenceCheckbox.checked) {
+      browserNotificationsRuntimeEnabled = false;
+      stopBrowserNotificationPolling();
+      return;
+    }
+    if (!("Notification" in window)) {
+      pushPreferenceCheckbox.checked = false;
+      announce("Browser notifications are not supported here");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      pushPreferenceCheckbox.checked = false;
+      browserNotificationsRuntimeEnabled = false;
+      announce("Allow browser notifications to turn this on");
+      return;
+    }
+    browserNotificationsRuntimeEnabled = true;
+    setBrowserNotificationCursor(new Date().toISOString());
+    startBrowserNotificationPolling();
+    announce("Browser notifications enabled");
+  });
+
+  startBrowserNotificationPolling();
 
   document.querySelectorAll("[data-command-open]").forEach((button) => {
     button.addEventListener("click", openCommandPalette);

@@ -6,6 +6,12 @@ from .models import Post
 
 
 class PostCreateForm(forms.ModelForm):
+    is_safe_for_work = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="This post is safe for work",
+        help_text="Leave this on for normal posts. Turn it off only when the thread contains 18+ sexual content or media.",
+    )
     poll_option_lines = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={"rows": 5, "placeholder": "One option per line"}),
@@ -31,7 +37,6 @@ class PostCreateForm(forms.ModelForm):
             "flair",
             "challenge",
             "is_spoiler",
-            "is_nsfw",
         ]
         widgets = {
             "body_md": forms.Textarea(
@@ -40,6 +45,7 @@ class PostCreateForm(forms.ModelForm):
                     "data-rich-markdown": "true",
                     "data-markdown-preview-target": "post-markdown-preview",
                     "data-markdown-preview-label": "Post preview",
+                    "data-mentions-url": "/accounts/mentions/search/",
                 }
             ),
         }
@@ -47,7 +53,24 @@ class PostCreateForm(forms.ModelForm):
     def __init__(self, *args, community: Community, **kwargs):
         super().__init__(*args, **kwargs)
         self.community = community
+        self.order_fields(
+            [
+                "post_type",
+                "title",
+                "body_md",
+                "url",
+                "image",
+                "flair",
+                "challenge",
+                "is_spoiler",
+                "is_safe_for_work",
+                "poll_option_lines",
+            ]
+        )
+        if self.instance and getattr(self.instance, "pk", None):
+            self.fields["is_safe_for_work"].initial = not self.instance.is_nsfw
         self.fields["flair"].queryset = community.post_flairs.all()
+        self.fields["body_md"].widget.attrs["data-community-slug"] = community.slug
         active_challenges = [
             challenge
             for challenge in community.challenges.filter(is_featured=True).order_by("-starts_at")
@@ -92,6 +115,10 @@ class PostCreateForm(forms.ModelForm):
             self.add_error("challenge", "Choose a challenge from this community.")
         if challenge and not challenge.is_active():
             self.add_error("challenge", "This challenge is no longer active.")
+        safe_for_work = cleaned_data.get("is_safe_for_work", True)
+        if self.is_bound and "is_safe_for_work" not in self.data:
+            safe_for_work = True
+        cleaned_data["is_nsfw"] = not bool(safe_for_work)
         cleaned_data["poll_option_lines"] = option_lines
         return cleaned_data
 

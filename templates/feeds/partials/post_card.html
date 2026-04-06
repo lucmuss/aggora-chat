@@ -1,5 +1,5 @@
 {% load post_tags common_tags %}
-<article class="bg-white border border-gray-200 rounded-g flex hover:border-gray-300 transition-colors group cursor-pointer"
+<article class="bg-white border {% if post.award_count %}border-amber-300 shadow-[0_0_0_1px_rgba(245,158,11,0.18)]{% else %}border-gray-200{% endif %} rounded-g flex hover:border-gray-300 transition-colors group cursor-pointer"
          data-post-card tabindex="0" aria-labelledby="post-title-{{ post.id }}">
 
   <!-- Vote column: gray bg, gray arrows -->
@@ -42,6 +42,12 @@
       {% endif %}
       {% if post.challenge_id %}
       <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">Challenge entry</span>
+      {% endif %}
+      {% if post.is_nsfw %}
+      <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-700">18+</span>
+      {% endif %}
+      {% if post.award_count %}
+      <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">Highlighted {{ post.award_count }}x</span>
       {% endif %}
       <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">{{ post.discussion_label }}</span>
       {% if post.last_comment_at %}

@@ -76,6 +76,19 @@ class ModerationFlowTests(TestCase):
         self.assertEqual(ModQueueItem.objects.count(), 1)
         self.assertEqual(ModQueueItem.objects.first().status, ModQueueItem.Status.REPORTED)
 
+    def test_report_rejects_self_reports(self):
+        self.client.force_login(self.member)
+
+        response = self.client.post(
+            reverse("report_content"),
+            {"post_id": self.post.id, "reason": "spam", "details": "Self report"},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "You cannot report your own content.")
+        self.assertEqual(Report.objects.count(), 0)
+
     def test_owner_can_remove_post_and_log_action(self):
         queue_item = ModQueueItem.objects.create(
             community=self.community,
@@ -180,6 +193,13 @@ class ModerationFlowTests(TestCase):
             content_type=ModQueueItem.ContentType.POST,
             status=ModQueueItem.Status.NEEDS_REVIEW,
         )
+        Report.objects.create(
+            reporter=self.reporter,
+            post=self.post,
+            reason="spam",
+            details="Please remove this.",
+            queue_item=ModQueueItem.objects.first(),
+        )
         ModAction.objects.create(
             community=self.community,
             moderator=self.owner,
@@ -194,6 +214,7 @@ class ModerationFlowTests(TestCase):
         self.assertEqual(queue_response.status_code, 200)
         self.assertEqual(log_response.status_code, 200)
         self.assertContains(queue_response, "Mod queue")
+        self.assertContains(queue_response, "Please remove this.")
         self.assertContains(log_response, "Moderation log")
 
     def test_mod_mail_thread_can_be_created_and_replied_to(self):

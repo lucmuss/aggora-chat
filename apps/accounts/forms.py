@@ -1,9 +1,14 @@
+from datetime import date
+
 from django import forms
 from django.db import models
+from PIL import Image
 
 from apps.communities.models import Community
 
+from .countries import COUNTRY_NAME_SET, COUNTRY_NAMES
 from .models import User
+from .regions import COUNTRY_CODE_BY_NAME, REGIONS_BY_COUNTRY
 
 
 class HandleSetupForm(forms.ModelForm):
@@ -33,13 +38,53 @@ class SignupForm(forms.Form):
 
 
 class AccountSettingsForm(forms.ModelForm):
+    region = forms.ChoiceField(
+        required=False,
+        choices=[("", "Select region")],
+    )
+    city = forms.CharField(
+        required=False,
+        max_length=120,
+        widget=forms.TextInput(
+            attrs={
+                "type": "search",
+                "list": "city-suggestions",
+                "placeholder": "Start typing your city",
+                "autocomplete": "address-level2",
+                "spellcheck": "false",
+            }
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["handle"].required = True
+        self.fields["email"].required = True
+        country = ""
+        if self.is_bound:
+            country = (self.data.get("country") or "").strip()
+        elif self.instance and self.instance.pk:
+            country = (self.instance.country or "").strip()
+        self.fields["region"].choices = [("", "Select region")] + [
+            (region_name, region_name) for region_name in REGIONS_BY_COUNTRY.get(country, [])
+        ]
+
     class Meta:
         model = User
         fields = [
+            "handle",
+            "email",
             "display_name",
             "bio",
             "avatar",
+            "banner",
+            "birth_date",
+            "country",
+            "region",
+            "city",
             "profile_visibility",
+            "preferred_theme",
+            "allow_nsfw_content",
             "email_notifications_enabled",
             "push_notifications_enabled",
             "notify_on_replies",
@@ -47,6 +92,20 @@ class AccountSettingsForm(forms.ModelForm):
             "notify_on_challenges",
         ]
         widgets = {
+            "handle": forms.TextInput(
+                attrs={
+                    "placeholder": "your_handle",
+                    "autocapitalize": "none",
+                    "spellcheck": "false",
+                }
+            ),
+            "email": forms.EmailInput(
+                attrs={
+                    "placeholder": "you@example.com",
+                    "autocomplete": "email",
+                    "spellcheck": "false",
+                }
+            ),
             "bio": forms.Textarea(
                 attrs={
                     "rows": 4,
@@ -56,7 +115,67 @@ class AccountSettingsForm(forms.ModelForm):
                     "data-markdown-preview-label": "Bio preview",
                 }
             ),
+            "birth_date": forms.DateInput(attrs={"type": "date", "max": date.today().isoformat()}),
+            "country": forms.TextInput(
+                attrs={
+                    "list": "country-options",
+                    "placeholder": "Start typing your country",
+                    "autocomplete": "country-name",
+                    "spellcheck": "false",
+                }
+            ),
+            "region": forms.Select(
+                attrs={
+                    "data-location-region": "true",
+                }
+            ),
         }
+        help_texts = {
+            "handle": "This is your public @name. Use lowercase letters, numbers, and underscores.",
+            "birth_date": "Used to show your age on your public profile.",
+            "country": "Choose the country you want to show on your profile.",
+            "region": "Agora will narrow this list to the regions that belong to your selected country.",
+            "city": "Type your city. If Google Places is enabled, suggestions will appear automatically.",
+            "preferred_theme": "Pick which color theme Agora should use by default on your devices.",
+            "allow_nsfw_content": "Turn this on if you want 18+ posts and media to appear in feeds and thread lists.",
+        }
+
+    def clean_handle(self) -> str:
+        handle = (self.cleaned_data.get("handle") or "").strip().lower()
+        if User.objects.filter(handle=handle).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("This handle is already taken.")
+        return handle
+
+    def clean_email(self) -> str:
+        email = (self.cleaned_data.get("email") or "").strip().lower()
+        if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("That email address is already linked to another account.")
+        return email
+
+    def clean_birth_date(self):
+        birth_date = self.cleaned_data.get("birth_date")
+        if birth_date and birth_date > date.today():
+            raise forms.ValidationError("Birth date can't be in the future.")
+        return birth_date
+
+    def clean_country(self) -> str:
+        country = (self.cleaned_data.get("country") or "").strip()
+        if country and country.casefold() not in COUNTRY_NAME_SET:
+            raise forms.ValidationError("Choose a country from the list so your profile stays consistent.")
+        return country
+
+    def clean_region(self) -> str:
+        region = (self.cleaned_data.get("region") or "").strip()
+        country = (self.cleaned_data.get("country") or "").strip()
+        valid_regions = REGIONS_BY_COUNTRY.get(country, [])
+        if region and not country:
+            raise forms.ValidationError("Choose your country before selecting a region.")
+        if region and valid_regions and region not in valid_regions:
+            raise forms.ValidationError("Choose a region that belongs to the selected country.")
+        return region
+
+    def clean_city(self) -> str:
+        return (self.cleaned_data.get("city") or "").strip()
 
     def clean_avatar(self):
         avatar = self.cleaned_data.get("avatar")
@@ -68,6 +187,40 @@ class AccountSettingsForm(forms.ModelForm):
         if getattr(avatar, "size", 0) > 2 * 1024 * 1024:
             raise forms.ValidationError("Avatar images must be 2 MB or smaller.")
         return avatar
+
+    def clean_banner(self):
+        banner = self.cleaned_data.get("banner")
+        if not banner:
+            return banner
+        content_type = getattr(banner, "content_type", "")
+        if content_type and not content_type.startswith("image/"):
+            raise forms.ValidationError("Upload a valid image file for your profile banner.")
+        if getattr(banner, "size", 0) > 4 * 1024 * 1024:
+            raise forms.ValidationError("Banner images must be 4 MB or smaller.")
+        try:
+            image = Image.open(banner)
+            width, height = image.size
+            if not width or not height:
+                raise forms.ValidationError("Banner image dimensions could not be read.")
+            ratio = width / height
+            if ratio < 2.0 or ratio > 6.0:
+                raise forms.ValidationError("Banner images should be wide, roughly between 2:1 and 6:1.")
+        finally:
+            if hasattr(banner, "seek"):
+                banner.seek(0)
+        return banner
+
+    @property
+    def country_names(self):
+        return COUNTRY_NAMES
+
+    @property
+    def regions_by_country(self):
+        return REGIONS_BY_COUNTRY
+
+    @property
+    def country_code_by_name(self):
+        return COUNTRY_CODE_BY_NAME
 
 
 class TotpVerificationForm(forms.Form):

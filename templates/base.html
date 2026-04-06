@@ -1,6 +1,6 @@
 {% load static common_tags %}
 <!DOCTYPE html>
-<html lang="en" class="{% if request.COOKIES.agora_theme == 'dark' %}dark{% endif %}">
+<html lang="en" class="{% if theme_mode == 'dark' %}dark{% endif %}">
 
 <head>
   <meta charset="utf-8">
@@ -58,7 +58,11 @@
   {% endblock %}
 </head>
 
-<body class="bg-gray-50 text-gray-900 font-sans text-sm antialiased min-h-screen">
+<body
+  class="bg-gray-50 text-gray-900 font-sans text-sm antialiased min-h-screen"
+  data-browser-notifications-enabled="{% if user.is_authenticated and user.push_notifications_enabled %}true{% else %}false{% endif %}"
+  {% if user.is_authenticated %}data-browser-notifications-feed-url="{% url 'browser_notifications_feed' %}"{% endif %}
+  data-browser-notifications-url="{% url 'notifications' %}">
   <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:bg-white focus:px-3 focus:py-2 focus:rounded-g focus:shadow-glow">
     Skip to content
   </a>

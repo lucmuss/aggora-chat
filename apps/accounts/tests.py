@@ -2,6 +2,7 @@ import time
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
+from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -300,6 +301,58 @@ class HandleSetupTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Forgot Password?")
 
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_password_reset_accepts_username_and_sends_email(self):
+        user = User.objects.create_user(
+            username="resetmember",
+            email="resetmember@example.com",
+            password="password123",
+            handle="resetmember",
+        )
+
+        response = self.client.post(
+            reverse("account_reset_password"),
+            {"identifier": "resetmember"},
+        )
+
+        self.assertRedirects(response, reverse("account_reset_password_done"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [user.email])
+
+    def test_password_reset_unknown_identifier_shows_inline_error(self):
+        response = self.client.post(
+            reverse("account_reset_password"),
+            {"identifier": "does-not-exist"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "couldn")
+        self.assertContains(response, "email address or username")
+
+    def test_signup_generates_non_empty_unique_username_when_email_local_part_collides(self):
+        User.objects.create_user(
+            username="skymuss",
+            email="skymuss@gmail.com",
+            password="password123",
+            handle="skymuss",
+        )
+
+        response = self.client.post(
+            reverse("account_signup"),
+            {
+                "email": "skymuss@gmx.net",
+                "password1": "ComplexPass!123",
+                "password2": "ComplexPass!123",
+                "first_name": "Sky",
+                "last_name": "Muss",
+            },
+        )
+
+        self.assertNotEqual(response.status_code, 500)
+        created_user = User.objects.get(email="skymuss@gmx.net")
+        self.assertTrue(created_user.username)
+        self.assertNotEqual(created_user.username, "skymuss")
+
     def test_authenticated_user_can_view_custom_account_management_pages(self):
         user = User.objects.create_user(
             username="accountflow",
@@ -420,9 +473,17 @@ class HandleSetupTests(TestCase):
         response = self.client.post(
             reverse("account_settings"),
             {
+                "handle": "settingsuser",
+                "email": "settingsuser@example.com",
                 "display_name": "Settings User",
                 "bio": "Testing profile settings.",
+                "birth_date": "1992-08-21",
+                "country": "Germany",
+                "region": "Berlin",
+                "city": "Berlin",
                 "profile_visibility": User.ProfileVisibility.MEMBERS,
+                "preferred_theme": User.PreferredTheme.DARK,
+                "allow_nsfw_content": "on",
                 "email_notifications_enabled": "on",
                 "notify_on_replies": "on",
             },
@@ -431,8 +492,14 @@ class HandleSetupTests(TestCase):
         user.refresh_from_db()
         self.assertRedirects(response, reverse("account_settings"))
         self.assertEqual(user.display_name, "Settings User")
+        self.assertEqual(user.country, "Germany")
+        self.assertEqual(user.region, "Berlin")
+        self.assertEqual(user.city, "Berlin")
         self.assertEqual(user.profile_visibility, User.ProfileVisibility.MEMBERS)
+        self.assertEqual(user.preferred_theme, User.PreferredTheme.DARK)
+        self.assertTrue(user.allow_nsfw_content)
         self.assertTrue(user.email_notifications_enabled)
+        self.assertEqual(response.cookies["agora_theme"].value, "dark")
 
     def test_staff_user_is_redirected_to_mfa_setup_for_sensitive_routes(self):
         user = User.objects.create_user(

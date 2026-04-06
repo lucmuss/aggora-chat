@@ -7,6 +7,7 @@ from apps.communities.models import Community, CommunityMembership
 from apps.moderation.models import ModAction, ModQueueItem
 from apps.posts.models import Post
 from apps.votes.models import SavedPost, Vote
+from apps.common.markdown import render_markdown
 
 User = get_user_model()
 
@@ -203,6 +204,14 @@ class TestIntegrationAndSecurity:
         assert response.status_code == 302
         assert "<script>" not in post.body_html
         assert "<strong>safe</strong>" in post.body_html
+
+    def test_render_markdown_linkifies_existing_user_mentions(self):
+        mentioned = make_user(username="ariane", email="ariane@example.com", handle="ariane")
+
+        html = render_markdown("Hello @ariane and `@ariane`")
+
+        assert f'href="/u/{mentioned.handle}/"' in html
+        assert "<code>@ariane</code>" in html
 
     def test_post_create_requires_csrf_token_when_csrf_checks_enabled(self):
         user = make_user(username="csrfuser", email="csrfuser@example.com", handle="csrfuser")

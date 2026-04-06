@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -7,7 +8,8 @@ from apps.common.celery import dispatch_task
 from apps.communities.services import can_view_community
 from apps.posts.models import Comment, Post
 
-from .models import SavedPost, Vote
+from .models import ContentAward, SavedPost, Vote
+from .services import AwardError, give_content_award
 from .tasks import recalculate_comment_vote_totals, recalculate_karma, recalculate_post_vote_totals
 
 
@@ -49,10 +51,11 @@ def vote(request):
             dispatch_task(recalculate_karma, target.author_id)
 
     target.refresh_from_db()
+    layout = "inline" if target_type == "comment" else "stacked"
     return render(
         request,
         "votes/partials/vote_widget.html",
-        {"target": target, "target_type": target_type, "user_vote": new_value},
+        {"target": target, "target_type": target_type, "user_vote": new_value, "layout": layout},
     )
 
 
@@ -91,4 +94,35 @@ def update_saved_post_status(request, post_id):
         return HttpResponseForbidden("Unsupported reader queue status.")
     saved.status = status
     saved.save(update_fields=["status"])
+    return redirect(next_url)
+
+
+@require_POST
+@login_required
+def give_award(request):
+    post_id = request.POST.get("post_id")
+    comment_id = request.POST.get("comment_id")
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "/"
+
+    if post_id:
+        post = get_object_or_404(Post.objects.select_related("community", "author"), pk=post_id)
+        if not can_view_community(request.user, post.community):
+            return HttpResponseForbidden("This post is not available in your current community access scope.")
+        try:
+            give_content_award(giver=request.user, post=post)
+            messages.success(request, "Award sent. You helped this thread stand out.")
+        except AwardError as exc:
+            messages.error(request, str(exc))
+    elif comment_id:
+        comment = get_object_or_404(Comment.objects.select_related("post__community", "author"), pk=comment_id)
+        if not can_view_community(request.user, comment.post.community):
+            return HttpResponseForbidden("This comment is not available in your current community access scope.")
+        try:
+            give_content_award(giver=request.user, comment=comment)
+            messages.success(request, "Award sent. You highlighted a thoughtful reply.")
+        except AwardError as exc:
+            messages.error(request, str(exc))
+    else:
+        return HttpResponseForbidden("Missing content target.")
+
     return redirect(next_url)
