@@ -1,8 +1,9 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import User
@@ -133,6 +134,81 @@ def report_content(request):
         community_slug=community.slug,
         post_id=comment.post_id,
         slug=comment.post.slug,
+    )
+
+
+@login_required
+def report_post_view(request, post_id):
+    post = get_object_or_404(Post.objects.select_related("community", "author"), pk=post_id)
+    if post.author_id == request.user.id:
+        messages.error(request, "You cannot report your own content.")
+        return redirect("post_detail", community_slug=post.community.slug, post_id=post.id, slug=post.slug)
+
+    form = ContentReportForm(request.POST or None)
+    if request.method == "POST":
+        if form.is_valid():
+            submit_report(
+                reporter=request.user,
+                post_id=str(post.id),
+                comment_id=None,
+                reason=form.cleaned_data["reason"],
+                details=form.cleaned_data["details"],
+            )
+            messages.success(request, "Thanks. The moderation team has received your report.")
+            return redirect("post_detail", community_slug=post.community.slug, post_id=post.id, slug=post.slug)
+        messages.error(request, "Choose a report reason before you send it.")
+
+    return render(
+        request,
+        "moderation/report_form.html",
+        {
+            "form": form,
+            "target_type": "post",
+            "target_object": post,
+            "target_title": post.title,
+            "cancel_url": reverse(
+                "post_detail",
+                kwargs={"community_slug": post.community.slug, "post_id": post.id, "slug": post.slug},
+            ),
+        },
+    )
+
+
+@login_required
+def report_comment_view(request, comment_id):
+    comment = get_object_or_404(Comment.objects.select_related("post", "post__community", "author"), pk=comment_id)
+    if comment.author_id == request.user.id:
+        messages.error(request, "You cannot report your own content.")
+        return redirect(
+            f"{reverse('post_detail', kwargs={'community_slug': comment.post.community.slug, 'post_id': comment.post_id, 'slug': comment.post.slug})}#comment-{comment.id}"
+        )
+
+    form = ContentReportForm(request.POST or None)
+    if request.method == "POST":
+        if form.is_valid():
+            submit_report(
+                reporter=request.user,
+                post_id=None,
+                comment_id=str(comment.id),
+                reason=form.cleaned_data["reason"],
+                details=form.cleaned_data["details"],
+            )
+            messages.success(request, "Thanks. The moderation team has received your report.")
+            return redirect(
+                f"{reverse('post_detail', kwargs={'community_slug': comment.post.community.slug, 'post_id': comment.post_id, 'slug': comment.post.slug})}#comment-{comment.id}"
+            )
+        messages.error(request, "Choose a report reason before you send it.")
+
+    return render(
+        request,
+        "moderation/report_form.html",
+        {
+            "form": form,
+            "target_type": "comment",
+            "target_object": comment,
+            "target_title": comment.body_md[:120],
+            "cancel_url": f"{reverse('post_detail', kwargs={'community_slug': comment.post.community.slug, 'post_id': comment.post_id, 'slug': comment.post.slug})}#comment-{comment.id}",
+        },
     )
 
 

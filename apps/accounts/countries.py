@@ -253,3 +253,63 @@ COUNTRY_NAMES = [
 
 COUNTRY_CHOICES = [(country, country) for country in COUNTRY_NAMES]
 COUNTRY_NAME_SET = {country.casefold() for country in COUNTRY_NAMES}
+
+import unicodedata
+
+
+COUNTRY_ALIASES_BY_NAME = {
+    "Germany": ["Deutschland", "DE", "Federal Republic of Germany"],
+    "United Kingdom": ["UK", "Great Britain", "Britain", "England", "GB"],
+    "United States": ["USA", "US", "United States of America"],
+    "Czechia": ["Czech Republic"],
+    "Türkiye": ["Turkey"],
+    "South Korea": ["Korea", "Republic of Korea"],
+}
+
+
+def _normalize_country_search(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode("ascii")
+    return " ".join(normalized.casefold().split())
+
+
+COUNTRY_SEARCH_INDEX = {}
+for _country in COUNTRY_NAMES:
+    COUNTRY_SEARCH_INDEX[_normalize_country_search(_country)] = _country
+for _country, _aliases in COUNTRY_ALIASES_BY_NAME.items():
+    for _alias in _aliases:
+        COUNTRY_SEARCH_INDEX[_normalize_country_search(_alias)] = _country
+
+
+def canonicalize_country_name(value: str) -> str:
+    normalized = _normalize_country_search(value)
+    return COUNTRY_SEARCH_INDEX.get(normalized, (value or "").strip())
+
+
+def country_suggestions(query: str, limit: int = 8) -> list[dict[str, str]]:
+    needle = _normalize_country_search(query)
+    if not needle:
+        return [{"label": country, "value": country} for country in COUNTRY_NAMES[:limit]]
+
+    suggestions = []
+    seen = set()
+    for country in COUNTRY_NAMES:
+        candidates = [country, *COUNTRY_ALIASES_BY_NAME.get(country, [])]
+        for candidate in candidates:
+            normalized_candidate = _normalize_country_search(candidate)
+            if not normalized_candidate.startswith(needle):
+                continue
+            key = (country, candidate)
+            if key in seen:
+                continue
+            seen.add(key)
+            suggestions.append({"label": candidate, "value": country})
+
+    suggestions.sort(
+        key=lambda item: (
+            0 if _normalize_country_search(item["label"]) == needle else 1,
+            0 if item["label"] == item["value"] else 1,
+            len(item["label"]),
+            item["label"],
+        )
+    )
+    return suggestions[:limit]

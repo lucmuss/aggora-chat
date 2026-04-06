@@ -167,9 +167,11 @@ class TestPostViews:
 
         response = client.get(reverse("post_detail", kwargs={"community_slug": community.slug, "post_id": post.id, "slug": post.slug}))
         content = response.content.decode()
+        comment = post.comments.first()
 
         assert response.status_code == 200
-        assert "Send report" in content
+        assert reverse("report_post", kwargs={"post_id": post.id}) in content
+        assert reverse("report_comment", kwargs={"comment_id": comment.id}) in content
         assert "Award" in content
         assert "You have 3 of 3 highlights left this month." in content
 

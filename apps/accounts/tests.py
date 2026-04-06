@@ -474,7 +474,6 @@ class HandleSetupTests(TestCase):
             reverse("account_settings"),
             {
                 "handle": "settingsuser",
-                "email": "settingsuser@example.com",
                 "display_name": "Settings User",
                 "bio": "Testing profile settings.",
                 "birth_date": "1992-08-21",
@@ -483,6 +482,7 @@ class HandleSetupTests(TestCase):
                 "city": "Berlin",
                 "profile_visibility": User.ProfileVisibility.MEMBERS,
                 "preferred_theme": User.PreferredTheme.DARK,
+                "preferred_language": User.PreferredLanguage.ENGLISH,
                 "allow_nsfw_content": "on",
                 "email_notifications_enabled": "on",
                 "notify_on_replies": "on",
@@ -497,9 +497,11 @@ class HandleSetupTests(TestCase):
         self.assertEqual(user.city, "Berlin")
         self.assertEqual(user.profile_visibility, User.ProfileVisibility.MEMBERS)
         self.assertEqual(user.preferred_theme, User.PreferredTheme.DARK)
+        self.assertEqual(user.preferred_language, User.PreferredLanguage.ENGLISH)
         self.assertTrue(user.allow_nsfw_content)
         self.assertTrue(user.email_notifications_enabled)
         self.assertEqual(response.cookies["agora_theme"].value, "dark")
+        self.assertEqual(response.cookies["django_language"].value, "en")
 
     def test_staff_user_is_redirected_to_mfa_setup_for_sensitive_routes(self):
         user = User.objects.create_user(

@@ -76,6 +76,33 @@ class ModerationFlowTests(TestCase):
         self.assertEqual(ModQueueItem.objects.count(), 1)
         self.assertEqual(ModQueueItem.objects.first().status, ModQueueItem.Status.REPORTED)
 
+    def test_report_post_page_renders_form(self):
+        self.client.force_login(self.reporter)
+
+        response = self.client.get(reverse("report_post", kwargs={"post_id": self.post.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Report post")
+        self.assertContains(response, self.post.title)
+
+    def test_report_post_page_submits_and_redirects_to_thread(self):
+        self.client.force_login(self.reporter)
+
+        response = self.client.post(
+            reverse("report_post", kwargs={"post_id": self.post.id}),
+            {"reason": "spam", "details": "Looks suspicious"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Report.objects.count(), 1)
+        self.assertIn(
+            reverse(
+                "post_detail",
+                kwargs={"community_slug": self.community.slug, "post_id": self.post.id, "slug": self.post.slug},
+            ),
+            response.url,
+        )
+
     def test_report_rejects_self_reports(self):
         self.client.force_login(self.member)
 

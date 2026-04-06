@@ -86,7 +86,6 @@ class TestAccountSettingsForm:
         form = AccountSettingsForm(
             data={
                 "handle": "settings",
-                "email": "settings@example.com",
                 "display_name": "Settings User",
                 "bio": "Testing settings",
                 "birth_date": "1994-04-15",
@@ -95,6 +94,7 @@ class TestAccountSettingsForm:
                 "city": "Berlin",
                 "profile_visibility": User.ProfileVisibility.MEMBERS,
                 "preferred_theme": User.PreferredTheme.DARK,
+                "preferred_language": User.PreferredLanguage.ENGLISH,
                 "allow_nsfw_content": "on",
                 "email_notifications_enabled": "on",
                 "push_notifications_enabled": "",
@@ -113,6 +113,7 @@ class TestAccountSettingsForm:
         assert saved.region == "Berlin"
         assert saved.city == "Berlin"
         assert saved.preferred_theme == User.PreferredTheme.DARK
+        assert saved.preferred_language == User.PreferredLanguage.ENGLISH
         assert saved.allow_nsfw_content is True
         assert saved.email_notifications_enabled is True
         assert saved.push_notifications_enabled is False
@@ -126,19 +127,24 @@ class TestAccountSettingsForm:
         assert attrs["data-rich-markdown"] == "true"
         assert attrs["data-markdown-preview-target"] == "account-bio-preview"
 
+    def test_account_settings_uses_account_email_management_view_instead_of_inline_email_field(self):
+        form = AccountSettingsForm()
+
+        assert "email" not in form.fields
+
     def test_account_settings_rejects_avatar_larger_than_two_mb(self):
         oversized = SimpleUploadedFile("avatar.png", b"x" * (2 * 1024 * 1024 + 1), content_type="image/png")
         user = make_user(username="avatar", email="avatar@example.com", handle="avatar")
         form = AccountSettingsForm(
             data={
                 "handle": "avatar",
-                "email": "avatar@example.com",
                 "display_name": "Avatar User",
                 "bio": "",
                 "birth_date": "",
                 "country": "",
                 "profile_visibility": User.ProfileVisibility.PUBLIC,
                 "preferred_theme": User.PreferredTheme.LIGHT,
+                "preferred_language": User.PreferredLanguage.ENGLISH,
                 "email_notifications_enabled": "",
                 "push_notifications_enabled": "",
                 "notify_on_replies": "",
@@ -157,13 +163,13 @@ class TestAccountSettingsForm:
         form = AccountSettingsForm(
             data={
                 "handle": "country",
-                "email": "country@example.com",
                 "display_name": "Country User",
                 "bio": "",
                 "birth_date": "",
                 "country": "Atlantis",
                 "profile_visibility": User.ProfileVisibility.PUBLIC,
                 "preferred_theme": User.PreferredTheme.LIGHT,
+                "preferred_language": User.PreferredLanguage.ENGLISH,
                 "email_notifications_enabled": "",
                 "push_notifications_enabled": "",
                 "notify_on_replies": "",
@@ -181,7 +187,6 @@ class TestAccountSettingsForm:
         form = AccountSettingsForm(
             data={
                 "handle": "regionbad",
-                "email": "regionbad@example.com",
                 "display_name": "Region User",
                 "bio": "",
                 "birth_date": "",
@@ -190,6 +195,7 @@ class TestAccountSettingsForm:
                 "city": "Berlin",
                 "profile_visibility": User.ProfileVisibility.PUBLIC,
                 "preferred_theme": User.PreferredTheme.LIGHT,
+                "preferred_language": User.PreferredLanguage.ENGLISH,
                 "email_notifications_enabled": "",
                 "push_notifications_enabled": "",
                 "notify_on_replies": "",
@@ -207,13 +213,13 @@ class TestAccountSettingsForm:
         form = AccountSettingsForm(
             data={
                 "handle": "bannerok",
-                "email": "bannerok@example.com",
                 "display_name": "Banner User",
                 "bio": "",
                 "birth_date": "",
                 "country": "",
                 "profile_visibility": User.ProfileVisibility.PUBLIC,
                 "preferred_theme": User.PreferredTheme.LIGHT,
+                "preferred_language": User.PreferredLanguage.ENGLISH,
                 "email_notifications_enabled": "",
                 "push_notifications_enabled": "",
                 "allow_nsfw_content": "",
@@ -232,13 +238,13 @@ class TestAccountSettingsForm:
         form = AccountSettingsForm(
             data={
                 "handle": "bannerbad",
-                "email": "bannerbad@example.com",
                 "display_name": "Banner User",
                 "bio": "",
                 "birth_date": "",
                 "country": "",
                 "profile_visibility": User.ProfileVisibility.PUBLIC,
                 "preferred_theme": User.PreferredTheme.LIGHT,
+                "preferred_language": User.PreferredLanguage.ENGLISH,
                 "email_notifications_enabled": "",
                 "push_notifications_enabled": "",
                 "allow_nsfw_content": "",

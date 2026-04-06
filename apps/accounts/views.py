@@ -4,6 +4,7 @@ from datetime import datetime
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -38,9 +39,11 @@ from .growth import (
     record_post_share,
     referral_summary_for_user,
 )
+from .countries import canonicalize_country_name, country_suggestions
 from .regions import COUNTRY_CODE_BY_NAME
 from .models import User
 from .models import Notification
+from .models import handle_validator
 from .security import build_totp_uri, generate_totp_secret, user_requires_mfa, verify_totp
 
 try:
@@ -499,10 +502,10 @@ def account_settings_view(request):
         form = AccountSettingsForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
             user = form.save()
-            _sync_primary_email_address(user, user.email)
             messages.success(request, "Account settings updated.")
             response = redirect("account_settings")
             response.set_cookie("agora_theme", user.preferred_theme, max_age=31536000, samesite="Lax")
+            response.set_cookie(settings.LANGUAGE_COOKIE_NAME, user.preferred_language, max_age=31536000, samesite="Lax")
             return response
     else:
         form = AccountSettingsForm(instance=request.user)
@@ -524,7 +527,9 @@ def account_settings_view(request):
             "country_names": form.country_names,
             "regions_by_country_json": json.dumps(form.regions_by_country),
             "country_code_by_name_json": json.dumps(form.country_code_by_name),
+            "country_search_index_json": json.dumps(form.country_search_index),
             "location_autocomplete_url": reverse("location_autocomplete"),
+            "handle_check_url": reverse("account_handle_check"),
             "connected_accounts": connected_accounts,
             "email_addresses": email_addresses,
             "profile_bio_html": render_markdown(request.user.bio) if request.user.bio else "",
@@ -537,14 +542,52 @@ def account_settings_view(request):
 
 
 @login_required
+def country_autocomplete_view(request):
+    query = (request.GET.get("q") or request.GET.get("input") or "").strip()
+    return JsonResponse({"suggestions": country_suggestions(query)})
+
+
+@login_required
+def account_handle_check_view(request):
+    raw_handle = (request.GET.get("handle") or "").strip().lower()
+    if not raw_handle:
+        return JsonResponse({"available": False, "valid": False, "message": "Add a handle first."}, status=400)
+
+    try:
+        handle_validator(raw_handle)
+    except ValidationError as exc:
+        return JsonResponse(
+            {
+                "available": False,
+                "valid": False,
+                "handle": raw_handle,
+                "message": exc.messages[0] if exc.messages else "This handle is not valid.",
+            }
+        )
+
+    exists = User.objects.filter(handle=raw_handle).exclude(pk=request.user.pk).exists()
+    return JsonResponse(
+        {
+            "available": not exists,
+            "valid": True,
+            "handle": raw_handle,
+            "message": "This handle is available." if not exists else "This handle is already taken.",
+        }
+    )
+
+
+@login_required
 def location_autocomplete_view(request):
     query = (request.GET.get("q") or request.GET.get("input") or "").strip()
-    country = (request.GET.get("country") or "").strip()
+    country = canonicalize_country_name((request.GET.get("country") or "").strip())
+    region = (request.GET.get("region") or "").strip()
     country_code = COUNTRY_CODE_BY_NAME.get(country, country).strip().lower() if country else ""
     try:
         suggestions = autocomplete_cities(
             query,
             country_code=country_code,
+            country_name=country,
+            region=region,
             session_token=(request.GET.get("session_token") or "").strip(),
         )
     except GooglePlacesError as exc:

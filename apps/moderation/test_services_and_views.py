@@ -218,6 +218,27 @@ class TestModerationServicesAndViews:
 
         assert response.status_code == 403
 
+    def test_report_comment_page_renders_form(self, client):
+        client.force_login(self.reporter)
+
+        response = client.get(reverse("report_comment", kwargs={"comment_id": self.comment.id}))
+
+        assert response.status_code == 200
+        assert "Report comment" in response.content.decode()
+        assert self.comment.body_md in response.content.decode()
+
+    def test_report_comment_page_submits_and_redirects_with_anchor(self, client):
+        client.force_login(self.reporter)
+
+        response = client.post(
+            reverse("report_comment", kwargs={"comment_id": self.comment.id}),
+            {"reason": "harassment", "details": "Please review this comment"},
+        )
+
+        assert response.status_code == 302
+        assert Report.objects.count() == 1
+        assert f"#comment-{self.comment.id}" in response.url
+
     @pytest.mark.parametrize("duration", ["abc", "-2"])
     def test_ban_user_rejects_invalid_duration(self, client, duration):
         client.force_login(self.owner)
@@ -273,6 +294,8 @@ class TestModerationServicesAndViews:
         ("name", "kwargs"),
         [
             ("report_content", {}),
+            ("report_post", {"post_id": 1}),
+            ("report_comment", {"comment_id": 1}),
             ("mod_queue", {"community_slug": "slug"}),
             ("mod_log", {"community_slug": "slug"}),
             ("mod_mail_list", {"community_slug": "slug"}),

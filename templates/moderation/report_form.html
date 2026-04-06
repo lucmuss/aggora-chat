@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Report {{ target_type|title }} — {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl">
+  <div class="mb-4">
+    <p class="text-xs font-semibold uppercase tracking-wider text-opal">Safety</p>
+    <h1 class="mt-1 text-2xl font-semibold text-gray-900">Report {{ target_type }}</h1>
+    <p class="mt-1 text-sm text-gray-500">Send a clear moderation report with the reason and any context that helps the review team.</p>
+  </div>
+
+  <div class="rounded-g border border-gray-200 bg-white shadow-sm">
+    <div class="border-b border-gray-100 px-5 py-4">
+      <p class="text-xs font-semibold uppercase tracking-wider text-opal">Content you are reporting</p>
+      {% if target_type == "post" %}
+      <h2 class="mt-1 text-lg font-medium text-gray-900">{{ target_object.title }}</h2>
+      <p class="mt-1 text-sm text-gray-500">in c/{{ target_object.community.slug }} by u/{{ target_object.author.handle|default:"[deleted]" }}</p>
+      {% else %}
+      <p class="mt-2 text-sm text-gray-700">{{ target_object.body_md|truncatechars:220 }}</p>
+      <p class="mt-2 text-sm text-gray-500">comment in c/{{ target_object.post.community.slug }} by u/{{ target_object.author.handle|default:"[deleted]" }}</p>
+      {% endif %}
+    </div>
+
+    <form method="post" class="space-y-4 px-5 py-5">
+      {% csrf_token %}
+      <div>
+        <label for="{{ form.reason.id_for_label }}" class="mb-1 block text-sm font-medium text-gray-700">Reason</label>
+        {{ form.reason }}
+        {% if form.reason.errors %}<p class="mt-1 text-xs text-red-500">{{ form.reason.errors.as_text }}</p>{% endif %}
+      </div>
+      <div>
+        <label for="{{ form.details.id_for_label }}" class="mb-1 block text-sm font-medium text-gray-700">Notes for moderators</label>
+        {{ form.details }}
+        <p class="mt-1 text-xs text-gray-400">Optional, but helpful when the issue needs context.</p>
+        {% if form.details.errors %}<p class="mt-1 text-xs text-red-500">{{ form.details.errors.as_text }}</p>{% endif %}
+      </div>
+      <div class="flex flex-wrap items-center gap-3 pt-2">
+        <button type="submit" class="btn-ui btn-ui--primary">Send report</button>
+        <a href="{{ cancel_url }}" class="btn-ui btn-ui--secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

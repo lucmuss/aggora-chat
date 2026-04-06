@@ -19,6 +19,9 @@ class User(AbstractUser):
         LIGHT = "light", "Light"
         DARK = "dark", "Dark"
 
+    class PreferredLanguage(models.TextChoices):
+        ENGLISH = "en", "English"
+
     handle = models.CharField(
         max_length=30,
         unique=True,
@@ -74,6 +77,11 @@ class User(AbstractUser):
         max_length=10,
         choices=PreferredTheme.choices,
         default=PreferredTheme.LIGHT,
+    )
+    preferred_language = models.CharField(
+        max_length=8,
+        choices=PreferredLanguage.choices,
+        default=PreferredLanguage.ENGLISH,
     )
 
     def total_karma(self) -> int:

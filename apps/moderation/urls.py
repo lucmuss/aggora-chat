@@ -4,6 +4,8 @@ from . import views
 
 urlpatterns = [
     path("report/", views.report_content, name="report_content"),
+    path("report/posts/<int:post_id>/", views.report_post_view, name="report_post"),
+    path("report/comments/<int:comment_id>/", views.report_comment_view, name="report_comment"),
     path("mod/<slug:community_slug>/queue/", views.mod_queue, name="mod_queue"),
     path("mod/<slug:community_slug>/log/", views.mod_log, name="mod_log"),
     path("mod/<slug:community_slug>/mail/", views.mod_mail_list, name="mod_mail_list"),

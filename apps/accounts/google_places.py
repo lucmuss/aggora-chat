@@ -22,6 +22,8 @@ def autocomplete_cities(
     query: str,
     *,
     country_code: str = "",
+    country_name: str = "",
+    region: str = "",
     session_token: str = "",
     requests_session=None,
 ) -> list[PlaceSuggestion]:
@@ -32,8 +34,10 @@ def autocomplete_cities(
     if not api_key:
         raise GooglePlacesError("Google Places API key is not configured.")
 
+    location_parts = [part.strip() for part in (region, country_name) if (part or "").strip()]
+    query_input = query if not location_parts else f"{query}, {', '.join(location_parts)}"
     payload: dict[str, object] = {
-        "input": query,
+        "input": query_input,
         "includedPrimaryTypes": ["(cities)"],
     }
     normalized_country_code = (country_code or "").strip().lower()

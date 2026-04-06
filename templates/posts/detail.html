@@ -63,28 +63,7 @@
               <span aria-hidden="true">✦</span><span>{% if post_awarded_by_user %}Awarded{% else %}Award{% endif %}</span>
             </button>
           </form>
-          <details class="relative">
-            <summary class="list-none btn-ui btn-ui--secondary btn-ui--sm cursor-pointer">Report</summary>
-            <div class="absolute left-0 z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-g border border-gray-200 bg-white p-3 shadow-lg">
-              <form method="post" action="{% url 'report_content' %}" class="space-y-3">
-                {% csrf_token %}
-                <input type="hidden" name="post_id" value="{{ post.id }}">
-                <label class="block text-xs font-medium text-gray-700">
-                  Reason
-                  <select name="reason" class="mt-1 w-full rounded-g border border-gray-200 px-3 py-2 text-sm">
-                    {% for value, label in report_reason_choices %}
-                    <option value="{{ value }}">{{ label }}</option>
-                    {% endfor %}
-                  </select>
-                </label>
-                <label class="block text-xs font-medium text-gray-700">
-                  Notes for the moderators
-                  <textarea name="details" rows="3" class="mt-1 w-full resize-y rounded-g border border-gray-200 px-3 py-2 text-sm" placeholder="Optional context"></textarea>
-                </label>
-                <button type="submit" class="btn-ui btn-ui--primary btn-ui--full">Send report</button>
-              </form>
-            </div>
-          </details>
+          <a href="{% url 'report_post' post_id=post.id %}" class="btn-ui btn-ui--secondary btn-ui--sm">Report</a>
           {% endif %}
           <button type="button"
              data-share-sheet-open

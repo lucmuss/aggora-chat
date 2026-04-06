@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.10] - 2026-04-06
+
+Patch release focused on production-ready account settings, reporting UX, live Google Places integration, and restored SMTP password-reset delivery on `aggora.org`.
+
+### Added
+- A live handle-availability check inside account settings with inline validation feedback.
+- A dedicated account language preference field, ready for future interface translations.
+- Dedicated report pages for posts and comments instead of inline dropdown report forms.
+- A backend country-autocomplete endpoint to support alias-aware country lookup in settings.
+
+### Changed
+- Account settings now route city suggestions through live Google Places requests biased by the selected country and region.
+- Country selection accepts aliases such as `Deutschland` while still saving the canonical country name used by the rest of the app.
+- Password-reset delivery is now configured for real SMTP transport in production instead of console-only logging.
+
+### Fixed
+- Removed duplicate inline email editing from account settings in favor of the existing dedicated email-management flow.
+- Improved birth-date field styling so it matches the surrounding settings form controls.
+- Corrected the reporting flow so post/comment moderation reports open as full pages and return cleanly to the thread.
+
+### Verified
+- `uv run python manage.py check`
+- `uv run pytest -q`
+
 ## [0.3.9] - 2026-04-06
 
 Patch release focused on richer profile settings, moderation/reporting, content awards, mentions, browser notifications, and production Google Places support on `aggora.org`.

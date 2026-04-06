@@ -356,6 +356,48 @@ class TestAccountViews:
         assert response.status_code == 200
         assert "regions_by_country_json" in response.context
         assert "location_autocomplete_url" in response.context
+        assert "handle_check_url" in response.context
+        assert "country_search_index_json" in response.context
+
+    def test_country_autocomplete_returns_alias_and_canonical_matches(self, client):
+        user = make_user(username="countrysuggest", email="countrysuggest@example.com", handle="countrysuggest")
+        client.force_login(user)
+
+        response = client.get(reverse("country_autocomplete"), {"q": "D"})
+
+        assert response.status_code == 200
+        labels = [item["label"] for item in response.json()["suggestions"]]
+        assert "Deutschland" in labels
+
+    def test_account_handle_check_returns_available_for_current_user_handle(self, client):
+        user = make_user(username="handleok", email="handleok@example.com", handle="handleok")
+        client.force_login(user)
+
+        response = client.get(reverse("account_handle_check"), {"handle": "handleok"})
+
+        assert response.status_code == 200
+        assert response.json()["available"] is True
+        assert response.json()["valid"] is True
+
+    def test_account_handle_check_rejects_taken_handle(self, client):
+        make_user(username="takenhandle", email="takenhandle@example.com", handle="takenhandle")
+        user = make_user(username="requester", email="requester@example.com", handle="requester")
+        client.force_login(user)
+
+        response = client.get(reverse("account_handle_check"), {"handle": "takenhandle"})
+
+        assert response.status_code == 200
+        assert response.json()["available"] is False
+        assert response.json()["valid"] is True
+
+    def test_account_handle_check_rejects_invalid_handle(self, client):
+        user = make_user(username="invalidcheck", email="invalidcheck@example.com", handle="invalidcheck")
+        client.force_login(user)
+
+        response = client.get(reverse("account_handle_check"), {"handle": "Nope!"})
+
+        assert response.status_code == 200
+        assert response.json()["valid"] is False
 
     def test_location_autocomplete_returns_google_places_suggestions(self, client, monkeypatch):
         user = make_user(username="placesuser", email="placesuser@example.com", handle="placesuser")
@@ -368,10 +410,13 @@ class TestAccountViews:
 
         monkeypatch.setattr(
             "apps.accounts.views.autocomplete_cities",
-            lambda query, country_code="", session_token="": [Suggestion("Berlin, Germany", "place-1")],
+            lambda query, country_code="", country_name="", region="", session_token="": [Suggestion("Berlin, Germany", "place-1")],
         )
 
-        response = client.get(reverse("location_autocomplete"), {"q": "Ber", "country": "Germany"})
+        response = client.get(
+            reverse("location_autocomplete"),
+            {"q": "Ber", "country": "Deutschland", "region": "Berlin"},
+        )
 
         assert response.status_code == 200
         assert response.json()["suggestions"][0]["text"] == "Berlin, Germany"
@@ -469,7 +514,7 @@ class TestAccountViews:
         assert response.status_code == 200
         assert response.context["password_url_name"] == "account_set_password"
 
-    def test_account_settings_save_updates_theme_cookie_and_primary_email(self, client):
+    def test_account_settings_save_updates_theme_and_language_cookies(self, client):
         user = make_user(username="themeuser", email="themeuser@example.com", handle="themeuser")
         client.force_login(user)
 
@@ -477,13 +522,13 @@ class TestAccountViews:
             reverse("account_settings"),
             {
                 "handle": "themeuser",
-                "email": "newthemeuser@example.com",
                 "display_name": "Theme User",
                 "bio": "",
                 "birth_date": "",
                 "country": "Germany",
                 "profile_visibility": User.ProfileVisibility.PUBLIC,
                 "preferred_theme": User.PreferredTheme.DARK,
+                "preferred_language": User.PreferredLanguage.ENGLISH,
                 "email_notifications_enabled": "",
                 "push_notifications_enabled": "",
                 "notify_on_replies": "on",
@@ -495,7 +540,8 @@ class TestAccountViews:
         user.refresh_from_db()
         assert response.status_code == 302
         assert response.cookies["agora_theme"].value == "dark"
-        assert user.email == "newthemeuser@example.com"
+        assert response.cookies["django_language"].value == "en"
+        assert user.email == "themeuser@example.com"
 
     @override_settings(MEDIA_ROOT=tempfile.gettempdir())
     def test_profile_shows_avatar_country_and_age_when_present(self, client):

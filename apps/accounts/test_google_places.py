@@ -49,11 +49,18 @@ class TestGooglePlacesService:
             )
         )
 
-        suggestions = autocomplete_cities("Berlin", country_code="de", requests_session=session)
+        suggestions = autocomplete_cities(
+            "Berlin",
+            country_code="de",
+            country_name="Germany",
+            region="Berlin",
+            requests_session=session,
+        )
 
         assert [item.text for item in suggestions] == ["Berlin, Germany"]
         assert session.calls[0]["json"]["includedRegionCodes"] == ["de"]
         assert session.calls[0]["json"]["includedPrimaryTypes"] == ["(cities)"]
+        assert session.calls[0]["json"]["input"] == "Berlin, Berlin, Germany"
 
     @override_settings(GOOGLE_PLACES_API_KEY="")
     def test_autocomplete_cities_requires_api_key(self):

@@ -6,7 +6,7 @@ from PIL import Image
 
 from apps.communities.models import Community
 
-from .countries import COUNTRY_NAME_SET, COUNTRY_NAMES
+from .countries import COUNTRY_NAME_SET, COUNTRY_NAMES, COUNTRY_SEARCH_INDEX, canonicalize_country_name
 from .models import User
 from .regions import COUNTRY_CODE_BY_NAME, REGIONS_BY_COUNTRY
 
@@ -59,10 +59,9 @@ class AccountSettingsForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["handle"].required = True
-        self.fields["email"].required = True
         country = ""
         if self.is_bound:
-            country = (self.data.get("country") or "").strip()
+            country = canonicalize_country_name((self.data.get("country") or "").strip())
         elif self.instance and self.instance.pk:
             country = (self.instance.country or "").strip()
         self.fields["region"].choices = [("", "Select region")] + [
@@ -73,7 +72,6 @@ class AccountSettingsForm(forms.ModelForm):
         model = User
         fields = [
             "handle",
-            "email",
             "display_name",
             "bio",
             "avatar",
@@ -84,6 +82,7 @@ class AccountSettingsForm(forms.ModelForm):
             "city",
             "profile_visibility",
             "preferred_theme",
+            "preferred_language",
             "allow_nsfw_content",
             "email_notifications_enabled",
             "push_notifications_enabled",
@@ -115,7 +114,13 @@ class AccountSettingsForm(forms.ModelForm):
                     "data-markdown-preview-label": "Bio preview",
                 }
             ),
-            "birth_date": forms.DateInput(attrs={"type": "date", "max": date.today().isoformat()}),
+            "birth_date": forms.DateInput(
+                attrs={
+                    "type": "date",
+                    "max": date.today().isoformat(),
+                    "class": "w-full min-h-[42px] rounded-g border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-none",
+                }
+            ),
             "country": forms.TextInput(
                 attrs={
                     "list": "country-options",
@@ -137,6 +142,7 @@ class AccountSettingsForm(forms.ModelForm):
             "region": "Agora will narrow this list to the regions that belong to your selected country.",
             "city": "Type your city. If Google Places is enabled, suggestions will appear automatically.",
             "preferred_theme": "Pick which color theme Agora should use by default on your devices.",
+            "preferred_language": "Choose the interface language Agora should use after you save these settings.",
             "allow_nsfw_content": "Turn this on if you want 18+ posts and media to appear in feeds and thread lists.",
         }
 
@@ -146,12 +152,6 @@ class AccountSettingsForm(forms.ModelForm):
             raise forms.ValidationError("This handle is already taken.")
         return handle
 
-    def clean_email(self) -> str:
-        email = (self.cleaned_data.get("email") or "").strip().lower()
-        if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
-            raise forms.ValidationError("That email address is already linked to another account.")
-        return email
-
     def clean_birth_date(self):
         birth_date = self.cleaned_data.get("birth_date")
         if birth_date and birth_date > date.today():
@@ -159,7 +159,7 @@ class AccountSettingsForm(forms.ModelForm):
         return birth_date
 
     def clean_country(self) -> str:
-        country = (self.cleaned_data.get("country") or "").strip()
+        country = canonicalize_country_name((self.cleaned_data.get("country") or "").strip())
         if country and country.casefold() not in COUNTRY_NAME_SET:
             raise forms.ValidationError("Choose a country from the list so your profile stays consistent.")
         return country
@@ -221,6 +221,10 @@ class AccountSettingsForm(forms.ModelForm):
     @property
     def country_code_by_name(self):
         return COUNTRY_CODE_BY_NAME
+
+    @property
+    def country_search_index(self):
+        return COUNTRY_SEARCH_INDEX
 
 
 class TotpVerificationForm(forms.Form):

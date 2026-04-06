@@ -1,6 +1,8 @@
 from django.urls import path
 
 from .views import (
+    country_autocomplete_view,
+    account_handle_check_view,
     account_settings_view,
     browser_notifications_feed_view,
     handle_setup,
@@ -24,6 +26,8 @@ urlpatterns = [
     path("accounts/handle-setup/", handle_setup, name="handle_setup"),
     path("accounts/get-started/", start_with_friends, name="start_with_friends"),
     path("accounts/settings/", account_settings_view, name="account_settings"),
+    path("accounts/settings/handle-check/", account_handle_check_view, name="account_handle_check"),
+    path("accounts/location/countries/", country_autocomplete_view, name="country_autocomplete"),
     path("accounts/location/autocomplete/", location_autocomplete_view, name="location_autocomplete"),
     path("accounts/notifications/browser-feed/", browser_notifications_feed_view, name="browser_notifications_feed"),
     path("accounts/mentions/search/", mention_search_view, name="mention_search"),
