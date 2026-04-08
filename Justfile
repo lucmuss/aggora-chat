@@ -34,7 +34,7 @@ dev-ps:
     docker compose --env-file environment.env -f docker-compose.dev.yml ps
 
 db-export:
-    ./scripts/db-export-custom.sh
+    DUMP_DIR=/srv/projects/web/aggora-chat/dumps ./scripts/db-export-custom.sh
 
 db-import:
     ./scripts/db-import-custom.sh
@@ -49,7 +49,7 @@ db-dump-list:
     ls -lh dumps/*.dump
 
 db-shell:
-    docker compose --env-file environment.env -f docker-compose.dev.yml exec db psql -U $$(awk -F= '$$1=="POSTGRES_USER" {print $$2}' environment.env | tail -n 1) -d $$(awk -F= '$$1=="POSTGRES_DB" {print $$2}' environment.env | tail -n 1)
+    docker compose --env-file environment.env -f docker-compose.dev.yml exec db psql -U $$(awk -F= '$$1=="POSTGRES_USER" {print $$2}' environment.env | tail -n 1 | sed 's/\r$$//; s/^"//; s/"$$//; s/^'\''//; s/'\''$$//') -d $$(awk -F= '$$1=="POSTGRES_DB" {print $$2}' environment.env | tail -n 1 | sed 's/\r$$//; s/^"//; s/"$$//; s/^'\''//; s/'\''$$//')
 
 # Start Docker deployment simulation
 stack-up:

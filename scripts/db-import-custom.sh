@@ -10,10 +10,16 @@ DUMP_DIR=${DUMP_DIR:-dumps}
 BASENAME=${BASENAME:-agora}
 DUMP_FILE=${DUMP_FILE:-$DUMP_DIR/${BASENAME}-latest.dump}
 FORCE=${FORCE:-0}
+FALLBACK_ENV_FILE=${FALLBACK_ENV_FILE:-.env}
 
 if [ ! -f "$ENV_FILE" ]; then
-  echo "Missing $ENV_FILE. Start with 'just up' or copy environment.env.example first." >&2
-  exit 1
+  if [ -f "$FALLBACK_ENV_FILE" ]; then
+    cp "$FALLBACK_ENV_FILE" "$ENV_FILE"
+    echo "Created $ENV_FILE from $FALLBACK_ENV_FILE"
+  else
+    echo "Missing $ENV_FILE. Start with 'just up' or copy environment.env.example first." >&2
+    exit 1
+  fi
 fi
 
 if [ ! -f "$DUMP_FILE" ]; then
@@ -26,8 +32,12 @@ if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps db >/dev/null 2
   exit 1
 fi
 
-POSTGRES_DB=$(awk -F= '$1=="POSTGRES_DB" {print $2}' "$ENV_FILE" | tail -n 1)
-POSTGRES_USER=$(awk -F= '$1=="POSTGRES_USER" {print $2}' "$ENV_FILE" | tail -n 1)
+read_env_value() {
+  awk -F= -v key="$1" '$1==key {print $2}' "$ENV_FILE" | tail -n 1 | sed 's/\r$//; s/^"//; s/"$//; s/^'\''//; s/'\''$//'
+}
+
+POSTGRES_DB=$(read_env_value POSTGRES_DB)
+POSTGRES_USER=$(read_env_value POSTGRES_USER)
 
 POSTGRES_DB=${POSTGRES_DB:-agora}
 POSTGRES_USER=${POSTGRES_USER:-agora}
