@@ -34,7 +34,7 @@ dev-ps:
     docker compose --env-file environment.env -f docker-compose.dev.yml ps
 
 db-export:
-    DUMP_DIR=/srv/projects/web/aggora-chat/dumps ./scripts/db-export-custom.sh
+    ./scripts/db-export-custom.sh
 
 db-import:
     ./scripts/db-import-custom.sh
@@ -50,6 +50,18 @@ db-dump-list:
 
 db-shell:
     docker compose --env-file environment.env -f docker-compose.dev.yml exec db psql -U $$(awk -F= '$$1=="POSTGRES_USER" {print $$2}' environment.env | tail -n 1 | sed 's/\r$$//; s/^"//; s/"$$//; s/^'\''//; s/'\''$$//') -d $$(awk -F= '$$1=="POSTGRES_DB" {print $$2}' environment.env | tail -n 1 | sed 's/\r$$//; s/^"//; s/"$$//; s/^'\''//; s/'\''$$//')
+
+media-export:
+    ./scripts/media-export.sh
+
+media-import:
+    ./scripts/media-import.sh
+
+media-import-latest:
+    FORCE=1 ./scripts/media-import.sh
+
+media-list:
+    ls -lh dumps/media-*.tar.gz
 
 # Start Docker deployment simulation
 stack-up:

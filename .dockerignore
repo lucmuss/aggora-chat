@@ -14,6 +14,3 @@ CLAUDE.md
 structure.txt
 db.sqlite3
 output/
-
-# Local scratch migration that conflicts with the tracked migration chain.
-apps/accounts/migrations/0004_rename_accounts_not_user_id_97fcb7_idx_accounts_no_user_id_b29cd4_idx_and_more.py

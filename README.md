@@ -65,6 +65,8 @@ just dev-ps
 just db-export
 FORCE=1 just db-import
 just db-import-latest
+just media-export
+just media-import-latest
 ```
 
 ## Setup
@@ -145,6 +147,25 @@ Useful variants:
 DUMP_FILE=dumps/agora-latest.dump FORCE=1 just db-import
 just db-dump-list
 just db-shell
+```
+
+### Media Archives
+
+Uploaded avatars, banners, and post images live under `media/`, not in Postgres, so they need a separate backup/restore flow:
+
+```bash
+just media-export
+FORCE=1 just media-import
+just media-import-latest
+```
+
+This creates tar.gz archives in `dumps/` and restores them back into the local `media/` directory used by the Docker dev stack.
+
+Useful variants:
+
+```bash
+ARCHIVE_FILE=dumps/media-latest.tar.gz FORCE=1 just media-import
+just media-list
 ```
 
 Alternative image-based bootstrap:
