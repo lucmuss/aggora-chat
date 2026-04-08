@@ -249,7 +249,7 @@ def community_landing(request, slug):
                 community.seo_description or community.description or f"Join c/{community.slug} and explore its best threads, challenge entries, and contributors."
             ),
             "canonical_url": canonical_url_for_request(request),
-            "og_image_url": absolute_url(community.banner.url) if community.banner else None,
+            "og_image_url": absolute_url(community.banner_optimized_url) if community.banner else None,
             "structured_data": serialize_structured_data(
                 breadcrumb_schema(
                     [

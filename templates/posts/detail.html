@@ -36,7 +36,7 @@
           <a href="{{ post.url }}" target="_blank" rel="noopener" class="text-sm text-opal hover:underline block mb-2 truncate">↗ {{ post.url }}</a>
         {% endif %}
         {% if post.image %}
-          <img src="{{ post.image.url }}" alt="" class="max-w-full rounded-g border border-gray-200 mb-2" loading="lazy">
+          <img src="{{ post.image_optimized_url }}" srcset="{{ post.image_optimized_srcset }}" sizes="(min-width: 1024px) 768px, 100vw" onerror="this.onerror=null;this.src='{{ post.image_original_url|default:''|escapejs }}';this.removeAttribute('srcset');" alt="" class="max-w-full rounded-g border border-gray-200 mb-2" loading="lazy">
         {% endif %}
         {% if post.body_html %}
           <div class="prose mb-3">{{ post.body_html|safe }}</div>
@@ -64,6 +64,7 @@
             </button>
           </form>
           <a href="{% url 'report_post' post_id=post.id %}" class="btn-ui btn-ui--secondary btn-ui--sm">Report</a>
+          <span class="text-xs text-gray-500">You have {{ awards_remaining }} of 3 highlights left this month.</span>
           {% endif %}
           <button type="button"
              data-share-sheet-open

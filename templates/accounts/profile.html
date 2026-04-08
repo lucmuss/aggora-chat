@@ -7,14 +7,14 @@
     <div class="bg-white border border-gray-200 rounded-g overflow-hidden">
       <div class="h-20 sm:h-24 bg-gradient-to-r from-opal to-teal-600">
         {% if profile_user.banner %}
-        <img src="{{ profile_user.banner.url }}" alt="Profile banner for {{ profile_user.display_name|default:profile_user.handle }}" class="h-full w-full object-cover">
+        <img src="{{ profile_user.banner_optimized_url }}" srcset="{{ profile_user.banner_optimized_srcset }}" sizes="100vw" onerror="this.onerror=null;this.src='{{ profile_user.banner_original_url|default:''|escapejs }}';this.removeAttribute('srcset');" alt="Profile banner for {{ profile_user.display_name|default:profile_user.handle }}" class="h-full w-full object-cover">
         {% endif %}
       </div>
       <div class="px-4 pb-4">
         <div class="flex items-end justify-between -mt-7 mb-3">
           <div class="w-14 h-14 rounded-full border-4 border-white bg-opal shadow-sm overflow-hidden flex items-center justify-center text-white text-xl font-medium">
             {% if profile_user.avatar %}
-            <img src="{{ profile_user.avatar.url }}" alt="{{ profile_user.display_name|default:profile_user.handle }}" class="h-full w-full object-cover">
+            <img src="{{ profile_user.avatar_optimized_url }}" srcset="{{ profile_user.avatar_optimized_srcset }}" sizes="(min-width: 768px) 144px, 112px" onerror="this.onerror=null;this.src='{{ profile_user.avatar_original_url|default:''|escapejs }}';this.removeAttribute('srcset');" alt="{{ profile_user.display_name|default:profile_user.handle }}" class="h-full w-full object-cover">
             {% else %}
             {{ profile_user.handle|first|upper }}
             {% endif %}

@@ -6,3 +6,6 @@ class CommunitiesConfig(AppConfig):
     name = "apps.communities"
     label = "communities"
     verbose_name = "Communities"
+
+    def ready(self):
+        from . import signals  # noqa: F401

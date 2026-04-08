@@ -148,7 +148,7 @@ def discussion_forum_posting_schema(post, *, comments: list | None = None) -> di
     if author_url:
         schema["author"]["url"] = author_url
     if post.image:
-        schema["image"] = absolute_url(post.image.url)
+        schema["image"] = absolute_url(post.image_optimized_url)
     if comments:
         schema["comment"] = [
             {

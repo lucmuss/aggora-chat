@@ -95,7 +95,11 @@ print(json.dumps({
         storage = MediaStorage()
 
         assert storage.url("avatars/test image.png") == "/media/avatars/test%20image.png"
-        assert storage.get_object_parameters("avatars/test-image.png")["CacheControl"] == "max-age=86400"
+        assert storage.get_object_parameters("avatars/test-image.png")["CacheControl"] == "public, max-age=86400"
+        assert (
+            storage.get_object_parameters("optimized/webp/md/avatars/test-image.webp")["CacheControl"]
+            == "public, max-age=31536000, immutable"
+        )
 
     def test_live_minio_bucket_is_reachable_when_enabled(self):
         if os.environ.get("MINIO_VERIFY_LIVE") != "1":

@@ -3,6 +3,9 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 
+from apps.common.image_variants import optimized_image_url
+from apps.common.upload_paths import HashedUploadTo
+
 handle_validator = RegexValidator(
     regex=r"^[a-z0-9_]{3,30}$",
     message="Use 3-30 lowercase letters, numbers, or underscores.",
@@ -32,8 +35,8 @@ class User(AbstractUser):
     )
     display_name = models.CharField(max_length=50, blank=True)
     bio = models.TextField(max_length=500, blank=True)
-    avatar = models.ImageField(upload_to="avatars/", blank=True)
-    banner = models.ImageField(upload_to="profile_banners/", blank=True)
+    avatar = models.ImageField(upload_to=HashedUploadTo("original/avatars"), blank=True)
+    banner = models.ImageField(upload_to=HashedUploadTo("original/profile_banners"), blank=True)
     birth_date = models.DateField(null=True, blank=True)
     country = models.CharField(max_length=100, blank=True)
     region = models.CharField(max_length=120, blank=True)
@@ -105,6 +108,34 @@ class User(AbstractUser):
 
     def __str__(self) -> str:
         return self.handle or self.email or self.username
+
+    @property
+    def avatar_original_url(self) -> str | None:
+        return self.avatar.url if self.avatar else None
+
+    @property
+    def banner_original_url(self) -> str | None:
+        return self.banner.url if self.banner else None
+
+    @property
+    def avatar_optimized_url(self) -> str | None:
+        return optimized_image_url(self.avatar)
+
+    @property
+    def banner_optimized_url(self) -> str | None:
+        return optimized_image_url(self.banner)
+
+    @property
+    def avatar_optimized_srcset(self) -> str:
+        from apps.common.image_variants import optimized_image_srcset
+
+        return optimized_image_srcset(self.avatar)
+
+    @property
+    def banner_optimized_srcset(self) -> str:
+        from apps.common.image_variants import optimized_image_srcset
+
+        return optimized_image_srcset(self.banner)
 
 
 class AgentIdentityProvider(models.Model):

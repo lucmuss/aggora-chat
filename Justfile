@@ -84,6 +84,18 @@ media-migrate-to-s3:
 media-migrate-to-s3-dry-run:
     uv run python manage.py migrate_media_to_object_storage --dry-run
 
+media-variants-backfill:
+    uv run python manage.py backfill_optimized_media_variants
+
+media-variants-backfill-dry-run:
+    uv run python manage.py backfill_optimized_media_variants --dry-run
+
+media-variants-cleanup:
+    uv run python manage.py cleanup_optimized_media_variants
+
+media-variants-cleanup-dry-run:
+    uv run python manage.py cleanup_optimized_media_variants --dry-run
+
 prod-up:
     docker compose --env-file .env -f docker-compose.prod.yml up -d --build
 

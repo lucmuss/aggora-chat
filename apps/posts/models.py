@@ -4,7 +4,9 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 
+from apps.common.image_variants import optimized_image_url
 from apps.common.markdown import render_markdown
+from apps.common.upload_paths import HashedUploadTo
 
 
 class PostQuerySet(models.QuerySet):
@@ -46,7 +48,7 @@ class Post(models.Model):
     body_md = models.TextField(blank=True)
     body_html = models.TextField(blank=True)
     url = models.URLField(max_length=2000, blank=True)
-    image = models.ImageField(upload_to="post_images/", blank=True)
+    image = models.ImageField(upload_to=HashedUploadTo("original/post_images"), blank=True)
     flair = models.ForeignKey("communities.PostFlair", null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
     edited_at = models.DateTimeField(null=True, blank=True)
@@ -94,6 +96,20 @@ class Post(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+    @property
+    def image_original_url(self) -> str | None:
+        return self.image.url if self.image else None
+
+    @property
+    def image_optimized_url(self) -> str | None:
+        return optimized_image_url(self.image)
+
+    @property
+    def image_optimized_srcset(self) -> str:
+        from apps.common.image_variants import optimized_image_srcset
+
+        return optimized_image_srcset(self.image)
 
 
 class Poll(models.Model):

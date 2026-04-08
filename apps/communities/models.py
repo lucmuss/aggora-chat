@@ -1,7 +1,9 @@
 from django.db import models
 from django.utils.text import slugify
 
+from apps.common.image_variants import optimized_image_url
 from apps.common.markdown import render_markdown
+from apps.common.upload_paths import HashedUploadTo
 
 
 class Community(models.Model):
@@ -23,8 +25,8 @@ class Community(models.Model):
     best_of_md = models.TextField(blank=True)
     best_of_html = models.TextField(blank=True)
     seo_description = models.CharField(max_length=160, blank=True)
-    icon = models.ImageField(upload_to="community_icons/", blank=True)
-    banner = models.ImageField(upload_to="community_banners/", blank=True)
+    icon = models.ImageField(upload_to=HashedUploadTo("original/community_icons"), blank=True)
+    banner = models.ImageField(upload_to=HashedUploadTo("original/community_banners"), blank=True)
     community_type = models.CharField(
         max_length=12,
         choices=CommunityType.choices,
@@ -60,6 +62,34 @@ class Community(models.Model):
 
     def __str__(self) -> str:
         return f"c/{self.slug}"
+
+    @property
+    def icon_original_url(self) -> str | None:
+        return self.icon.url if self.icon else None
+
+    @property
+    def banner_original_url(self) -> str | None:
+        return self.banner.url if self.banner else None
+
+    @property
+    def icon_optimized_url(self) -> str | None:
+        return optimized_image_url(self.icon)
+
+    @property
+    def banner_optimized_url(self) -> str | None:
+        return optimized_image_url(self.banner)
+
+    @property
+    def icon_optimized_srcset(self) -> str:
+        from apps.common.image_variants import optimized_image_srcset
+
+        return optimized_image_srcset(self.icon)
+
+    @property
+    def banner_optimized_srcset(self) -> str:
+        from apps.common.image_variants import optimized_image_srcset
+
+        return optimized_image_srcset(self.banner)
 
 
 class CommunityMembership(models.Model):

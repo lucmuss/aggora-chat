@@ -18,7 +18,11 @@ class MediaStorage(S3Boto3Storage):
 
     def get_object_parameters(self, name):
         params = super().get_object_parameters(name)
-        params.setdefault("CacheControl", "max-age=86400")
+        normalized_name = name.lstrip("/")
+        if normalized_name.startswith("optimized/webp/"):
+            params.setdefault("CacheControl", "public, max-age=31536000, immutable")
+        else:
+            params.setdefault("CacheControl", "public, max-age=86400")
         return params
 
     def url(self, name, parameters=None, expire=None, http_method=None):

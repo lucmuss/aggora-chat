@@ -213,7 +213,17 @@ just local-logs
 just local-ps
 just local-down
 just local-minio-console-url
+just media-variants-backfill-dry-run
+just media-variants-backfill
+just media-variants-cleanup-dry-run
+just media-variants-cleanup
 ```
+
+Media originals are now stored under `original/...`, and responsive WebP variants are generated under:
+
+- `optimized/webp/sm/...`
+- `optimized/webp/md/...`
+- `optimized/webp/lg/...`
 
 For production routing with Cloudflare Tunnel, see [`docs/cloudflare-migration-aggora-org.md`](/srv/projects/web/aggora-chat/docs/cloudflare-migration-aggora-org.md).
 

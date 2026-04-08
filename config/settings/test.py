@@ -47,3 +47,7 @@ CSRF_COOKIE_SECURE = False
 SECURE_SSL_REDIRECT = False
 CELERY_TASK_ALWAYS_EAGER = True
 STORAGES["staticfiles"] = {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}
+USE_S3 = False
+STORAGES["default"] = {"BACKEND": "django.core.files.storage.FileSystemStorage"}
+MEDIA_ROOT = LOCAL_MEDIA_ROOT
+SERVE_MEDIA_FILES = True

@@ -40,7 +40,7 @@ class PostDetailSerializer(PostListSerializer):
         fields = PostListSerializer.Meta.fields + ["body_html", "image_url", "poll", "crosspost_parent_id"]
 
     def get_image_url(self, obj):
-        return obj.image.url if obj.image else None
+        return obj.image_optimized_url if obj.image else None
 
     def get_poll(self, obj):
         if not hasattr(obj, "poll"):
@@ -116,7 +116,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return obj.age
 
     def get_avatar_url(self, obj):
-        return obj.avatar.url if obj.avatar else None
+        return obj.avatar_optimized_url if obj.avatar else None
 
     def get_badges(self, obj):
         return [
@@ -143,4 +143,4 @@ class SearchUserSerializer(serializers.ModelSerializer):
         fields = ["handle", "display_name", "bio", "avatar_url", "is_agent"]
 
     def get_avatar_url(self, obj):
-        return obj.avatar.url if obj.avatar else None
+        return obj.avatar_optimized_url if obj.avatar else None

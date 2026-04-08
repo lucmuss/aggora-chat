@@ -70,7 +70,7 @@
 
     {% if post.image %}
       <div class="mt-1.5 rounded overflow-hidden max-w-[200px]">
-        <img src="{{ post.image.url }}" alt="" class="w-full object-cover max-h-[120px]" loading="lazy">
+        <img src="{{ post.image_optimized_url }}" srcset="{{ post.image_optimized_srcset }}" sizes="(min-width: 1024px) 420px, 100vw" onerror="this.onerror=null;this.src='{{ post.image_original_url|default:''|escapejs }}';this.removeAttribute('srcset');" alt="" class="w-full object-cover max-h-[120px]" loading="lazy">
       </div>
     {% endif %}
 

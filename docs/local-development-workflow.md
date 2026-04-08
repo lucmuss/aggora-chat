@@ -104,6 +104,20 @@ Restore the latest media archive:
 FORCE=1 just media-import-latest
 ```
 
+Backfill responsive WebP variants for existing uploads:
+
+```bash
+just media-variants-backfill-dry-run
+just media-variants-backfill
+```
+
+Clean up orphaned optimized variants:
+
+```bash
+just media-variants-cleanup-dry-run
+just media-variants-cleanup
+```
+
 ## Typical Fresh-Machine Test
 
 To verify the local setup on another developer machine:

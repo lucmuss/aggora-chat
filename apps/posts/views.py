@@ -96,7 +96,7 @@ def _build_post_detail_context(request, post, *, sort=None, comment_body_md="", 
         "seo_title": f"{post.title} — c/{post.community.slug} — Agora",
         "seo_description": seo_description,
         "og_type": "article",
-        "og_image_url": absolute_url(post.image.url) if post.image else None,
+        "og_image_url": absolute_url(post.image_optimized_url) if post.image else None,
         "canonical_url": canonical_url,
         "structured_data": serialize_structured_data(
             breadcrumb_schema(

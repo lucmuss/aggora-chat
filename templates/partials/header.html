@@ -75,7 +75,7 @@
       <a href="{% url 'profile' handle=user.handle|default:'me' %}"
         class="h-8 w-8 flex items-center justify-center rounded-full bg-opal text-white text-xs font-medium hover:bg-opal-hover transition-colors overflow-hidden">
         {% if user.avatar %}
-        <img src="{{ user.avatar.url }}" alt="{{ user.display_name|default:user.handle|default:user.email }}" class="h-full w-full object-cover">
+        <img src="{{ user.avatar_optimized_url }}" srcset="{{ user.avatar_optimized_srcset }}" sizes="40px" onerror="this.onerror=null;this.src='{{ user.avatar_original_url|default:''|escapejs }}';this.removeAttribute('srcset');" alt="{{ user.display_name|default:user.handle|default:user.email }}" class="h-full w-full object-cover">
         {% else %}
         {{ user.handle|default:user.email|first|upper }}
         {% endif %}

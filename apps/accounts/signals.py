@@ -2,9 +2,17 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.signals import user_logged_in
+from django.db import transaction
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.core.mail import send_mail
 from django.dispatch import receiver
 from django.urls import reverse
+
+from apps.common.celery import dispatch_task
+from apps.common.image_variants import delete_optimized_image
+from apps.common.tasks import generate_media_variants_task
+
+from .models import User
 
 logger = logging.getLogger(__name__)
 
@@ -56,3 +64,38 @@ def send_login_alert(sender, user, request, **kwargs):
         logger.info(f"Login alert sent for user_id={user.id}")
     except Exception:
         logger.exception(f"Failed to send login alert for user_id={user.id}")
+
+
+def _queue_user_image_optimization(user: User) -> None:
+    transaction.on_commit(
+        lambda: dispatch_task(
+            generate_media_variants_task,
+            user._meta.label_lower,
+            user.pk,
+            ["avatar", "banner"],
+        )
+    )
+
+
+@receiver(pre_save, sender=User)
+def cleanup_replaced_user_image_variants(sender, instance, **kwargs):
+    if not instance.pk:
+        return
+    previous = sender.objects.filter(pk=instance.pk).only("avatar", "banner").first()
+    if previous is None:
+        return
+    if previous.avatar and previous.avatar.name != getattr(instance.avatar, "name", ""):
+        delete_optimized_image(previous.avatar)
+    if previous.banner and previous.banner.name != getattr(instance.banner, "name", ""):
+        delete_optimized_image(previous.banner)
+
+
+@receiver(post_save, sender=User)
+def ensure_user_image_variants(sender, instance, **kwargs):
+    _queue_user_image_optimization(instance)
+
+
+@receiver(post_delete, sender=User)
+def cleanup_deleted_user_image_variants(sender, instance, **kwargs):
+    delete_optimized_image(instance.avatar)
+    delete_optimized_image(instance.banner)
