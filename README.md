@@ -27,6 +27,46 @@ The app currently includes:
 - PWA manifest/service worker shell
 - live Markdown preview for post and community creation
 
+## Quick Start
+
+Recommended contributor path with Docker:
+
+```bash
+just up
+```
+
+That one command will:
+
+- create `environment.env` from [`environment.env.example`](/home/prem/Documents/aggora-chat/environment.env.example) if it does not exist
+- build and start the local Docker stack from [`docker-compose.dev.yml`](/home/prem/Documents/aggora-chat/docker-compose.dev.yml)
+- start local Postgres on `localhost:5432`
+- auto-run migrations and demo seeding
+- print the local app URL when the stack is healthy
+
+Then open:
+
+```text
+http://127.0.0.1:18080/
+```
+
+If you want to customize ports or credentials first, use two commands instead:
+
+```bash
+cp environment.env.example environment.env
+just up
+```
+
+Useful Docker dev commands:
+
+```bash
+just dev-logs
+just dev-down
+just dev-ps
+just db-export
+FORCE=1 just db-import
+just db-import-latest
+```
+
 ## Setup
 
 The project uses `uv` for local Python dependency management.
@@ -71,12 +111,63 @@ uv run python manage.py runserver
 
 If you want the full stack with supporting services, there are also Docker compose files in the repo:
 
+- `docker-compose.dev.yml`
 - `docker-compose.yml`
 - `docker-compose.prod.yml`
 - `docker-compose.stack.yml`
 
 The compose files inject container-friendly defaults themselves, so local `.env` values do not need to point at a Docker-only database host unless you want that behavior outside Docker.
 The default stack is now SQL-first and runs without Redis.
+
+### Docker Files
+
+Recommended for contributors:
+
+- [`docker-compose.dev.yml`](/home/prem/Documents/aggora-chat/docker-compose.dev.yml): stable Docker-based local development stack with Postgres, migrations, and seed data
+- [`environment.env.example`](/home/prem/Documents/aggora-chat/environment.env.example): Docker-first environment template used by `just up`
+- [`scripts/dev-up.sh`](/home/prem/Documents/aggora-chat/scripts/dev-up.sh): helper used by `just up` and `just dev-up`
+
+### Database Dumps
+
+The contributor Docker flow also supports safer Postgres custom-format dumps:
+
+```bash
+just db-export
+FORCE=1 just db-import
+just db-import-latest
+```
+
+This creates binary Postgres dumps in `dumps/` using `pg_dump -Fc` and restores them with `pg_restore --clean --if-exists`.
+
+Useful variants:
+
+```bash
+DUMP_FILE=dumps/agora-latest.dump FORCE=1 just db-import
+just db-dump-list
+just db-shell
+```
+
+Alternative image-based bootstrap:
+
+For the local Docker path with Postgres, migrations, and seed data:
+
+```bash
+./scripts/bootstrap-local-docker.sh
+```
+
+That script will:
+
+- build and start the Docker Compose stack
+- start a local Postgres container on `localhost:5432`
+- wait for `http://127.0.0.1:18080/healthz/`
+- auto-run migrations and demo seeding through the container entrypoint
+- use [`docker-compose.local.yml`](/home/prem/Documents/aggora-chat/docker-compose.local.yml) so host-side scratch files do not break the boot flow
+
+Then open:
+
+```text
+http://127.0.0.1:18080/
+```
 
 For production routing with Cloudflare Tunnel, see [`docs/cloudflare-migration-aggora-org.md`](/srv/projects/web/aggora-chat/docs/cloudflare-migration-aggora-org.md).
 
@@ -105,7 +196,7 @@ just format
 
 ## Env
 
-Environment values are loaded automatically from `.env`.
+Plain local `uv` workflows load values from `.env`. The Docker contributor flow uses `environment.env`.
 
 Commonly relevant variables:
 
@@ -121,7 +212,7 @@ Commonly relevant variables:
 - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
 - `EMAIL_DELIVERY_MODE`, `DJANGO_DEFAULT_FROM_EMAIL`
 
-Use [`.env.example`](/srv/projects/web/aggora-chat/.env.example) as the canonical starting point.
+Use [`environment.env.example`](/home/prem/Documents/aggora-chat/environment.env.example) for Docker onboarding and [`.env.example`](/home/prem/Documents/aggora-chat/.env.example) for plain local `uv` workflows.
 
 ## Seed Data
 

@@ -1,10 +1,13 @@
 # Local environment files
 .env
 .env.local
+environment.env
 .venv/
 db.sqlite3
 media/
 staticfiles/
+dumps/
+*.dump
 __pycache__/
 *.pyc
 output/ui-review/

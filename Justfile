@@ -17,8 +17,42 @@ lint:
 check:
     uv run pre-commit run --all-files
 
-# Start Docker deployment simulation
+# Start the recommended contributor Docker environment
 up:
+    ./scripts/dev-up.sh
+
+dev-up:
+    ./scripts/dev-up.sh
+
+dev-down:
+    docker compose --env-file environment.env -f docker-compose.dev.yml down
+
+dev-logs:
+    docker compose --env-file environment.env -f docker-compose.dev.yml logs -f web db
+
+dev-ps:
+    docker compose --env-file environment.env -f docker-compose.dev.yml ps
+
+db-export:
+    ./scripts/db-export-custom.sh
+
+db-import:
+    ./scripts/db-import-custom.sh
+
+db-restore:
+    ./scripts/db-import-custom.sh
+
+db-import-latest:
+    FORCE=1 ./scripts/db-import-custom.sh
+
+db-dump-list:
+    ls -lh dumps/*.dump
+
+db-shell:
+    docker compose --env-file environment.env -f docker-compose.dev.yml exec db psql -U $$(awk -F= '$$1=="POSTGRES_USER" {print $$2}' environment.env | tail -n 1) -d $$(awk -F= '$$1=="POSTGRES_DB" {print $$2}' environment.env | tail -n 1)
+
+# Start Docker deployment simulation
+stack-up:
     docker compose -f docker-compose.stack.yml up -d --build
 
 # Install requirements via uv
