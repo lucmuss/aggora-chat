@@ -22,6 +22,7 @@ class FakeDestinationStorage:
         self.existing = set()
         self.saved = []
         self.deleted = []
+        self.contents = {}
 
     def exists(self, name):
         return name in self.existing
@@ -30,11 +31,16 @@ class FakeDestinationStorage:
         content = file_handle.read()
         self.saved.append((name, content))
         self.existing.add(name)
+        self.contents[name] = content
         return name
 
     def delete(self, name):
         self.deleted.append(name)
         self.existing.discard(name)
+        self.contents.pop(name, None)
+
+    def open(self, name, mode="rb"):
+        return io.BytesIO(self.contents[name])
 
 
 class TestMinioStorageSetup:
@@ -160,3 +166,81 @@ class TestMinioMigrationCommand:
 
         with pytest.raises(CommandError, match="USE_S3 must be enabled before migrating media to object storage."):
             call_command("migrate_media_to_object_storage")
+
+    def test_migrate_object_storage_media_layout_moves_legacy_key_and_updates_db(self, settings, monkeypatch):
+        settings.USE_S3 = True
+
+        user = User.objects.create_user(
+            username="layout_case",
+            email="layout_case@example.com",
+            password="password123",
+            handle="layout_case",
+        )
+        user.avatar = "avatars/2026/04/08/aa/bb/legacy.png"
+        user.save(update_fields=["avatar"])
+
+        fake_storage = FakeDestinationStorage()
+        fake_storage.existing.add("avatars/2026/04/08/aa/bb/legacy.png")
+        fake_storage.contents["avatars/2026/04/08/aa/bb/legacy.png"] = b"legacy-bytes"
+
+        monkeypatch.setattr(
+            "apps.common.management.commands.migrate_object_storage_media_layout.default_storage",
+            fake_storage,
+        )
+        monkeypatch.setattr(
+            "apps.common.management.commands.migrate_object_storage_media_layout._target_original_name",
+            lambda current_name, payload: "original/avatars/2026/04/09/aa/bb/20260409-aabbccddee12.png",
+        )
+        monkeypatch.setattr(
+            "apps.common.management.commands.migrate_object_storage_media_layout.ensure_optimized_images",
+            lambda field_file, force=False: [
+                f"optimized/webp/md/{field_file.name.replace('original/', '', 1).rsplit('.', 1)[0]}.webp"
+            ],
+        )
+
+        stdout = io.StringIO()
+        call_command("migrate_object_storage_media_layout", stdout=stdout, delete_legacy=True)
+        output = stdout.getvalue()
+        user.refresh_from_db()
+
+        assert user.avatar.name == "original/avatars/2026/04/09/aa/bb/20260409-aabbccddee12.png"
+        assert fake_storage.saved == [
+            ("original/avatars/2026/04/09/aa/bb/20260409-aabbccddee12.png", b"legacy-bytes"),
+        ]
+        assert fake_storage.deleted == ["avatars/2026/04/08/aa/bb/legacy.png"]
+        assert "Updated DB references: 1" in output
+        assert "Deleted legacy objects: 1" in output
+
+    def test_migrate_object_storage_media_layout_supports_dry_run(self, settings, monkeypatch):
+        settings.USE_S3 = True
+
+        user = User.objects.create_user(
+            username="layout_dry_run",
+            email="layout_dry_run@example.com",
+            password="password123",
+            handle="layout_dry_run",
+        )
+        user.avatar = "avatars/2026/04/08/aa/bb/dry-run.png"
+        user.save(update_fields=["avatar"])
+
+        fake_storage = FakeDestinationStorage()
+        fake_storage.existing.add("avatars/2026/04/08/aa/bb/dry-run.png")
+        fake_storage.contents["avatars/2026/04/08/aa/bb/dry-run.png"] = b"dry-run-bytes"
+
+        monkeypatch.setattr(
+            "apps.common.management.commands.migrate_object_storage_media_layout.default_storage",
+            fake_storage,
+        )
+        monkeypatch.setattr(
+            "apps.common.management.commands.migrate_object_storage_media_layout._target_original_name",
+            lambda current_name, payload: "original/avatars/2026/04/09/aa/bb/20260409-aabbccddee12.png",
+        )
+
+        stdout = io.StringIO()
+        call_command("migrate_object_storage_media_layout", stdout=stdout, dry_run=True)
+        output = stdout.getvalue()
+        user.refresh_from_db()
+
+        assert user.avatar.name == "avatars/2026/04/08/aa/bb/dry-run.png"
+        assert fake_storage.saved == []
+        assert "DRY RUN accounts.user" in output
