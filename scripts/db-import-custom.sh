@@ -4,20 +4,20 @@ set -eu
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT_DIR"
 
-ENV_FILE=${ENV_FILE:-environment.env}
-COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.dev.yml}
+ENV_FILE=${ENV_FILE:-.env}
+COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.local.yml}
 DUMP_DIR=${DUMP_DIR:-dumps}
 BASENAME=${BASENAME:-agora}
 DUMP_FILE=${DUMP_FILE:-$DUMP_DIR/${BASENAME}-latest.dump}
 FORCE=${FORCE:-0}
-FALLBACK_ENV_FILE=${FALLBACK_ENV_FILE:-.env}
+ENV_EXAMPLE=${ENV_EXAMPLE:-.env.example}
 
 if [ ! -f "$ENV_FILE" ]; then
-  if [ -f "$FALLBACK_ENV_FILE" ]; then
-    cp "$FALLBACK_ENV_FILE" "$ENV_FILE"
-    echo "Created $ENV_FILE from $FALLBACK_ENV_FILE"
+  if [ -f "$ENV_EXAMPLE" ]; then
+    cp "$ENV_EXAMPLE" "$ENV_FILE"
+    echo "Created $ENV_FILE from $ENV_EXAMPLE"
   else
-    echo "Missing $ENV_FILE. Start with 'just up' or copy environment.env.example first." >&2
+    echo "Missing $ENV_FILE. Start with 'just up' or copy .env.example first." >&2
     exit 1
   fi
 fi

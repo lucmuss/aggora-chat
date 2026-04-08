@@ -1,35 +1,80 @@
 services:
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      web:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      MINIO_MEDIA_BUCKET: ${MINIO_MEDIA_BUCKET:-agora-media}
+      NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-20m}
+    ports:
+      - "${APP_HOST_PORT:-18080}:80"
+    volumes:
+      - ./deploy/nginx/minio-proxy.conf.template:/etc/nginx/templates/default.conf.template:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
   web:
     build:
       context: .
       args:
         INSTALL_DEV: "true"
     command: python manage.py runserver 0.0.0.0:${PORT:-8000}
-    ports:
-      - "${APP_HOST_PORT:-18080}:${PORT:-8000}"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
     environment:
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.dev}
       DJANGO_ENV: ${DJANGO_ENV:-development}
-      DJANGO_ALLOWED_HOSTS: ${DOCKER_DJANGO_ALLOWED_HOSTS:-127.0.0.1,localhost}
-      DJANGO_CSRF_TRUSTED_ORIGINS: ${DOCKER_DJANGO_CSRF_TRUSTED_ORIGINS:-http://127.0.0.1:${APP_HOST_PORT:-18080},http://localhost:${APP_HOST_PORT:-18080}}
-      APP_PUBLIC_URL: ${DOCKER_APP_PUBLIC_URL:-http://127.0.0.1:${APP_HOST_PORT:-18080}}
+      DJANGO_ALLOWED_HOSTS: ${DOCKER_DJANGO_ALLOWED_HOSTS:-${DJANGO_ALLOWED_HOSTS:-127.0.0.1,localhost}}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DOCKER_DJANGO_CSRF_TRUSTED_ORIGINS:-${DJANGO_CSRF_TRUSTED_ORIGINS:-http://127.0.0.1:${APP_HOST_PORT:-18080},http://localhost:${APP_HOST_PORT:-18080}}}
+      APP_PUBLIC_URL: ${DOCKER_APP_PUBLIC_URL:-${APP_PUBLIC_URL:-http://127.0.0.1:${APP_HOST_PORT:-18080}}}
       PORT: ${PORT:-8000}
       POSTGRES_DB: ${POSTGRES_DB:-agora}
       POSTGRES_USER: ${POSTGRES_USER:-agora}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agora_dev}
       POSTGRES_HOST: ${POSTGRES_HOST:-db}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
-      SEARCH_BACKEND: ${SEARCH_BACKEND:-sql}
-      SEARCH_INDEX_ENABLED: ${SEARCH_INDEX_ENABLED:-0}
+      USE_S3: ${USE_S3:-0}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin123}
+      AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME:-agora-media}
+      AWS_S3_ENDPOINT_URL: ${AWS_S3_DOCKER_ENDPOINT_URL:-http://minio:9000}
+      AWS_S3_PROXY_MEDIA: ${AWS_S3_PROXY_MEDIA:-1}
+      AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME:-us-east-1}
+      AWS_S3_SIGNATURE_VERSION: ${AWS_S3_SIGNATURE_VERSION:-s3v4}
+      AWS_S3_ADDRESSING_STYLE: ${AWS_S3_ADDRESSING_STYLE:-path}
+      AWS_QUERYSTRING_AUTH: ${AWS_QUERYSTRING_AUTH:-0}
+      AWS_S3_FILE_OVERWRITE: ${AWS_S3_FILE_OVERWRITE:-0}
+      AWS_S3_VERIFY: ${AWS_S3_VERIFY:-0}
       AUTO_MIGRATE_ON_START: ${AUTO_MIGRATE_ON_START:-1}
       AUTO_SEED_ON_START: ${AUTO_SEED_ON_START:-1}
       SEED_SKIP_DEMO_CONTENT: ${SEED_SKIP_DEMO_CONTENT:-0}
       SEED_USERS_FILE: ${SEED_USERS_FILE:-data/seed/users.json}
       SEED_ADMINS_FILE: ${SEED_ADMINS_FILE:-data/seed/admins.json}
       SEED_COMMUNITIES_FILE: ${SEED_COMMUNITIES_FILE:-data/seed/communities.json}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz/', timeout=5).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   db:
     image: postgres:16
@@ -37,6 +82,7 @@ services:
       default:
         aliases:
           - postgres
+    restart: unless-stopped
     ports:
       - "${POSTGRES_HOST_PORT:-5432}:5432"
     environment:
@@ -45,16 +91,39 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agora_dev}
     volumes:
       - pgdata-local:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agora} -d ${POSTGRES_DB:-agora}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
-  elasticsearch:
-    image: elasticsearch:8.15.0
-    profiles: ["search"]
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
     environment:
-      discovery.type: single-node
-      xpack.security.enabled: "false"
-      ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms512m -Xmx512m}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
     ports:
-      - "${ELASTICSEARCH_HOST_PORT:-9200}:9200"
+      - "${MINIO_CONSOLE_PORT:-19001}:9001"
+    volumes:
+      - minio-local:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_started
+    restart: "no"
+    entrypoint: ["/bin/sh", "/init-minio.sh"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_MEDIA_BUCKET: ${MINIO_MEDIA_BUCKET:-agora-media}
+    volumes:
+      - ./scripts/init-minio.sh:/init-minio.sh:ro
 
 volumes:
   pgdata-local:
+  minio-local:

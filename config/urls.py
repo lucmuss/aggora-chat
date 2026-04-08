@@ -24,7 +24,7 @@ urlpatterns = [
     path("", include("apps.votes.urls")),
 ]
 
-if settings.DEBUG:
+if settings.DEBUG and getattr(settings, "SERVE_MEDIA_FILES", False):
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 handler404 = not_found_page

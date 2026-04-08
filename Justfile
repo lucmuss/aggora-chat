@@ -19,19 +19,25 @@ check:
 
 # Start the recommended contributor Docker environment
 up:
-    ./scripts/dev-up.sh
+    ./scripts/bootstrap-local-docker.sh
 
-dev-up:
-    ./scripts/dev-up.sh
+local-up:
+    ./scripts/bootstrap-local-docker.sh
 
-dev-down:
-    docker compose --env-file environment.env -f docker-compose.dev.yml down
+local-down:
+    docker compose --env-file .env -f docker-compose.local.yml down
 
-dev-logs:
-    docker compose --env-file environment.env -f docker-compose.dev.yml logs -f web db
+local-logs:
+    docker compose --env-file .env -f docker-compose.local.yml logs -f nginx web db minio minio-init
 
-dev-ps:
-    docker compose --env-file environment.env -f docker-compose.dev.yml ps
+local-ps:
+    docker compose --env-file .env -f docker-compose.local.yml ps
+
+local-minio-logs:
+    docker compose --env-file .env -f docker-compose.local.yml logs -f minio minio-init
+
+local-minio-console-url:
+    @port=$(sed -n "s/^MINIO_CONSOLE_PORT=//p" .env 2>/dev/null | tail -n 1 | tr -d "\"'"); echo "http://127.0.0.1:${port:-19001}"
 
 db-export:
     ./scripts/db-export-custom.sh
@@ -49,7 +55,16 @@ db-dump-list:
     ls -lh dumps/*.dump
 
 db-shell:
-    docker compose --env-file environment.env -f docker-compose.dev.yml exec db psql -U $$(awk -F= '$$1=="POSTGRES_USER" {print $$2}' environment.env | tail -n 1 | sed 's/\r$$//; s/^"//; s/"$$//; s/^'\''//; s/'\''$$//') -d $$(awk -F= '$$1=="POSTGRES_DB" {print $$2}' environment.env | tail -n 1 | sed 's/\r$$//; s/^"//; s/"$$//; s/^'\''//; s/'\''$$//')
+    docker compose --env-file .env -f docker-compose.local.yml exec db psql -U $$(awk -F= '$$1=="POSTGRES_USER" {print $$2}' .env | tail -n 1 | sed 's/\r$$//; s/^"//; s/"$$//; s/^'\''//; s/'\''$$//') -d $$(awk -F= '$$1=="POSTGRES_DB" {print $$2}' .env | tail -n 1 | sed 's/\r$$//; s/^"//; s/"$$//; s/^'\''//; s/'\''$$//')
+
+minio-up:
+    docker compose --env-file .env -f docker-compose.local.yml up -d minio minio-init
+
+minio-logs:
+    docker compose --env-file .env -f docker-compose.local.yml logs -f minio minio-init
+
+minio-console-url:
+    @port=$(sed -n "s/^MINIO_CONSOLE_PORT=//p" .env 2>/dev/null | tail -n 1 | tr -d "\"'"); echo "http://127.0.0.1:${port:-19001}"
 
 media-export:
     ./scripts/media-export.sh
@@ -63,18 +78,29 @@ media-import-latest:
 media-list:
     ls -lh dumps/media-*.tar.gz
 
-# Start Docker deployment simulation
-stack-up:
-    docker compose -f docker-compose.stack.yml up -d --build
+media-migrate-to-s3:
+    uv run python manage.py migrate_media_to_object_storage
+
+media-migrate-to-s3-dry-run:
+    uv run python manage.py migrate_media_to_object_storage --dry-run
+
+prod-up:
+    docker compose --env-file .env -f docker-compose.prod.yml up -d --build
+
+prod-down:
+    docker compose --env-file .env -f docker-compose.prod.yml down
+
+prod-logs:
+    docker compose --env-file .env -f docker-compose.prod.yml logs -f nginx web minio
 
 # Install requirements via uv
 sync:
-    uv pip install -r requirements/base.txt
-    uv pip install -r requirements/dev.txt
+    uv pip install -r requirements.txt
+    uv pip install -r requirements-dev.txt
 
 # Run Django tests
 test:
-    uv run python manage.py test
+    uv run pytest
 
 # Run pytest-based test collection
 pytest:

@@ -37,10 +37,11 @@ just up
 
 That one command will:
 
-- create `environment.env` from [`environment.env.example`](/home/prem/Documents/aggora-chat/environment.env.example) if it does not exist
-- build and start the local Docker stack from [`docker-compose.dev.yml`](/home/prem/Documents/aggora-chat/docker-compose.dev.yml)
+- create `.env` from [`.env.example`](/srv/projects/web/aggora-chat/.env.example) if it does not exist
+- build and start the local Docker stack from [docker-compose.local.yml](/srv/projects/web/aggora-chat/docker-compose.local.yml)
 - start local Postgres on `localhost:5432`
 - auto-run migrations and demo seeding
+- start MinIO and the local Nginx proxy
 - print the local app URL when the stack is healthy
 
 Then open:
@@ -52,16 +53,18 @@ http://127.0.0.1:18080/
 If you want to customize ports or credentials first, use two commands instead:
 
 ```bash
-cp environment.env.example environment.env
+cp .env.example .env
 just up
 ```
 
 Useful Docker dev commands:
 
 ```bash
-just dev-logs
-just dev-down
-just dev-ps
+just local-up
+just local-logs
+just local-down
+just local-ps
+just local-minio-console-url
 just db-export
 FORCE=1 just db-import
 just db-import-latest
@@ -89,7 +92,10 @@ The checked-in example is intentionally local-safe:
 
 - no Docker-only Postgres host defaults
 - no Redis requirement for cache or background jobs
-- SQLite works out of the box for plain local `manage.py` commands
+- plain local `manage.py` commands require a Postgres connection via `DATABASE_URL` or `POSTGRES_*`
+
+Then configure Postgres before running plain local Django commands.
+The Docker flows (`just up`, `just local-up`) already provide the database container automatically.
 
 3. Apply database migrations:
 
@@ -111,12 +117,10 @@ Start the development server:
 uv run python manage.py runserver
 ```
 
-If you want the full stack with supporting services, there are also Docker compose files in the repo:
+If you want the full stack with supporting services, there are two Docker compose files in the repo:
 
-- `docker-compose.dev.yml`
-- `docker-compose.yml`
+- `docker-compose.local.yml`
 - `docker-compose.prod.yml`
-- `docker-compose.stack.yml`
 
 The compose files inject container-friendly defaults themselves, so local `.env` values do not need to point at a Docker-only database host unless you want that behavior outside Docker.
 The default stack is now SQL-first and runs without Redis.
@@ -125,9 +129,10 @@ The default stack is now SQL-first and runs without Redis.
 
 Recommended for contributors:
 
-- [`docker-compose.dev.yml`](/home/prem/Documents/aggora-chat/docker-compose.dev.yml): stable Docker-based local development stack with Postgres, migrations, and seed data
-- [`environment.env.example`](/home/prem/Documents/aggora-chat/environment.env.example): Docker-first environment template used by `just up`
-- [`scripts/dev-up.sh`](/home/prem/Documents/aggora-chat/scripts/dev-up.sh): helper used by `just up` and `just dev-up`
+- [docker-compose.local.yml](/srv/projects/web/aggora-chat/docker-compose.local.yml): stable Docker-based local development stack with Postgres, MinIO, proxying, migrations, and seed data
+- [docker-compose.prod.yml](/srv/projects/web/aggora-chat/docker-compose.prod.yml): production deployment stack for `aggora.org` and related public environments
+- [`.env.example`](/srv/projects/web/aggora-chat/.env.example): shared local environment template used by both Docker and plain `uv` workflows
+- [scripts/bootstrap-local-docker.sh](/srv/projects/web/aggora-chat/scripts/bootstrap-local-docker.sh): helper used by `just up` and `just local-up`
 
 ### Database Dumps
 
@@ -173,21 +178,39 @@ Alternative image-based bootstrap:
 For the local Docker path with Postgres, migrations, and seed data:
 
 ```bash
-./scripts/bootstrap-local-docker.sh
+just local-up
 ```
 
-That script will:
+Equivalent direct Docker Compose command:
 
-- build and start the Docker Compose stack
+```bash
+docker compose --env-file .env -f docker-compose.local.yml up --build -d
+```
+
+The local bootstrap will:
+
+- create `.env` from [`.env.example`](/srv/projects/web/aggora-chat/.env.example) if it does not exist
+- build and start [`docker-compose.local.yml`](/srv/projects/web/aggora-chat/docker-compose.local.yml)
+- wait for the app to respond through the local Nginx proxy
+- start MinIO and run the one-shot bucket initializer automatically
+- print the MinIO Console URL and credentials from `.env`
 - start a local Postgres container on `localhost:5432`
-- wait for `http://127.0.0.1:18080/healthz/`
 - auto-run migrations and demo seeding through the container entrypoint
-- use [`docker-compose.local.yml`](/home/prem/Documents/aggora-chat/docker-compose.local.yml) so host-side scratch files do not break the boot flow
 
-Then open:
+That stack exposes:
 
-```text
-http://127.0.0.1:18080/
+- app: `http://127.0.0.1:18080/`
+- health: `http://127.0.0.1:18080/healthz/`
+- MinIO Console: `http://127.0.0.1:19001/`
+- Postgres: `localhost:5432`
+
+Useful local Docker commands:
+
+```bash
+just local-logs
+just local-ps
+just local-down
+just local-minio-console-url
 ```
 
 For production routing with Cloudflare Tunnel, see [`docs/cloudflare-migration-aggora-org.md`](/srv/projects/web/aggora-chat/docs/cloudflare-migration-aggora-org.md).
@@ -213,11 +236,11 @@ just lint
 just format
 ```
 
-`pytest.ini` points at `config.settings.dev`, and `requirements/dev.txt` includes both `pytest` and `pytest-django`.
+`pytest.ini` points at `config.settings.test`, and `requirements-dev.txt` includes both `pytest` and `pytest-django`.
 
 ## Env
 
-Plain local `uv` workflows load values from `.env`. The Docker contributor flow uses `environment.env`.
+Plain local `uv` workflows and the Docker contributor flow both use `.env`.
 
 Commonly relevant variables:
 
@@ -228,12 +251,11 @@ Commonly relevant variables:
 - `AUTO_MIGRATE_ON_START`, `AUTO_SEED_ON_START`, `SEED_SKIP_DEMO_CONTENT`
 - `DATABASE_URL` or the `POSTGRES_*` fallback variables
 - `CELERY_TASK_ALWAYS_EAGER`
-- `SEARCH_BACKEND`, `SEARCH_INDEX_ENABLED`, `ELASTICSEARCH_URL`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
 - `EMAIL_DELIVERY_MODE`, `DJANGO_DEFAULT_FROM_EMAIL`
 
-Use [`environment.env.example`](/home/prem/Documents/aggora-chat/environment.env.example) for Docker onboarding and [`.env.example`](/home/prem/Documents/aggora-chat/.env.example) for plain local `uv` workflows.
+Use [`.env.example`](/srv/projects/web/aggora-chat/.env.example) as the single onboarding template for both Docker and plain local `uv` workflows.
 
 ## Seed Data
 

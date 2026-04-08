@@ -12,7 +12,7 @@ This runbook prepares Agora for a clean move from `aggora.kolibri-kollektiv.eu` 
 
 ## Repo changes already prepared
 
-- `docker-compose.stack.yml` now includes `aggora.org` and `www.aggora.org` in host and CSRF defaults.
+- `docker-compose.prod.yml` is the public deployment stack for `aggora.org`.
 - `CanonicalHostMiddleware` redirects `www.aggora.org` to the apex domain when `APP_PUBLIC_URL=https://aggora.org`.
 - `README.md` now documents `aggora.org` as the primary production domain.
 

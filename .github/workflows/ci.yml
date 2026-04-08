@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: "3.13"
       - run: uv venv
-      - run: uv pip install -r requirements/dev.txt
+      - run: uv pip install -r requirements-dev.txt
       - run: uv run ruff check .
       - run: uv run python -m compileall apps config templates static
       - run: uv run pytest -q
@@ -30,8 +30,8 @@ jobs:
         with:
           python-version: "3.13"
       - run: uv venv
-      - run: uv pip install -r requirements/dev.txt
-      - run: uv run bandit -q -r apps config scripts -x "apps/*/test*.py,apps/*/tests.py,config/settings/test.py" -s B105
+      - run: uv pip install -r requirements-dev.txt
+      - run: uv run bandit -q -r apps config scripts tests -x "tests/**/*.py,config/settings/test.py" -s B105
 
   ui-smoke:
     if: github.event_name == 'workflow_dispatch'
@@ -43,7 +43,7 @@ jobs:
         with:
           python-version: "3.13"
       - run: uv venv
-      - run: uv pip install -r requirements/dev.txt
+      - run: uv pip install -r requirements-dev.txt
       - run: uv run playwright install --with-deps chromium
       - run: cp .env.example .env
       - run: uv run python manage.py migrate

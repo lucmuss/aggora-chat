@@ -183,7 +183,7 @@ Release focused on product polish, growth loops, explainable personalization, an
 Patch release focused on GitHub CI reliability and repo-wide lint cleanup.
 
 ### Changed
-- GitHub Actions now installs dependencies via `uv venv` plus `uv pip install -r requirements/dev.txt`.
+- GitHub Actions now installs dependencies via `uv venv` plus `uv pip install -r requirements-dev.txt`.
 - The CI test job now runs `pytest` against the dedicated test settings instead of relying on the ambient management-command environment.
 - The Bandit job now excludes repo test files and test-only settings to avoid false-positive failures in CI.
 - Ruff configuration and repo code were cleaned up so the lint job passes consistently.

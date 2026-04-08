@@ -1,4 +1,18 @@
 services:
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+      - minio
+    environment:
+      MINIO_MEDIA_BUCKET: ${MINIO_MEDIA_BUCKET:-agora-media}
+      NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-20m}
+    ports:
+      - "${APP_HOST_PORT:-18080}:80"
+    volumes:
+      - ./deploy/nginx/minio-proxy.conf.template:/etc/nginx/templates/default.conf.template:ro
+
   web:
     build:
       context: .
@@ -7,14 +21,27 @@ services:
     command: gunicorn config.wsgi:application -w ${GUNICORN_WORKERS:-4} -b ${GUNICORN_BIND:-0.0.0.0:${PORT:-8000}}
     restart: unless-stopped
     environment:
-      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.prod}
-      DJANGO_ENV: ${DJANGO_ENV:-production}
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      DJANGO_ENV: production
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_SECURE_SSL_REDIRECT: "true"
+      DJANGO_SESSION_COOKIE_SECURE: "true"
+      DJANGO_CSRF_COOKIE_SECURE: "true"
       PORT: ${PORT:-8000}
       DATABASE_URL: ${DATABASE_URL}
-      SEARCH_BACKEND: ${SEARCH_BACKEND:-sql}
-      SEARCH_INDEX_ENABLED: ${SEARCH_INDEX_ENABLED:-0}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL}
+      USE_S3: "1"
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME:-agora-media}
+      AWS_S3_ENDPOINT_URL: http://minio:9000
+      AWS_S3_PROXY_MEDIA: "1"
+      AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME:-us-east-1}
+      AWS_S3_SIGNATURE_VERSION: ${AWS_S3_SIGNATURE_VERSION:-s3v4}
+      AWS_S3_ADDRESSING_STYLE: ${AWS_S3_ADDRESSING_STYLE:-path}
+      AWS_QUERYSTRING_AUTH: ${AWS_QUERYSTRING_AUTH:-0}
+      AWS_S3_FILE_OVERWRITE: ${AWS_S3_FILE_OVERWRITE:-0}
+      AWS_S3_VERIFY: ${AWS_S3_VERIFY:-0}
       APP_NAME: ${APP_NAME:-Agora}
       APP_TAGLINE: ${APP_TAGLINE:-communities first}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
@@ -34,10 +61,8 @@ services:
       SEED_USERS_FILE: ${SEED_USERS_FILE:-data/seed/users.json}
       SEED_ADMINS_FILE: ${SEED_ADMINS_FILE:-data/seed/admins.json}
       SEED_COMMUNITIES_FILE: ${SEED_COMMUNITIES_FILE:-data/seed/communities.json}
-    ports:
-      - "${APP_HOST_PORT:-18080}:${PORT:-8000}"
-    volumes:
-      - media:/app/media
+    depends_on:
+      - minio
     networks:
       - default
       - apps-shared
@@ -47,19 +72,30 @@ services:
       timeout: 10s
       retries: 10
       start_period: 60s
-  elasticsearch:
-    image: elasticsearch:8.15.0
-    profiles: ["search"]
-    environment:
-      discovery.type: single-node
-      xpack.security.enabled: "false"
-      ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms512m -Xmx512m}
-    volumes:
-      - esdata:/usr/share/elasticsearch/data
 
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: ["/bin/sh", "/init-minio.sh"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_MEDIA_BUCKET: ${MINIO_MEDIA_BUCKET:-agora-media}
+    volumes:
+      - ./scripts/init-minio.sh:/init-minio.sh:ro
 volumes:
-  esdata:
-  media:
+  minio:
 
 networks:
   apps-shared:

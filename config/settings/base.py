@@ -57,10 +57,10 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.github",
     "allauth.socialaccount.providers.openid_connect",
     "django_htmx",
+    "storages",
     "rest_framework",
     "rest_framework.authtoken",
     "apps.common",
-    "django_elasticsearch_dsl",
     "apps.accounts",
     "apps.api",
     "apps.communities",
@@ -134,12 +134,10 @@ elif env_str("POSTGRES_DB", "").strip():
         }
     }
 else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+    raise RuntimeError(
+        "Postgres configuration is required. Set DATABASE_URL or POSTGRES_DB/POSTGRES_USER/"
+        "POSTGRES_PASSWORD/POSTGRES_HOST/POSTGRES_PORT."
+    )
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -157,11 +155,49 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+LOCAL_MEDIA_ROOT = BASE_DIR / "media"
+USE_S3 = env_bool("USE_S3", False)
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = LOCAL_MEDIA_ROOT
 SERVE_MEDIA_FILES = env_bool("SERVE_MEDIA_FILES", DEBUG)
+
+if USE_S3:
+    AWS_ACCESS_KEY_ID = env_str("AWS_ACCESS_KEY_ID", "")
+    AWS_SECRET_ACCESS_KEY = env_str("AWS_SECRET_ACCESS_KEY", "")
+    AWS_STORAGE_BUCKET_NAME = env_str("AWS_STORAGE_BUCKET_NAME", "agora-media")
+    AWS_S3_ENDPOINT_URL = env_str("AWS_S3_ENDPOINT_URL", "")
+    AWS_S3_PROXY_MEDIA = env_bool("AWS_S3_PROXY_MEDIA", True)
+    AWS_S3_PUBLIC_BASE_URL = env_str("AWS_S3_PUBLIC_BASE_URL", "").rstrip("/")
+    AWS_S3_REGION_NAME = env_str("AWS_S3_REGION_NAME", "us-east-1")
+    AWS_S3_SIGNATURE_VERSION = env_str("AWS_S3_SIGNATURE_VERSION", "s3v4")
+    AWS_S3_ADDRESSING_STYLE = env_str("AWS_S3_ADDRESSING_STYLE", "path")
+    AWS_S3_VERIFY = env_bool("AWS_S3_VERIFY", AWS_S3_ENDPOINT_URL.startswith("https://"))
+    AWS_QUERYSTRING_AUTH = env_bool("AWS_QUERYSTRING_AUTH", False)
+    AWS_S3_FILE_OVERWRITE = env_bool("AWS_S3_FILE_OVERWRITE", False)
+    AWS_DEFAULT_ACL = None
+
+    if not AWS_S3_ENDPOINT_URL:
+        raise RuntimeError("USE_S3=1 requires AWS_S3_ENDPOINT_URL to be configured.")
+
+    STORAGES["default"] = {
+        "BACKEND": "config.storage_backends.MediaStorage",
+    }
+    if AWS_S3_PROXY_MEDIA:
+        MEDIA_URL = "/media/"
+    else:
+        AWS_S3_PUBLIC_BASE_URL = (AWS_S3_PUBLIC_BASE_URL or AWS_S3_ENDPOINT_URL).rstrip("/")
+        MEDIA_URL = f"{AWS_S3_PUBLIC_BASE_URL}/{AWS_STORAGE_BUCKET_NAME}/"
+    SERVE_MEDIA_FILES = False
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SITE_ID = env_int("DJANGO_SITE_ID", 1)
@@ -213,14 +249,7 @@ SOCIALACCOUNT_PROVIDERS = {
     },
 }
 
-SEARCH_BACKEND = env_str("SEARCH_BACKEND", "sql").strip().lower()
-if SEARCH_BACKEND not in {"sql", "elasticsearch"}:
-    raise RuntimeError("SEARCH_BACKEND must be 'sql' or 'elasticsearch'.")
-SEARCH_INDEX_ENABLED = SEARCH_BACKEND == "elasticsearch" and env_bool("SEARCH_INDEX_ENABLED", False)
-
-ELASTICSEARCH_DSL = {
-    "default": {"hosts": env_str("ELASTICSEARCH_URL", "http://elasticsearch:9200")},
-}
+SEARCH_BACKEND = "sql"
 
 CELERY_BROKER_URL = env_str("CELERY_BROKER_URL", "memory://")
 CELERY_RESULT_BACKEND = env_str("CELERY_RESULT_BACKEND", "cache+memory://")

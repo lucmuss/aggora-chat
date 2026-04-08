@@ -5,8 +5,6 @@ import json
 import re
 from dataclasses import dataclass
 
-from django.conf import settings
-from django.db.models import Case, IntegerField, Value, When
 from django.db.models import Q as DjangoQ
 
 from apps.accounts.regions import COUNTRY_CODE_BY_NAME
@@ -27,17 +25,6 @@ OPERATOR_MAP = {
     "type": "post_type__iexact",
     "country": "author__country__iexact",
 }
-
-ELASTIC_OPERATOR_MAP = {
-    "author": "author_handle",
-    "flair": "flair_text",
-    "community": "community_slug",
-    "subreddit": "community_slug",
-    "type": "post_type",
-    "country": "author_country",
-}
-DJANGO_FILTER_TO_OPERATOR = {value: key for key, value in OPERATOR_MAP.items()}
-
 
 def parse_search_query(raw_query: str):
     filters = {}
@@ -174,129 +161,5 @@ class SQLDiscoveryBackend(BaseDiscoveryBackend):
         return self._paginate_queryset(queryset, page_size=page_size, after=after)
 
 
-class ElasticsearchDiscoveryBackend(BaseDiscoveryBackend):
-    name = "elasticsearch"
-
-    def __init__(self):
-        from .documents import PostDocument
-
-        self.document = PostDocument
-        self.sql_backend = SQLDiscoveryBackend()
-
-    def _sort(self, search, sort: str):
-        sort_map = {
-            "hot": [{"hot_score": "desc"}, {"created_at": "desc"}],
-            "new": [{"created_at": "desc"}],
-            "top": [{"score": "desc"}, {"created_at": "desc"}],
-            "rising": [{"upvote_count": "desc"}, {"created_at": "desc"}],
-            "relevance": [{"_score": "desc"}, {"created_at": "desc"}],
-        }
-        return search.sort(*sort_map.get(sort, sort_map["hot"]))
-
-    def _ordered_posts(self, ids: list[int], user=None) -> list[Post]:
-        if not ids:
-            return []
-        ordering = Case(
-            *[When(pk=post_id, then=Value(index)) for index, post_id in enumerate(ids)],
-            output_field=IntegerField(),
-        )
-        queryset = Post.objects.visible_to(user).for_listing().filter(pk__in=ids).annotate(_sort_order=ordering)
-        posts_by_id = {post.id: post for post in queryset.order_by("_sort_order")}
-        return [posts_by_id[post_id] for post_id in ids if post_id in posts_by_id]
-
-    def _blocked_handles(self, user):
-        if user is None or not user.is_authenticated:
-            return []
-        return list(user.blocked_users.values_list("handle", flat=True))
-
-    def _search_to_posts(self, search, page_size=25, after=None, user=None):
-        offset = SQLDiscoveryBackend._decode_cursor(after)
-        search = search[offset : offset + page_size]
-        results = search.execute()
-        ids = [int(hit.id) for hit in results]
-        next_cursor = SQLDiscoveryBackend._encode_cursor(offset + page_size) if len(ids) == page_size else None
-        return FeedResult(self._ordered_posts(ids, user=user), next_cursor=next_cursor)
-
-    def home_feed(self, user, sort="hot", page_size=25, after=None, scope="all") -> FeedResult:
-        from elasticsearch_dsl import Q as ElasticQ
-
-        if user is None or not user.is_authenticated:
-            return self.popular_feed(sort=sort, page_size=page_size, after=after)
-
-        community_slugs = list(user.communitymembership_set.values_list("community__slug", flat=True))
-        followed_handles = list(user.followed_users.values_list("handle", flat=True))
-        if scope == "communities":
-            followed_handles = []
-        elif scope == "following":
-            community_slugs = []
-        if not community_slugs and not followed_handles:
-            return self.popular_feed(sort=sort, page_size=page_size)
-
-        search = self.document.search().filter("term", is_removed=False)
-        should = []
-        if community_slugs:
-            should.append(ElasticQ("terms", community_slug=community_slugs))
-        if followed_handles:
-            should.append(ElasticQ("terms", author_handle=followed_handles))
-        search = search.query(ElasticQ("bool", should=should, minimum_should_match=1))
-        blocked_handles = self._blocked_handles(user)
-        if blocked_handles:
-            search = search.exclude("terms", author_handle=blocked_handles)
-        search = self._sort(search, sort)
-        return self._search_to_posts(search, page_size=page_size, after=after, user=user)
-
-    def community_feed(self, user, community, sort="hot", page_size=25, after=None) -> FeedResult:
-        search = self.document.search().filter("term", is_removed=False).filter("term", community_slug=community.slug)
-        blocked_handles = self._blocked_handles(user)
-        if blocked_handles:
-            search = search.exclude("terms", author_handle=blocked_handles)
-        search = self._sort(search, sort)
-        return self._search_to_posts(search, page_size=page_size, after=after, user=user)
-
-    def popular_feed(self, user=None, sort="hot", page_size=25, after=None) -> FeedResult:
-        search = self.document.search().filter("term", is_removed=False)
-        blocked_handles = self._blocked_handles(user)
-        if blocked_handles:
-            search = search.exclude("terms", author_handle=blocked_handles)
-        search = self._sort(search, sort)
-        return self._search_to_posts(search, page_size=page_size, after=after, user=user)
-
-    def search_posts(self, raw_query, sort="relevance", page_size=50, after=None, *, post_type="", media="", user=None):
-        query_text, filters = parse_search_query(raw_query)
-        search = self.document.search().filter("term", is_removed=False)
-
-        if query_text:
-            search = search.query("multi_match", query=query_text, fields=["title^3", "body_text", "community_name"])
-
-        for field, value in filters.items():
-            es_field = ELASTIC_OPERATOR_MAP[DJANGO_FILTER_TO_OPERATOR[field]]
-            if es_field == "post_type" and str(value).lower() == "video":
-                search = search.filter("term", post_type="link").filter("regexp", url=".*(youtube\\.com|youtu\\.be|vimeo\\.com|tiktok\\.com|dailymotion\\.com|loom\\.com|wistia\\.(com|net)).*")
-            else:
-                search = search.filter("term", **{es_field: value})
-
-        if post_type == "video":
-            search = search.filter("term", post_type="link").filter("regexp", url=".*(youtube\\.com|youtu\\.be|vimeo\\.com|tiktok\\.com|dailymotion\\.com|loom\\.com|wistia\\.(com|net)).*")
-        elif post_type:
-            search = search.filter("term", post_type=post_type)
-        if media == "images":
-            search = search.filter("exists", field="image")
-        elif media == "links":
-            search = search.filter("exists", field="url")
-        elif media == "videos":
-            search = search.filter("regexp", url=".*(youtube\\.com|youtu\\.be|vimeo\\.com|tiktok\\.com|dailymotion\\.com|loom\\.com|wistia\\.(com|net)).*")
-
-        search = self._sort(search, sort)
-        return self._search_to_posts(search, page_size=page_size, after=after, user=user)
-
-
 def get_discovery_backend() -> BaseDiscoveryBackend:
-    backend_name = getattr(settings, "SEARCH_BACKEND", "sql")
-    if backend_name == "elasticsearch":
-        try:
-            if not settings.SEARCH_INDEX_ENABLED:
-                return SQLDiscoveryBackend()
-            return ElasticsearchDiscoveryBackend()
-        except Exception:
-            return SQLDiscoveryBackend()
     return SQLDiscoveryBackend()
