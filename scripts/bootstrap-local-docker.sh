@@ -56,7 +56,21 @@ POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-agora_dev}
 MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
 MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
 
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up --build -d
+if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up --build -d; then
+  echo "Docker Compose failed while starting the local stack." >&2
+  echo >&2
+  echo "Current container status:" >&2
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps >&2 || true
+  echo >&2
+  echo "Recent logs from nginx, web, db, and minio:" >&2
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=200 nginx web db minio minio-init >&2 || true
+  echo >&2
+  echo "If this looks like an old local-state problem, try:" >&2
+  echo "  docker compose --env-file $ENV_FILE -f $COMPOSE_FILE down -v --remove-orphans" >&2
+  echo "  rm -f $ENV_FILE && cp .env.example $ENV_FILE" >&2
+  echo "  ./scripts/bootstrap-local-docker.sh" >&2
+  exit 1
+fi
 
 echo "Waiting for Agora to become healthy at ${LOCAL_URL}/healthz/ ..."
 i=0
@@ -71,6 +85,8 @@ done
 
 if ! curl -fsS "${LOCAL_URL}/healthz/" >/dev/null 2>&1; then
   echo "Agora did not become healthy in time. Inspect with: docker compose --env-file $ENV_FILE -f $COMPOSE_FILE logs nginx web db minio" >&2
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps >&2 || true
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=200 nginx web db minio minio-init >&2 || true
   exit 1
 fi
 

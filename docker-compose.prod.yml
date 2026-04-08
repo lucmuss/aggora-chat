@@ -3,8 +3,10 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     depends_on:
-      - web
-      - minio
+      web:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     environment:
       MINIO_MEDIA_BUCKET: ${MINIO_MEDIA_BUCKET:-agora-media}
       NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-20m}
@@ -62,7 +64,8 @@ services:
       SEED_ADMINS_FILE: ${SEED_ADMINS_FILE:-data/seed/admins.json}
       SEED_COMMUNITIES_FILE: ${SEED_COMMUNITIES_FILE:-data/seed/communities.json}
     depends_on:
-      - minio
+      minio-init:
+        condition: service_completed_successfully
     networks:
       - default
       - apps-shared
@@ -82,11 +85,18 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
       - minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   minio-init:
     image: minio/mc:latest
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
     entrypoint: ["/bin/sh", "/init-minio.sh"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}

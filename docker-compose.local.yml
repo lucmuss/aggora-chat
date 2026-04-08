@@ -73,8 +73,8 @@ services:
         ]
       interval: 10s
       timeout: 5s
-      retries: 12
-      start_period: 20s
+      retries: 18
+      start_period: 60s
 
   db:
     image: postgres:16
@@ -109,12 +109,18 @@ services:
       - "${MINIO_CONSOLE_PORT:-19001}:9001"
     volumes:
       - minio-local:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   minio-init:
     image: minio/mc:latest
     depends_on:
       minio:
-        condition: service_started
+        condition: service_healthy
     restart: "no"
     entrypoint: ["/bin/sh", "/init-minio.sh"]
     environment:
