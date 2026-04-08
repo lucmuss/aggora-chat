@@ -72,6 +72,8 @@ just media-export
 just media-import-latest
 ```
 
+Detailed onboarding for contributors is documented in [docs/local-development-workflow.md](/srv/projects/web/aggora-chat/docs/local-development-workflow.md).
+
 ## Setup
 
 The project uses `uv` for local Python dependency management.
