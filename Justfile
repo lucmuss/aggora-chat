@@ -43,10 +43,10 @@ db-export:
     ./scripts/db-export-custom.sh
 
 db-import:
-    ./scripts/db-import-custom.sh
+    FORCE=1 ./scripts/db-import-custom.sh
 
 db-restore:
-    ./scripts/db-import-custom.sh
+    FORCE=1 ./scripts/db-import-custom.sh
 
 db-import-latest:
     FORCE=1 ./scripts/db-import-custom.sh
