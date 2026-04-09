@@ -187,7 +187,10 @@ def _read_source_image_bytes(field_file: FieldFile) -> bytes | None:
     source_name = getattr(field_file, "name", "")
     if not source_name or not _is_optimizable_name(source_name):
         return None
-    field_file.open("rb")
+    try:
+        field_file.open("rb")
+    except FileNotFoundError:
+        return None
     try:
         return field_file.read()
     finally:
